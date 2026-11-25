@@ -1,15 +1,32 @@
 import { mount, flushPromises } from '@vue/test-utils';
+import type { VueWrapper } from '@vue/test-utils';
 import type { Component } from 'vue';
 import { createPinia, setActivePinia } from 'pinia';
 import type { FeatureData, LayerData, MapData, ProviderData } from '@sw-maps/map-contracts';
 import { vi } from 'vitest';
+import type { Mock } from 'vitest';
 import type { Api } from '@/api';
 import { setApiForTests } from '@/api';
 import { resetConfigForTests } from '@/config';
 
-export function configure(capabilities: string[] = ['swmap_edit_maps', 'swmap_publish_maps', 'swmap_manage_layers', 'swmap_manage_system']): void {
+export function configure(
+  capabilities: string[] = [
+    'swmap_edit_maps',
+    'swmap_publish_maps',
+    'swmap_manage_layers',
+    'swmap_manage_system',
+  ],
+): void {
   resetConfigForTests();
-  window.swmapsConfig = { restRoot: 'https://example.org/wp-json/sw-maps/v1/', nonce: 'n', locale: 'en_US', version: '0.1.0', adminUrl: '', siteUrl: '', capabilities };
+  window.swmapsConfig = {
+    restRoot: 'https://example.org/wp-json/sw-maps/v1/',
+    nonce: 'n',
+    locale: 'en_US',
+    version: '0.1.0',
+    adminUrl: '',
+    siteUrl: '',
+    capabilities,
+  };
 }
 
 export function makeMap(overrides: Partial<MapData> = {}): MapData {
@@ -19,8 +36,27 @@ export function makeMap(overrides: Partial<MapData> = {}): MapData {
     title: 'Test map',
     description: '',
     status: 'draft',
-    viewport: { center: [8.4, 49], zoom: 10, minZoom: 2, maxZoom: 18, bounds: null, autoBounds: true },
-    settings: { height: 400, aspectRatio: null, scrollZoom: false, touch: true, drag: true, zoomControls: true, fullscreen: true, scale: true, showList: true, clickToLoad: false, providerId: null },
+    viewport: {
+      center: [8.4, 49],
+      zoom: 10,
+      minZoom: 2,
+      maxZoom: 18,
+      bounds: null,
+      autoBounds: true,
+    },
+    settings: {
+      height: 400,
+      aspectRatio: null,
+      scrollZoom: false,
+      touch: true,
+      drag: true,
+      zoomControls: true,
+      fullscreen: true,
+      scale: true,
+      showList: true,
+      clickToLoad: false,
+      providerId: null,
+    },
     layer_count: 1,
     feature_count: 2,
     created_at: '',
@@ -30,7 +66,19 @@ export function makeMap(overrides: Partial<MapData> = {}): MapData {
 }
 
 export function makeLayer(overrides: Partial<LayerData> = {}): LayerData {
-  return { id: 10, map_id: 1, title: 'Layer 1', type: 'features', status: 'published', sort_order: 0, visible: true, style: {}, created_at: '', updated_at: '', ...overrides };
+  return {
+    id: 10,
+    map_id: 1,
+    title: 'Layer 1',
+    type: 'features',
+    status: 'published',
+    sort_order: 0,
+    visible: true,
+    style: {},
+    created_at: '',
+    updated_at: '',
+    ...overrides,
+  };
 }
 
 export function makeFeature(overrides: Partial<FeatureData> = {}): FeatureData {
@@ -39,7 +87,14 @@ export function makeFeature(overrides: Partial<FeatureData> = {}): FeatureData {
     layer_id: 10,
     external_id: null,
     geometry: { type: 'Point', coordinates: [8.4, 49] },
-    properties: { title: 'Rathaus', description: '', address: '', image_id: null, link: null, icon: 'builtin:pin' },
+    properties: {
+      title: 'Rathaus',
+      description: '',
+      address: '',
+      image_id: null,
+      link: null,
+      icon: 'builtin:pin',
+    },
     style: {},
     updated_at: '',
     ...overrides,
@@ -51,7 +106,14 @@ export function makeProvider(overrides: Partial<ProviderData> = {}): ProviderDat
     id: 1,
     type: 'xyz',
     name: 'OpenStreetMap',
-    public_config: { urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '© OSM', minZoom: 0, maxZoom: 19, tileSize: 256, publicKey: '' },
+    public_config: {
+      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      attribution: '© OSM',
+      minZoom: 0,
+      maxZoom: 19,
+      tileSize: 256,
+      publicKey: '',
+    },
     secret_constant: null,
     secret_defined: false,
     external_requests: ['tile.openstreetmap.org'],
@@ -60,13 +122,20 @@ export function makeProvider(overrides: Partial<ProviderData> = {}): ProviderDat
   };
 }
 
+type MockedGroup<T> = {
+  [M in keyof T]: T[M] extends (...args: infer A) => infer R ? Mock<(...args: A) => R> : never;
+};
+export type FakeApi = { [K in keyof Api]: MockedGroup<Api[K]> };
+
 /** A fully mocked API (every method is a vi.fn with sensible defaults). */
-export function fakeApi(): Api & Record<string, never> {
+export function fakeApi(): FakeApi {
   const api = {
     maps: {
       list: vi.fn(async () => ({ items: [makeMap()], total: 1, totalPages: 1 })),
       get: vi.fn(async () => makeMap()),
-      create: vi.fn(async (b: Record<string, unknown>) => makeMap({ id: 5, title: String(b['title']) })),
+      create: vi.fn(async (b: Record<string, unknown>) =>
+        makeMap({ id: 5, title: String(b['title']) }),
+      ),
       update: vi.fn(async () => makeMap()),
       remove: vi.fn(async () => undefined),
       duplicate: vi.fn(async () => makeMap({ id: 6 })),
@@ -91,29 +160,79 @@ export function fakeApi(): Api & Record<string, never> {
       test: vi.fn(async () => ({ ok: true, status: 200, message: 'Connection successful.' })),
     },
     settings: {
-      get: vi.fn(async () => ({ delete_data_on_uninstall: false, default_height: 400, default_scroll_zoom: false, max_features_per_layer: 5000, click_to_load: false })),
-      update: vi.fn(async (b: Record<string, unknown>) => ({ delete_data_on_uninstall: false, default_height: 400, default_scroll_zoom: false, max_features_per_layer: 5000, click_to_load: false, ...b })),
+      get: vi.fn(async () => ({
+        delete_data_on_uninstall: false,
+        default_height: 400,
+        default_scroll_zoom: false,
+        max_features_per_layer: 5000,
+        click_to_load: false,
+      })),
+      update: vi.fn(async (b: Record<string, unknown>) => ({
+        delete_data_on_uninstall: false,
+        default_height: 400,
+        default_scroll_zoom: false,
+        max_features_per_layer: 5000,
+        click_to_load: false,
+        ...b,
+      })),
     },
     status: {
       get: vi.fn(async () => ({
-        plugin_version: '0.1.0', db_version: 1, db_expected: 1, tables: [{ name: 'wp_swmap_maps', exists: true }, { name: 'wp_swmap_layers', exists: false }],
-        php_version: '8.3.0', wp_version: '6.8', db_server: 'MariaDB 11', multisite: false, environment: 'local', consent_api: false,
-        settings: { delete_data_on_uninstall: false, default_height: 400, default_scroll_zoom: false, max_features_per_layer: 5000, click_to_load: false },
+        plugin_version: '0.1.0',
+        db_version: 1,
+        db_expected: 1,
+        tables: [
+          { name: 'wp_swmap_maps', exists: true },
+          { name: 'wp_swmap_layers', exists: false },
+        ],
+        php_version: '8.3.0',
+        wp_version: '6.8',
+        db_server: 'MariaDB 11',
+        multisite: false,
+        environment: 'local',
+        consent_api: false,
+        settings: {
+          delete_data_on_uninstall: false,
+          default_height: 400,
+          default_scroll_zoom: false,
+          max_features_per_layer: 5000,
+          click_to_load: false,
+        },
       })),
     },
   };
   setApiForTests(api as unknown as Api);
-  return api as never;
+  return api as unknown as FakeApi;
 }
 
 export function setupPinia(): void {
   setActivePinia(createPinia());
 }
 
-export async function mountView(component: Component, props: Record<string, unknown> = {}, extra: Record<string, unknown> = {}) {
+const mounted: VueWrapper[] = [];
+
+/** Unmounts everything mounted through mountView (called after each test from tests/setup.ts). */
+export function unmountAll(): void {
+  for (const wrapper of mounted.splice(0)) wrapper.unmount();
+}
+
+export async function mountView(
+  component: Component,
+  props: Record<string, unknown> = {},
+  extra: Record<string, unknown> = {},
+) {
   const pinia = createPinia();
   setActivePinia(pinia);
-  const wrapper = mount(component, { props, attachTo: document.body, global: { plugins: [pinia], stubs: { RouterLink: { props: ['to'], template: '<a><slot /></a>' } }, ...extra } });
+  const wrapper = mount(component, {
+    props,
+    attachTo: document.body,
+    global: {
+      plugins: [pinia],
+      stubs: { RouterLink: { props: ['to'], template: '<a><slot /></a>' } },
+      ...extra,
+    },
+  });
+  mounted.push(wrapper as VueWrapper);
   await flushPromises();
   return wrapper;
 }

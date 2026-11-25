@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { FeatureData, LayerData } from '@sw-maps/map-contracts';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
@@ -19,6 +19,7 @@ const emit = defineEmits<{
   select: [id: number];
 }>();
 const { t } = useI18n();
+const drafts = reactive<Record<number, string>>({});
 const deleting = ref<LayerData | null>(null);
 const confirmOpen = ref(false);
 
@@ -28,8 +29,10 @@ const label = (f: FeatureData): string => f.properties.title || t('editor.untitl
 const typeLabel = (f: FeatureData): string =>
   t(`feature.type.${f.geometry.type}` as 'feature.type.Point');
 
-function onRename(layer: LayerData, event: Event): void {
-  const value = (event.target as HTMLInputElement).value.trim();
+/** Typed text is kept as a draft until the field loses focus (one undo step per rename). */
+function onRename(layer: LayerData): void {
+  const value = (drafts[layer.id] ?? layer.title).trim();
+  delete drafts[layer.id];
   if (value !== '' && value !== layer.title) emit('rename-layer', layer.id, value);
 }
 
@@ -58,7 +61,7 @@ function askDelete(layer: LayerData): void {
     <div v-for="layer in layers" :key="layer.id" class="q-mb-md" data-test="layer">
       <div class="row items-center no-wrap">
         <q-input
-          :model-value="layer.title"
+          :model-value="drafts[layer.id] ?? layer.title"
           dense
           borderless
           :aria-label="t('editor.layerName')"
@@ -66,7 +69,8 @@ function askDelete(layer: LayerData): void {
           class="col"
           data-test="layer-title"
           @focus="emit('update:activeLayerId', layer.id)"
-          @blur="onRename(layer, $event)"
+          @update:model-value="drafts[layer.id] = String($event ?? '')"
+          @blur="onRename(layer)"
         />
         <q-btn
           flat

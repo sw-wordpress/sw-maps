@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { getConfig, hasCapability, normaliseConfig, resetConfigForTests, resolveUiLocale } from '@/config';
+import {
+  getConfig,
+  hasCapability,
+  normaliseConfig,
+  resetConfigForTests,
+  resolveUiLocale,
+} from '@/config';
 import { createAppI18n } from '@/i18n';
 import quasarLang from '@/i18n/quasarLang';
 import de from '@/i18n/de';
@@ -9,7 +15,11 @@ import { join } from 'node:path';
 import { pickImage } from '@/utils/media';
 
 function flatten(obj: Record<string, unknown>, prefix = ''): string[] {
-  return Object.entries(obj).flatMap(([k, v]) => (typeof v === 'object' && v !== null ? flatten(v as Record<string, unknown>, `${prefix}${k}.`) : [`${prefix}${k}`]));
+  return Object.entries(obj).flatMap(([k, v]) =>
+    typeof v === 'object' && v !== null
+      ? flatten(v as Record<string, unknown>, `${prefix}${k}.`)
+      : [`${prefix}${k}`],
+  );
 }
 
 function sources(dir: string): string[] {
@@ -23,13 +33,18 @@ describe('config', () => {
   it('normalises and validates the PHP configuration', () => {
     expect(() => normaliseConfig(undefined)).toThrow('restRoot');
     expect(() => normaliseConfig({ restRoot: '' })).toThrow();
-    const c = normaliseConfig({ restRoot: 'https://x/wp-json/sw-maps/v1', capabilities: ['a', 5 as never] });
+    const c = normaliseConfig({
+      restRoot: 'https://x/wp-json/sw-maps/v1',
+      capabilities: ['a', 5 as never],
+    });
     expect(c.restRoot).toBe('https://x/wp-json/sw-maps/v1/');
     expect(c.capabilities).toEqual(['a']);
     expect(c.locale).toBe('en_US');
     expect(hasCapability(c, 'a')).toBe(true);
     expect(hasCapability(c, 'b')).toBe(false);
-    expect(normaliseConfig({ restRoot: '/x/', capabilities: 'no' as never }).capabilities).toEqual([]);
+    expect(normaliseConfig({ restRoot: '/x/', capabilities: 'no' as never }).capabilities).toEqual(
+      [],
+    );
   });
 
   it('caches the window configuration', () => {
@@ -58,12 +73,14 @@ describe('translations', () => {
 
   it('have no empty strings and keep placeholders in sync', () => {
     const e = flatten(en as never);
-    const get = (obj: unknown, path: string): string => path.split('.').reduce((o, k) => (o as Record<string, unknown>)[k], obj) as string;
+    const get = (obj: unknown, path: string): string =>
+      path.split('.').reduce((o, k) => (o as Record<string, unknown>)[k], obj) as string;
     for (const key of e) {
       expect(get(en, key).trim(), key).not.toBe('');
       expect(get(de, key).trim(), key).not.toBe('');
       const names = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
-      if (!key.startsWith('providers.urlHint') && !key.startsWith('providers.publicKey')) expect(names(get(de, key)), key).toEqual(names(get(en, key)));
+      if (!key.startsWith('providers.urlHint') && !key.startsWith('providers.publicKey'))
+        expect(names(get(de, key)), key).toEqual(names(get(en, key)));
     }
   });
 
@@ -92,6 +109,8 @@ describe('media picker', () => {
       open: () => selectHandler(),
       state: () => ({ get: () => ({ first: () => ({ toJSON: () => attachment }) }) }),
     };
-    expect(await pickImage({ wp: { media: () => frame } } as unknown as Window)).toEqual(attachment);
+    expect(await pickImage({ wp: { media: () => frame } } as unknown as Window)).toEqual(
+      attachment,
+    );
   });
 });

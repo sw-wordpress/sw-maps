@@ -23,7 +23,11 @@ import {
 import { makeFeature, makeLayer, makeMap, makeProvider } from './helpers';
 import { viewerStrings } from '@/utils/viewerStrings';
 
-const base = (): EditorDoc => ({ map: makeMap(), layers: [makeLayer()], features: [makeFeature()] });
+const base = (): EditorDoc => ({
+  map: makeMap(),
+  layers: [makeLayer()],
+  features: [makeFeature()],
+});
 const point = (lon: number, lat: number) => ({ type: 'Point' as const, coordinates: [lon, lat] });
 
 describe('pure edit operations', () => {
@@ -31,7 +35,11 @@ describe('pure edit operations', () => {
     const doc = base();
     const next = updateMap(doc, { title: 'New', viewport: { zoom: 5 }, settings: { height: 600 } });
     expect(doc.map.title).toBe('Test map');
-    expect([next.map.title, next.map.viewport.zoom, next.map.settings.height]).toEqual(['New', 5, 600]);
+    expect([next.map.title, next.map.viewport.zoom, next.map.settings.height]).toEqual([
+      'New',
+      5,
+      600,
+    ]);
     expect(docEquals(doc, cloneDoc(doc))).toBe(true);
     expect(docEquals(doc, next)).toBe(false);
     const stamped = cloneDoc(doc);
@@ -41,13 +49,21 @@ describe('pure edit operations', () => {
 
   it('adds, updates and removes layers and features', () => {
     let doc = addLayer(base(), -1, 'Second');
-    expect(doc.layers.map((l) => [l.id, l.sort_order])).toEqual([[10, 0], [-1, 1]]);
+    expect(doc.layers.map((l) => [l.id, l.sort_order])).toEqual([
+      [10, 0],
+      [-1, 1],
+    ]);
     doc = updateLayer(doc, -1, { title: 'Renamed', visible: false });
     doc = addFeature(doc, -2, -1, point(1, 2), { title: 'New' });
     doc = setFeatureGeometry(doc, -2, point(3, 4));
     doc = updateFeature(doc, -2, { properties: { address: 'A' }, style: { color: '#fff' } });
     const f = doc.features.find((x) => x.id === -2)!;
-    expect([f.properties.title, f.properties.address, f.geometry.coordinates, f.style]).toEqual(['New', 'A', [3, 4], { color: '#fff' }]);
+    expect([f.properties.title, f.properties.address, f.geometry.coordinates, f.style]).toEqual([
+      'New',
+      'A',
+      [3, 4],
+      { color: '#fff' },
+    ]);
     expect(doc.layers[1]).toMatchObject({ title: 'Renamed', visible: false });
     doc = removeFeature(doc, -2);
     expect(doc.features.some((x) => x.id === -2)).toBe(false);
@@ -108,8 +124,17 @@ describe('diff and save plan', () => {
   });
 
   it('describes every kind of change', () => {
-    const original: EditorDoc = { map: makeMap(), layers: [makeLayer(), makeLayer({ id: 20, title: 'Gone' })], features: [makeFeature(), makeFeature({ id: 101 }), makeFeature({ id: 200, layer_id: 20 })] };
-    let working = updateMap(original, { title: 'T', status: 'published', viewport: { zoom: 3 }, settings: { height: 500 } });
+    const original: EditorDoc = {
+      map: makeMap(),
+      layers: [makeLayer(), makeLayer({ id: 20, title: 'Gone' })],
+      features: [makeFeature(), makeFeature({ id: 101 }), makeFeature({ id: 200, layer_id: 20 })],
+    };
+    let working = updateMap(original, {
+      title: 'T',
+      status: 'published',
+      viewport: { zoom: 3 },
+      settings: { height: 500 },
+    });
     working = removeLayer(working, 20);
     working = addLayer(working, -1, 'New layer');
     working = updateLayer(working, 10, { title: 'Renamed' });
@@ -118,7 +143,16 @@ describe('diff and save plan', () => {
     working = addFeature(working, -3, 10, point(2, 2));
     working = setFeatureGeometry(working, 100, point(9, 9));
     const ops = diff(original, working);
-    expect(ops.map((o) => o.kind).sort()).toEqual(['feature-create', 'feature-create', 'feature-delete', 'feature-update', 'layer-create', 'layer-delete', 'layer-update', 'map-update']);
+    expect(ops.map((o) => o.kind).sort()).toEqual([
+      'feature-create',
+      'feature-create',
+      'feature-delete',
+      'feature-update',
+      'layer-create',
+      'layer-delete',
+      'layer-update',
+      'map-update',
+    ]);
     expect(ops[0]).toMatchObject({ patch: { title: 'T', status: 'published' } });
     expect(ops.find((o) => o.kind === 'feature-delete')).toMatchObject({ id: 101 });
     expect(ops.some((o) => o.kind === 'feature-delete' && o.id === 200)).toBe(false);
@@ -158,12 +192,18 @@ describe('diff and save plan', () => {
     const api: SaveApi = {
       maps: { update: vi.fn() },
       layers: { create: vi.fn(async () => ({ id: 70 })), update: vi.fn(), remove: vi.fn() },
-      features: { create: vi.fn(async () => Promise.reject(new Error('boom'))), update: vi.fn(), remove: vi.fn() },
+      features: {
+        create: vi.fn(async () => Promise.reject(new Error('boom'))),
+        update: vi.fn(),
+        remove: vi.fn(),
+      },
     };
     const original = base();
     let working = addLayer(original, -1, 'L2');
     working = addFeature(working, -2, -1, point(1, 1));
-    const error = (await runOps(api, 1, diff(original, working)).catch((e: unknown) => e)) as SaveError;
+    const error = (await runOps(api, 1, diff(original, working)).catch(
+      (e: unknown) => e,
+    )) as SaveError;
     expect(error).toBeInstanceOf(SaveError);
     expect(Object.fromEntries(error.ids)).toEqual({ '-1': 70 });
     expect((error.cause as Error).message).toBe('boom');
@@ -174,7 +214,14 @@ describe('render data', () => {
   const strings = viewerStrings((k) => k);
 
   it('resolves the provider key and drops private fields', () => {
-    const p = makeProvider({ public_config: { ...makeProvider().public_config, urlTemplate: 'https://t.example.org/{z}/{x}/{y}.png?k={key}', publicKey: 'a b' }, secret_constant: 'SECRET' });
+    const p = makeProvider({
+      public_config: {
+        ...makeProvider().public_config,
+        urlTemplate: 'https://t.example.org/{z}/{x}/{y}.png?k={key}',
+        publicKey: 'a b',
+      },
+      secret_constant: 'SECRET',
+    });
     const pub = toPublicProvider(p)!;
     expect(pub.urlTemplate).toBe('https://t.example.org/{z}/{x}/{y}.png?k=a%20b');
     expect(JSON.stringify(pub)).not.toContain('SECRET');
@@ -188,7 +235,12 @@ describe('render data', () => {
     doc.map.settings.clickToLoad = true;
     const data = buildRenderData(doc, makeProvider(), strings);
     expect(data.layers.map((l) => l.id)).toEqual([10]);
-    expect(data.settings).toMatchObject({ scrollZoom: true, drag: true, fullscreen: false, clickToLoad: false });
+    expect(data.settings).toMatchObject({
+      scrollZoom: true,
+      drag: true,
+      fullscreen: false,
+      clickToLoad: false,
+    });
     expect(data.viewport.autoBounds).toBe(false);
     expect(data.consentCategory).toBeNull();
     expect(buildRenderData(doc, null, strings).provider).toBeNull();

@@ -7,7 +7,7 @@ import { useProvidersStore } from '@/stores/providers';
 import { useSettingsStore } from '@/stores/settings';
 import { viewerStrings } from '@/utils/viewerStrings';
 import { errorMessage } from '@/utils/errors';
-import { configure, fakeApi, makeFeature, makeLayer, makeMap, makeProvider, setupPinia } from './helpers';
+import { configure, fakeApi, makeFeature, makeLayer, makeMap, setupPinia } from './helpers';
 
 let api: ReturnType<typeof fakeApi>;
 
@@ -23,13 +23,24 @@ describe('maps store', () => {
     store.search = 'abc';
     store.status = 'published';
     await store.load();
-    expect(api.maps.list).toHaveBeenCalledWith({ search: 'abc', status: 'published', page: 1, per_page: 20 });
+    expect(api.maps.list).toHaveBeenCalledWith({
+      search: 'abc',
+      status: 'published',
+      page: 1,
+      per_page: 20,
+    });
     expect(store.total).toBe(1);
 
     let release: (v: unknown) => void = () => undefined;
-    api.maps.list.mockImplementationOnce(() => new Promise((resolve) => (release = resolve)) as never);
+    api.maps.list.mockImplementationOnce(
+      () => new Promise((resolve) => (release = resolve)) as never,
+    );
     const slow = store.load();
-    api.maps.list.mockResolvedValueOnce({ items: [makeMap({ id: 9 })], total: 1, totalPages: 1 } as never);
+    api.maps.list.mockResolvedValueOnce({
+      items: [makeMap({ id: 9 })],
+      total: 1,
+      totalPages: 1,
+    } as never);
     await store.load();
     release({ items: [makeMap({ id: 1 })], total: 5, totalPages: 1 });
     await slow;
@@ -133,7 +144,21 @@ describe('editor store', () => {
   });
 
   it('refuses coordinates for non point features and handles selection', async () => {
-    api.features.page.mockResolvedValueOnce({ items: [makeFeature({ geometry: { type: 'LineString', coordinates: [[0, 0], [1, 1]] } })], total: 1, totalPages: 1 } as never);
+    api.features.page.mockResolvedValueOnce({
+      items: [
+        makeFeature({
+          geometry: {
+            type: 'LineString',
+            coordinates: [
+              [0, 0],
+              [1, 1],
+            ],
+          },
+        }),
+      ],
+      total: 1,
+      totalPages: 1,
+    } as never);
     const store = await loaded();
     expect(store.setPointCoordinates(100, 1, 1)).toBe(false);
     store.select(100);
@@ -163,10 +188,17 @@ describe('editor store', () => {
     store.patchMap({ title: 'Saved' });
     store.addGeometry({ type: 'Point', coordinates: [1, 1] });
     api.maps.get.mockResolvedValueOnce(makeMap({ title: 'Saved' }) as never);
-    api.features.page.mockResolvedValueOnce({ items: [makeFeature(), makeFeature({ id: 101 })], total: 2, totalPages: 1 } as never);
+    api.features.page.mockResolvedValueOnce({
+      items: [makeFeature(), makeFeature({ id: 101 })],
+      total: 2,
+      totalPages: 1,
+    } as never);
     expect(await store.save()).toBe(true);
     expect(api.maps.update).toHaveBeenCalledWith(1, { title: 'Saved' });
-    expect(api.features.create).toHaveBeenCalledWith(10, expect.objectContaining({ geometry: { type: 'Point', coordinates: [1, 1] } }));
+    expect(api.features.create).toHaveBeenCalledWith(
+      10,
+      expect.objectContaining({ geometry: { type: 'Point', coordinates: [1, 1] } }),
+    );
     expect(store.dirty).toBe(false);
     expect(store.canUndo).toBe(false);
     expect(store.selectedFeatureId).toBe(101);
@@ -176,8 +208,13 @@ describe('editor store', () => {
     const store = await loaded();
     const layerId = store.createLayer('New layer');
     store.addGeometry({ type: 'Point', coordinates: [1, 1] });
-    api.features.create.mockRejectedValueOnce(new ApiError('swmap_invalid_geometry', 'Bad', 400) as never);
-    api.layers.forMap.mockResolvedValue([makeLayer(), makeLayer({ id: 11, title: 'New layer' })] as never);
+    api.features.create.mockRejectedValueOnce(
+      new ApiError('swmap_invalid_geometry', 'Bad', 400) as never,
+    );
+    api.layers.forMap.mockResolvedValue([
+      makeLayer(),
+      makeLayer({ id: 11, title: 'New layer' }),
+    ] as never);
     expect(await store.save()).toBe(false);
     expect(store.saveError).toBeInstanceOf(ApiError);
     expect(store.dirty).toBe(true);
@@ -213,7 +250,12 @@ describe('editor store', () => {
   });
 
   it('errorMessage formats API errors with details and falls back otherwise', () => {
-    expect(errorMessage(new ApiError('c', 'Invalid input.', 400, [{ field: 'title', message: 'Required.' }]), 'f')).toBe('Invalid input. (title: Required.)');
+    expect(
+      errorMessage(
+        new ApiError('c', 'Invalid input.', 400, [{ field: 'title', message: 'Required.' }]),
+        'f',
+      ),
+    ).toBe('Invalid input. (title: Required.)');
     expect(errorMessage(new Error('x'), 'fallback')).toBe('fallback');
     void vi;
   });

@@ -1,5 +1,5 @@
 import { config } from '@vue/test-utils';
-import { vi } from 'vitest';
+import { afterEach, vi } from 'vitest';
 import { Quasar } from 'quasar';
 import { createI18n } from 'vue-i18n';
 import en from '@/i18n/en';
@@ -24,8 +24,20 @@ globalThis.ResizeObserver = class {
   disconnect(): void {}
 } as unknown as typeof ResizeObserver;
 
+afterEach(async () => {
+  const { unmountAll } = await import('./helpers');
+  unmountAll();
+});
+
 export function createTestI18n(locale: 'en' | 'de' = 'en') {
-  return createI18n({ legacy: false, locale, fallbackLocale: 'en', messages: { en, de }, missingWarn: false, fallbackWarn: false });
+  return createI18n({
+    legacy: false,
+    locale,
+    fallbackLocale: 'en',
+    messages: { en, de },
+    missingWarn: false,
+    fallbackWarn: false,
+  });
 }
 
 config.global.plugins = [[Quasar, {}], createTestI18n()];
