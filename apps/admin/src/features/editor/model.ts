@@ -331,6 +331,7 @@ async function execute(
   ops: Op[],
   ids: Map<number, number>,
 ): Promise<void> {
+  let publishAfterwards = false;
   const order: Op['kind'][] = [
     'map-update',
     'layer-delete',
@@ -343,9 +344,16 @@ async function execute(
   for (const kind of order) {
     for (const op of ops.filter((o) => o.kind === kind)) {
       switch (op.kind) {
-        case 'map-update':
-          await api.maps.update(mapId, op.patch);
+        case 'map-update': {
+          // Publishing waits until every content change succeeded (unpublishing and other edits go first), so a failed
+          // save can never expose content the user meant to remove.
+          const { status, ...rest } = op.patch;
+          const deferPublish = status === 'published';
+          const early = deferPublish ? rest : op.patch;
+          if (Object.keys(early).length > 0) await api.maps.update(mapId, early);
+          if (deferPublish) publishAfterwards = true;
           break;
+        }
         case 'layer-delete':
           await api.layers.remove(op.id);
           break;
@@ -370,6 +378,7 @@ async function execute(
       }
     }
   }
+  if (publishAfterwards) await api.maps.update(mapId, { status: 'published' });
 }
 
 // ---- render data for the editor canvas -------------------------------------------------------------------------------

@@ -2,30 +2,59 @@ import { createRouter, createWebHashHistory } from 'vue-router';
 import type { Router } from 'vue-router';
 import { useEditorStore } from '@/stores/editor';
 
+/**
+ * Lazy view loader that retries: a chunk request can fail transiently (network change, busy server) and would leave the
+ * router view blank until the page is reloaded.
+ */
+export function retryImport<T>(
+  load: () => Promise<T>,
+  attempts = 3,
+  delayMs = 400,
+): () => Promise<T> {
+  return async () => {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await load();
+      } catch (error) {
+        if (attempt >= attempts) throw error;
+        await new Promise((resolve) => setTimeout(resolve, delayMs * attempt));
+      }
+    }
+  };
+}
+
 export const routes = [
   {
     path: '/',
     name: 'dashboard',
-    component: () => import('@/features/dashboard/DashboardView.vue'),
+    component: retryImport(() => import('@/features/dashboard/DashboardView.vue')),
   },
-  { path: '/maps', name: 'maps', component: () => import('@/features/maps/MapsView.vue') },
+  {
+    path: '/maps',
+    name: 'maps',
+    component: retryImport(() => import('@/features/maps/MapsView.vue')),
+  },
   {
     path: '/maps/:id(\\d+)',
     name: 'editor',
-    component: () => import('@/features/editor/EditorView.vue'),
+    component: retryImport(() => import('@/features/editor/EditorView.vue')),
     props: true,
   },
   {
     path: '/providers',
     name: 'providers',
-    component: () => import('@/features/providers/ProvidersView.vue'),
+    component: retryImport(() => import('@/features/providers/ProvidersView.vue')),
   },
   {
     path: '/settings',
     name: 'settings',
-    component: () => import('@/features/settings/SettingsView.vue'),
+    component: retryImport(() => import('@/features/settings/SettingsView.vue')),
   },
-  { path: '/status', name: 'status', component: () => import('@/features/status/StatusView.vue') },
+  {
+    path: '/status',
+    name: 'status',
+    component: retryImport(() => import('@/features/status/StatusView.vue')),
+  },
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ];
 

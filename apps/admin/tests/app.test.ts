@@ -4,7 +4,7 @@ import { createPinia, setActivePinia } from 'pinia';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import { Notify } from 'quasar';
 import App from '@/App.vue';
-import { createAppRouter, routes, setUnsavedMessage } from '@/router';
+import { createAppRouter, retryImport, routes, setUnsavedMessage } from '@/router';
 import { useEditorStore } from '@/stores/editor';
 import { useNotify } from '@/composables/useNotify';
 import { configure, fakeApi, makeMap } from './helpers';
@@ -96,6 +96,21 @@ describe('router', () => {
     expect(router.currentRoute.value.name).toBe('dashboard');
     await router.push('/does/not/exist');
     expect(router.currentRoute.value.path).toBe('/');
+  });
+});
+
+describe('retryImport', () => {
+  it('retries transient failures and gives up after the last attempt', async () => {
+    const flaky = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('net'))
+      .mockRejectedValueOnce(new Error('net'))
+      .mockResolvedValue('view');
+    await expect(retryImport(flaky, 3, 1)()).resolves.toBe('view');
+    expect(flaky).toHaveBeenCalledTimes(3);
+    const broken = vi.fn().mockRejectedValue(new Error('gone'));
+    await expect(retryImport(broken, 2, 1)()).rejects.toThrow('gone');
+    expect(broken).toHaveBeenCalledTimes(2);
   });
 });
 

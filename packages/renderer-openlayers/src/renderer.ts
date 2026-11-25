@@ -272,7 +272,12 @@ export class OpenLayersRenderer implements MapRenderer {
 
   private computeSettingsKey(data: MapRenderData): string {
     const s = data.settings;
+    const p = data.provider;
+    // The tile grid (size, zoom range) is fixed when the source is created: changing it needs a rebuild.
     return JSON.stringify([
+      p?.tileSize,
+      p?.minZoom,
+      p?.maxZoom,
       s.zoomControls,
       s.scale,
       s.fullscreen,

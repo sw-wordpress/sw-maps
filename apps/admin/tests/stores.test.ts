@@ -304,6 +304,7 @@ describe('editor store', () => {
     api.features.create.mockRejectedValueOnce(new ApiError('x', 'Bad', 400) as never);
     expect(await store.save()).toBe(false);
     expect(store.activeLayerId).toBe(77);
+    expect(store.canUndo).toBe(false); // the snapshots predate the partial write
     store.addGeometry({ type: 'Point', coordinates: [2, 2] });
     expect(store.doc?.features.filter((f) => f.id < 0).every((f) => f.layer_id === 77)).toBe(true);
   });

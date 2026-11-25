@@ -173,6 +173,21 @@ describe('OpenLayersRenderer', () => {
     expect(target.querySelectorAll('.swmap__canvas')).toHaveLength(1);
   });
 
+  it('rebuilds the tile source when the provider grid settings change', () => {
+    const r = mounted();
+    const first = (r as unknown as { tileLayer: unknown }).tileLayer;
+    r.update(makeData());
+    expect((r as unknown as { tileLayer: unknown }).tileLayer).toBe(first);
+    const bigger = makeData();
+    bigger.provider = { ...bigger.provider!, tileSize: 512, maxZoom: 17 };
+    r.update(bigger);
+    const next = (
+      r as unknown as { tileLayer: { getSource(): { getTileGrid(): { getMaxZoom(): number } } } }
+    ).tileLayer;
+    expect(next).not.toBe(first);
+    expect(next.getSource().getTileGrid().getMaxZoom()).toBe(17);
+  });
+
   it('emits viewchange and a single error after repeated tile failures', () => {
     const r = mounted();
     const errors: Error[] = [];

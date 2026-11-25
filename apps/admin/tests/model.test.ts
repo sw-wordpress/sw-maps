@@ -188,6 +188,33 @@ describe('diff and save plan', () => {
     expect(remapped.features.map((f) => [f.id, f.layer_id])).toEqual([[60, 50]]);
   });
 
+  it('publishes only after all content changes succeeded, but unpublishes first', async () => {
+    const calls: string[] = [];
+    const api: SaveApi = {
+      maps: { update: vi.fn(async (_id, body) => void calls.push(`map ${JSON.stringify(body)}`)) },
+      layers: { create: vi.fn(), update: vi.fn(), remove: vi.fn() },
+      features: {
+        create: vi.fn(),
+        update: vi.fn(),
+        remove: vi.fn(async (id) => void calls.push(`feature-${id}`)),
+      },
+    };
+    const original = base();
+    let working = updateMap(original, { status: 'published', title: 'T' });
+    working = removeFeature(working, 100);
+    await runOps(api, 1, diff(original, working));
+    expect(calls).toEqual(['map {"title":"T"}', 'feature-100', 'map {"status":"published"}']);
+
+    calls.length = 0;
+    const live = updateMap(base(), { status: 'published' });
+    await runOps(api, 1, diff(live, updateMap(removeFeature(live, 100), { status: 'draft' })));
+    expect(calls).toEqual(['map {"status":"draft"}', 'feature-100']);
+
+    calls.length = 0;
+    await runOps(api, 1, diff(original, updateMap(original, { status: 'published' })));
+    expect(calls).toEqual(['map {"status":"published"}']);
+  });
+
   it('reports what was created when a request fails', async () => {
     const api: SaveApi = {
       maps: { update: vi.fn() },

@@ -252,6 +252,9 @@ export const useEditorStore = defineStore('editor', () => {
         activeLayerId.value =
           activeBefore === null ? null : (error.ids.get(activeBefore) ?? activeBefore);
         original.value = await fetchDoc(mapId).catch(() => original.value);
+        // The undo snapshots predate the partial write (ids, deleted objects): they cannot be saved any more.
+        history.clear();
+        historyTick.value++;
         saveError.value = error.cause;
       } else {
         saveError.value = error;
