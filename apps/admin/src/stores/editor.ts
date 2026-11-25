@@ -59,6 +59,8 @@ export const useEditorStore = defineStore('editor', () => {
   const loading = ref(false);
   const saving = ref(false);
   const saveError = ref<unknown>(null);
+  /** Incremented by every load(): a save that finishes after another map was opened must not touch the new document. */
+  let loadToken = 0;
 
   const dirty = computed(
     () => original.value !== null && doc.value !== null && !docEquals(original.value, doc.value),
@@ -91,6 +93,7 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   async function load(mapId: number): Promise<void> {
+    const token = ++loadToken;
     loading.value = true;
     try {
       const [fetched, provs] = await Promise.all([
@@ -99,6 +102,7 @@ export const useEditorStore = defineStore('editor', () => {
           .providers.list()
           .catch(() => [] as ProviderData[]),
       ]);
+      if (token !== loadToken) return; // a newer load() superseded this one
       providers.value = provs;
       original.value = fetched;
       doc.value = cloneDoc(fetched);
@@ -212,10 +216,13 @@ export const useEditorStore = defineStore('editor', () => {
     saving.value = true;
     saveError.value = null;
     const mapId = doc.value.map.id;
+    const token = loadToken;
     const selectedBefore = selectedFeatureId.value;
     const activeBefore = activeLayerId.value;
     try {
       const ids = await runOps(api(), mapId, diff(original.value, doc.value));
+      // Another map was opened meanwhile: the data is saved, the store now belongs to the other document.
+      if (token !== loadToken) return true;
       // Everything was written: acknowledge it before refreshing, so a failing refresh can never lead to duplicates.
       const written = remapIds(doc.value, ids);
       doc.value = written;
@@ -226,13 +233,19 @@ export const useEditorStore = defineStore('editor', () => {
       history.clear();
       historyTick.value++;
       const fresh = await fetchDoc(mapId);
+      if (token !== loadToken) return true;
       original.value = fresh;
       doc.value = cloneDoc(fresh);
       return true;
     } catch (error) {
+      if (token !== loadToken) return false;
       if (error instanceof SaveError) {
         // Keep the work; what was already created must not be created twice on retry.
         doc.value = remapIds(doc.value, error.ids);
+        selectedFeatureId.value =
+          selectedBefore === null ? null : (error.ids.get(selectedBefore) ?? selectedBefore);
+        activeLayerId.value =
+          activeBefore === null ? null : (error.ids.get(activeBefore) ?? activeBefore);
         original.value = await fetchDoc(mapId).catch(() => original.value);
         saveError.value = error.cause;
       } else {

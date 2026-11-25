@@ -279,6 +279,35 @@ describe('editor store', () => {
     expect(api.features.create).toHaveBeenCalledTimes(1);
   });
 
+  it('does not let a finished save replace another map that was opened meanwhile', async () => {
+    const store = await loaded();
+    store.patchMap({ title: 'Map A edited' });
+    let release: (v: unknown) => void = () => undefined;
+    api.maps.update.mockImplementationOnce(
+      () => new Promise((resolve) => (release = resolve)) as never,
+    );
+    const pending = store.save();
+    api.maps.get.mockResolvedValueOnce(makeMap({ id: 2, title: 'Map B' }) as never);
+    await store.load(2);
+    release(makeMap());
+    expect(await pending).toBe(true);
+    expect(store.doc?.map.title).toBe('Map B');
+    expect(store.dirty).toBe(false);
+  });
+
+  it('remaps the active layer and the selection after a partially successful save', async () => {
+    const store = await loaded();
+    const layerId = store.createLayer('New layer');
+    const featureId = store.addGeometry({ type: 'Point', coordinates: [1, 1] });
+    expect([store.activeLayerId, store.selectedFeatureId]).toEqual([layerId, featureId]);
+    api.layers.create.mockResolvedValueOnce(makeLayer({ id: 77 }) as never);
+    api.features.create.mockRejectedValueOnce(new ApiError('x', 'Bad', 400) as never);
+    expect(await store.save()).toBe(false);
+    expect(store.activeLayerId).toBe(77);
+    store.addGeometry({ type: 'Point', coordinates: [2, 2] });
+    expect(store.doc?.features.filter((f) => f.id < 0).every((f) => f.layer_id === 77)).toBe(true);
+  });
+
   it('throws when editing without a loaded map', () => {
     const store = useEditorStore();
     expect(() => store.patchMap({ title: 'x' })).toThrow('No map loaded');

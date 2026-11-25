@@ -46,23 +46,36 @@ export type AttributionPart = { text: string; href?: string };
  * Parses attribution text with `[label](https://url)` links into safe parts. Only http(s) targets become links;
  * everything else stays plain text, so the result can be rendered with DOM text nodes (never innerHTML).
  */
+const HTTP_LINK = /^https?:\/\/[^\s"<>\\]+$/i;
 export function parseAttribution(input: string): AttributionPart[] {
   const parts: AttributionPart[] = [];
-  const pattern = /\[([^\]]*)\]\(([^)\s]*)\)/g;
   let last = 0;
-  for (const match of input.matchAll(pattern)) {
-    const index = match.index ?? 0;
-    if (index > last) parts.push({ text: input.slice(last, index) });
-    const label = match[1] ?? '';
-    const href = match[2] ?? '';
-    parts.push(/^https?:\/\/[^\s"<>\\]+$/i.test(href) ? { text: label, href } : { text: label });
-    last = index + match[0].length;
+  let from = 0;
+  // Linear scan for `[label](target)` (no regular expression, so no backtracking).
+  for (;;) {
+    const open = input.indexOf('[', from);
+    if (open === -1) break;
+    const close = input.indexOf(']', open + 1);
+    if (close === -1 || input[close + 1] !== '(') {
+      from = open + 1;
+      continue;
+    }
+    const end = input.indexOf(')', close + 2);
+    const href = end === -1 ? '' : input.slice(close + 2, end);
+    if (end === -1 || /\s/.test(href) || input.slice(open + 1, close).includes(']')) {
+      from = open + 1;
+      continue;
+    }
+    if (open > last) parts.push({ text: input.slice(last, open) });
+    const label = input.slice(open + 1, close);
+    parts.push(HTTP_LINK.test(href) ? { text: label, href } : { text: label });
+    last = end + 1;
+    from = last;
   }
   if (last < input.length) parts.push({ text: input.slice(last) });
   return parts;
 }
 
-const HTTP_LINK = /^https?:\/\/[^\s"<>\\]+$/i;
 const CONTACT_LINK = /^(?:mailto|tel):\S+$/i;
 
 /** Client side re-check of link targets (the server validates as well; this is defence in depth). */
