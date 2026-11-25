@@ -95,4 +95,14 @@ final class FeaturePropertiesTest extends TestCase
         self::assertSame('ab', FeatureProperties::plain("a\x00\x07b", false));
         self::assertSame('a b', FeatureProperties::plain("a \n\t b", false));
     }
+
+    public function testLenientReadingNeverThrowsAndKeepsValidFields(): void
+    {
+        $p = FeatureProperties::lenient(['title' => 'Ok', 'link' => 'javascript:alert(1)', 'icon' => 'evil', 'image_id' => -4, 'description' => ['x'], 'unknown' => 1]);
+        self::assertSame('Ok', $p->title);
+        self::assertNull($p->link);
+        self::assertSame('builtin:pin', $p->icon);
+        self::assertNull($p->imageId);
+        self::assertSame('', $p->description);
+    }
 }

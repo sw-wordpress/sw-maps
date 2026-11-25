@@ -96,11 +96,28 @@ final class WpdbMaps implements MapRepositoryInterface {
 			(string) $row['title'],
 			(string) $row['description'],
 			MapStatus::tryFrom( (string) $row['status'] ) ?? MapStatus::Draft,
-			Viewport::fromArray( Codec::decode( $row['viewport_json'] ) ),
-			MapSettings::fromArray( Codec::decode( $row['settings_json'] ) ),
+			$this->viewport( $row['viewport_json'] ),
+			$this->settings( $row['settings_json'] ),
 			(int) $row['created_by'],
 			Codec::parse_date( $row['created_at'] ),
 			Codec::parse_date( $row['updated_at'] )
 		);
+	}
+
+	/** Stored JSON that no longer validates falls back to defaults instead of breaking every page with this map. */
+	private function viewport( mixed $json ): Viewport {
+		try {
+			return Viewport::fromArray( Codec::decode( $json ) );
+		} catch ( \Throwable ) {
+			return Viewport::default();
+		}
+	}
+
+	private function settings( mixed $json ): MapSettings {
+		try {
+			return MapSettings::fromArray( Codec::decode( $json ) );
+		} catch ( \Throwable ) {
+			return MapSettings::default();
+		}
 	}
 }

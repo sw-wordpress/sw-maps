@@ -115,20 +115,33 @@ final class WpdbFeatures implements FeatureRepositoryInterface {
 	private function hydrate_all( mixed $rows ): array {
 		$out = array();
 		foreach ( is_array( $rows ) ? $rows : array() as $row ) {
-			$out[] = $this->hydrate( $row );
+			$feature = $this->hydrate( $row );
+			if ( null !== $feature ) {
+				$out[] = $feature;
+			}
 		}
 		return $out;
 	}
 
-	/** @param array<string, mixed> $row */
-	private function hydrate( array $row ): Feature {
-		$geometry = Geometry::fromArray( Codec::decode( $row['geometry_json'] ) );
+	/**
+	 * Rows with a broken geometry are skipped (and logged) instead of breaking the whole page; invalid property
+	 * fields fall back to their defaults.
+	 *
+	 * @param array<string, mixed> $row Database row.
+	 */
+	private function hydrate( array $row ): ?Feature {
+		try {
+			$geometry = Geometry::fromArray( Codec::decode( $row['geometry_json'] ) );
+		} catch ( \Throwable ) {
+			error_log( sprintf( 'sw-maps: feature %d has an invalid geometry and was skipped.', (int) $row['id'] ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			return null;
+		}
 		return new Feature(
 			(int) $row['id'],
 			(int) $row['layer_id'],
 			null === $row['external_id'] ? null : (string) $row['external_id'],
 			$geometry,
-			FeatureProperties::fromArray( Codec::decode( $row['properties_json'] ) ),
+			FeatureProperties::lenient( Codec::decode( $row['properties_json'] ) ),
 			Codec::decode( $row['style_json'] ),
 			Codec::parse_date( $row['updated_at'] )
 		);

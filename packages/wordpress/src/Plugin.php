@@ -30,6 +30,13 @@ final class Plugin {
 		add_action( 'init', array( $this, 'load_textdomain' ) );
 		add_action( 'rest_api_init', array( $this, 'register_rest' ) );
 		add_action( 'wp_initialize_site', array( Lifecycle::class, 'on_new_site' ) );
+		add_action( 'init', array( Integration\Shortcode::class, 'register' ) );
+		add_action( 'init', array( Integration\Block::class, 'register' ) );
+		Integration\Privacy::register();
+		Integration\Consent::register();
+		if ( is_admin() ) {
+			( new Admin\AdminPage() )->register();
+		}
 	}
 
 	/** Runs pending migrations when the stored schema is older than the code (cheap option comparison). */

@@ -91,6 +91,26 @@ final class FeatureProperties
         return new self($title, $description, $address, $imageId, $link, $icon);
     }
 
+    /**
+     * Reads stored data defensively (the database may hold rows written by older versions or other tools): every
+     * invalid field falls back to its default; this method never throws.
+     *
+     * @param array<string, mixed> $data
+     */
+    public static function lenient(array $data): self
+    {
+        $result = self::empty();
+        foreach (array_keys($data) as $key) {
+            try {
+                $result = self::fromArray([$key => $data[$key]], $result);
+            } catch (ValidationException) {
+                continue;
+            }
+        }
+
+        return $result;
+    }
+
     /** Strips tags and control characters; collapses whitespace (newlines kept for multiline text). */
     public static function plain(string $value, bool $multiline): string
     {

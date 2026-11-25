@@ -67,6 +67,8 @@ $swmap_loader->addPsr4( 'SWMaps\\Core\\', SWMAPS_DIR . 'packages/core/src/' );
 $swmap_loader->addPsr4( 'SWMaps\\WordPress\\', SWMAPS_DIR . 'packages/wordpress/src/' );
 unset( $swmap_autoload, $swmap_loader );
 
+require_once SWMAPS_DIR . 'packages/wordpress/src/functions.php';
+
 register_activation_hook( __FILE__, array( \SWMaps\WordPress\Lifecycle::class, 'activate' ) );
 register_deactivation_hook( __FILE__, array( \SWMaps\WordPress\Lifecycle::class, 'deactivate' ) );
 
