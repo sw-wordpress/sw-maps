@@ -16,6 +16,9 @@ swmap_register_source( string $id, \SWMaps\Core\Contracts\MapSourceInterface $so
 | `swmap_import_completed` | action | `array $report` | nach Commit (M2) |
 | `swmap_register_sources` | action | – | Quellenregistrierung (M2) |
 | `swmap_render_options` | filter | `array $options, int $map_id` | vor dem Rendern |
+| `swmap_consent_category` | filter | `string\|null $category` | WP-Consent-API-Kategorie für Kacheln (Standard `marketing`; `null` schaltet die Sperre ab) |
+| `swmap_consent_api_active` | filter | `bool $active` | Ob eine Consent-Implementierung vorhanden ist (Standard: `function_exists( 'wp_has_consent' )`) |
+| `swmap_can_edit_map` | filter | `bool $allowed, int $map_id, int $user_id` | Schränkt ein, wer eine Karte bearbeiten darf (erweitert nie) |
 
 Fehlerrichtlinie: Events erst nach konsistentem Commit; Exceptions in Drittanbieter-Callbacks werden protokolliert und brechen abgeschlossene Operationen nicht ab.
 
@@ -26,8 +29,4 @@ Fehlerrichtlinie: Events erst nach konsistentem Commit; Exceptions in Drittanbie
 | `swmap_publish_maps` | Karten veröffentlichen | Administrator, Editor |
 | `swmap_manage_layers` | Layer verwalten | Administrator, Editor |
 | `swmap_manage_imports` | Importe ausführen | Administrator |
-| `swmap_manage_system` | Provider, Einstellungen, Systemstatus | Administrator (Multisite: Super Admin über `manage_options`-Mapping) |
-
-| `swmap_consent_category` | filter | `string\|null $category` | WP Consent API category required for tiles (default `marketing`; `null` disables gating) |
-| `swmap_consent_api_active` | filter | `bool $active` | Whether a consent implementation is available (default: `function_exists( 'wp_has_consent' )`) |
-| `swmap_can_edit_map` | filter | `bool $allowed, int $map_id, int $user_id` | Restricts (never extends) who may edit a map |
+| `swmap_manage_system` | Provider, Einstellungen, Systemstatus | Administrator (Multisite: Super Admins bestehen jede Prüfung über `is_super_admin`) |

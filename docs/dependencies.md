@@ -9,7 +9,7 @@ Nicht übernommen: Backup/Restore-Logik, Restore-App, Update-Mechanismus (X-01).
 |---|---|---|
 | PHP | >= 8.2 | wie BackupIt |
 | WordPress | >= 6.4 | wie BackupIt |
-| Datenbank | MySQL 5.7+ / MariaDB 10.4+ | utf8mb4, InnoDB, Index-Präfixlängen ≤ 191 Zeichen bei `utf8mb4_unicode_520_ci` |
+| Datenbank | MySQL / MariaDB wie WordPress 6.4 (MySQL 5.5.5+, MariaDB 10.0+) | utf8mb4, InnoDB; getestet mit MariaDB 11.4. BackupIt nennt keine konkreten Versionen („MySQL or MariaDB“), die Untergrenze folgt daher WordPress. Indexlängen ≤ 190 Zeichen (utf8mb4). |
 | Node | ^22.13 / ^24 | wie BackupIt (`engines`) |
 | Vue / Quasar / Pinia / Router / I18n | 3.5 / 2.x / Pinia / 5 / 11 | wie BackupIt |
 | Vite / Vitest / TypeScript | 8 / 5 / 6 | wie BackupIt |
@@ -17,6 +17,6 @@ Nicht übernommen: Backup/Restore-Logik, Restore-App, Update-Mechanismus (X-01).
 | OpenLayers | `ol` 10.x | siehe unten |
 
 ## OpenLayers und PMTiles (M0-03)
-- `ol`: Lizenz BSD-2-Clause (GPL-kompatibel), aktiv gepflegt. Bundle: Viewer-Build mit Tree-Shaking (nur Map, View, TileLayer, VectorLayer, Overlay, Controls) bleibt unter dem Budget in `bin/bundle-budget.json`; Editor-Interaktionen (`Draw`, `Modify`, `Snap`) nur im Admin-Chunk.
+- `ol` 10.x: Lizenz BSD-2-Clause (GPL-kompatibel), aktiv gepflegt. Gemessene Bundlegrößen (gzip): Frontend-Viewer ≈ 101 KB JS + 2 KB CSS; Budget in `bin/bundle-budget.json` (CI: `node bin/check-bundle-size.mjs`). Editor-Interaktionen (`Draw`, `Modify`, `Snap`) sind nur im Admin-Chunk enthalten, nicht im Frontend-Bundle.
 - PMTiles: `pmtiles` (BSD-3-Clause) mit eigener `ol`-Anbindung. Die Einbindung erfolgt erst in M2-14; Entscheidung für die Bibliothek wird dort anhand von Bundlegröße gegen das Budget getroffen. Bis dahin keine Abhängigkeit.
 - Tile-Nutzung: https://operations.osmfoundation.org/policies/tiles/ (Attribution, kein Prefetch, Hinweis auf Alternativen im Admin).
