@@ -1,0 +1,71 @@
+{
+    "name": "sw-maps/sw-maps",
+    "description": "SW Maps - interactive maps for WordPress (monorepo).",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "require": {
+        "php": ">=8.2",
+        "ext-json": "*"
+    },
+    "require-dev": {
+        "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+        "phpcompatibility/phpcompatibility-wp": "^2.1",
+        "phpstan/extension-installer": "^1.4",
+        "phpstan/phpstan": "^2.0",
+        "phpunit/phpunit": "^11.0",
+        "squizlabs/php_codesniffer": "^3.10",
+        "szepeviktor/phpstan-wordpress": "^2.0",
+        "wp-coding-standards/wpcs": "^3.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "SWMaps\\Core\\": "packages/core/src/",
+            "SWMaps\\WordPress\\": "packages/wordpress/src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "SWMaps\\Tests\\Support\\": "tests/Support/",
+            "SWMaps\\Tests\\Unit\\": "tests/Unit/",
+            "SWMaps\\Tests\\Integration\\": "tests/Integration/"
+        }
+    },
+    "extra": {
+        "mozart": {
+            "dep_namespace": "SWMaps\\Dependencies\\",
+            "dep_directory": "/vendor-prefixed/",
+            "classmap_directory": "/vendor-prefixed/",
+            "classmap_prefix": "SWMaps_",
+            "constant_prefix": "SWMAPS_",
+            "functions_prefix": "swmaps_",
+            "generate_autoloader": true,
+            "delete_vendor_directories": true
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "optimize-autoloader": true,
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true,
+            "phpstan/extension-installer": true
+        },
+        "platform": {
+            "php": "8.2.0"
+        }
+    },
+    "scripts": {
+        "test": "phpunit --testsuite unit,integration",
+        "stan": "phpstan analyse --memory-limit=1G",
+        "cs": "phpcs --runtime-set ignore_warnings_on_exit 1",
+        "cs:fix": "phpcbf",
+        "cs:wp": "phpcs --standard=phpcs-wordpress.xml.dist --runtime-set ignore_warnings_on_exit 1",
+        "test:wp": "cd tests/wp && vendor/bin/phpunit -c phpunit.xml.dist",
+        "test:wp:ms": "cd tests/wp && vendor/bin/phpunit -c phpunit-ms.xml.dist",
+        "check": [
+            "@cs",
+            "@cs:wp",
+            "@stan",
+            "@test"
+        ]
+    }
+}

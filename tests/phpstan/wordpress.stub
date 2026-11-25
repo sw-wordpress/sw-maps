@@ -1,0 +1,7 @@
+<?php
+
+/**
+ * Corrections of WordPress core PHPDoc (never loaded at runtime).
+ *
+ * @package sw-maps
+ */

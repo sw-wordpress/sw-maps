@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<ruleset name="sw-maps">
+    <description>PSR-12 for core and tests (CODE-STYLE.md); the WordPress adapter is checked by phpcs-wordpress.xml.dist.</description>
+    <arg name="extensions" value="php"/>
+    <arg name="colors"/>
+    <arg value="sp"/>
+    <arg name="cache" value=".phpcs.cache"/>
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+    <exclude-pattern>*/node_modules/*</exclude-pattern>
+    <file>packages/core/src</file>
+    <file>tests/Unit</file>
+    <file>tests/Integration</file>
+    <file>tests/Support</file>
+    <file>tests/coverage</file>
+    <rule ref="PSR12"/>
+    <rule ref="Generic.Files.LineLength">
+        <properties>
+            <property name="lineLimit" value="200"/>
+            <property name="absoluteLineLimit" value="0"/>
+        </properties>
+    </rule>
+    <config name="testVersion" value="8.2-"/>
+    <rule ref="PHPCompatibility">
+        <exclude-pattern>tests/*</exclude-pattern>
+    </rule>
+    <!-- PHPCompatibility 9.x does not understand PHP 8.1 enums ($this/self inside enum methods). -->
+    <rule ref="PHPCompatibility.Variables.ForbiddenThisUseContexts.OutsideObjectContext">
+        <exclude-pattern>packages/core/src/Domain/*</exclude-pattern>
+    </rule>
+    <rule ref="PHPCompatibility.FunctionDeclarations.NewParamTypeDeclarations.SelfOutsideClassScopeFound">
+        <exclude-pattern>packages/core/src/Domain/*</exclude-pattern>
+    </rule>
+</ruleset>

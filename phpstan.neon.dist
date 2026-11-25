@@ -1,0 +1,20 @@
+parameters:
+    level: 8
+    paths:
+        - packages/core/src
+        - packages/wordpress/src
+        - sw-maps.php
+        - uninstall.php
+    stubFiles:
+        - tests/phpstan/wordpress.stub
+    scanFiles:
+        - tests/phpstan/stubs.php
+    bootstrapFiles:
+        - tests/phpstan/bootstrap.php
+    dynamicConstantNames:
+        - SWMAPS_VERSION
+        - SWMAPS_FILE
+        - SWMAPS_DIR
+        - SWMAPS_URL
+        - SWMAPS_MIN_PHP
+    tmpDir: .phpstan.cache
