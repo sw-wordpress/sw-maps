@@ -119,6 +119,7 @@ jobs:
         bin/test-zip-install.sh
     - name: Mock mode (admin app without WordPress)
       run: |
+        (cd packages/renderer-openlayers && npm ci --no-audit --no-fund)
         (cd apps/admin && npm ci --no-audit --no-fund)
         (cd e2e && npm ci --no-audit --no-fund && npx playwright install chromium && npm run test:mock)
     - uses: actions/upload-artifact@v5

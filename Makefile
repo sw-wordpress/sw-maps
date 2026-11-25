@@ -12,8 +12,8 @@ release:
 
 .PHONY: build
 build:
-	cd $(ADMIN_DIR) && $(NPM) ci && $(NPM) run build
 	cd $(RENDERER_DIR) && $(NPM) ci && $(NPM) run build
+	cd $(ADMIN_DIR) && $(NPM) ci && $(NPM) run build
 	node bin/check-bundle-size.mjs
 
 # Release ZIP exactly as the release workflow builds it. Output: dist/sw-maps-<version>.zip

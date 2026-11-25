@@ -12,10 +12,11 @@ STAGE="$(mktemp -d)"
 trap 'rm -r "$STAGE"' EXIT
 NAME=sw-maps
 
-echo ">> building the admin app"
-(cd "$ROOT/apps/admin" && npm ci --no-audit --no-fund && npm run build)
+# The admin app imports the renderer sources, so the renderer's dependencies (OpenLayers) must be installed first.
 echo ">> building the frontend bundle"
 (cd "$ROOT/packages/renderer-openlayers" && npm ci --no-audit --no-fund && npm run build)
+echo ">> building the admin app"
+(cd "$ROOT/apps/admin" && npm ci --no-audit --no-fund && npm run build)
 node "$ROOT/bin/check-bundle-size.mjs"
 
 echo ">> assembling plugin tree"
