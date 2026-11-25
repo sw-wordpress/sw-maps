@@ -40,10 +40,7 @@ test('place a marker, save and see it in the layer panel', async ({ page }) => {
   expect((api.state.features[0]!['properties'] as Record<string, string>)['title']).toBe(
     'Treffpunkt',
   );
-  await page
-    .locator('[data-test="undo"]')
-    .click()
-    .catch(() => undefined);
+  await expect(page.locator('[data-test="undo"]')).toBeDisabled(); // saving clears the local history
 });
 
 test('enabling a provider shows the external hosts first', async ({ page }) => {

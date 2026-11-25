@@ -42,14 +42,7 @@ const tabs = computed(() => [
       </q-tabs>
     </nav>
     <main class="swmap-main">
-      <router-view v-slot="{ Component }">
-        <suspense>
-          <component :is="Component" />
-          <template #fallback>
-            <q-spinner color="primary" size="2em" :aria-label="t('app.loading')" />
-          </template>
-        </suspense>
-      </router-view>
+      <router-view />
     </main>
   </div>
 </template>
