@@ -1,0 +1,8 @@
+{
+  "groups": [
+    { "name": "frontend viewer JS (loaded on pages with a map)", "dir": "assets/frontend", "pattern": "\\.js$", "maxGzipKb": 115 },
+    { "name": "frontend viewer CSS", "dir": "assets/frontend", "pattern": "\\.css$", "maxGzipKb": 4 },
+    { "name": "admin app JS (all chunks, admin pages only)", "dir": "assets/admin", "pattern": "\\.js$", "maxGzipKb": 330 },
+    { "name": "admin app CSS", "dir": "assets/admin", "pattern": "\\.css$", "maxGzipKb": 60 }
+  ]
+}

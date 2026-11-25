@@ -20,6 +20,8 @@ final class Block {
 		register_block_type(
 			SWMAPS_DIR . 'blocks/map',
 			array(
+				'title'           => __( 'SW Map', 'sw-maps' ),
+				'description'     => __( 'Displays a map created with SW Maps.', 'sw-maps' ),
 				'render_callback' => array( self::class, 'render' ),
 			)
 		);
