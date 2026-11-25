@@ -54,7 +54,18 @@ watch(
     }, 300);
   },
 );
-watch([() => maps.status, () => maps.page], () => void run(() => maps.load()));
+// A new filter always starts at page 1 (the page watcher below then loads); otherwise the current page may not exist.
+watch(
+  () => maps.status,
+  () => {
+    if (maps.page !== 1) maps.page = 1;
+    else void run(() => maps.load());
+  },
+);
+watch(
+  () => maps.page,
+  () => void run(() => maps.load()),
+);
 
 async function create(): Promise<void> {
   const title = newTitle.value.trim();

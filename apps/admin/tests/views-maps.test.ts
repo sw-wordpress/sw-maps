@@ -3,6 +3,7 @@ import { flushPromises } from '@vue/test-utils';
 import { notifier } from './notifier';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import MapsView from '@/features/maps/MapsView.vue';
+import { useMapsStore } from '@/stores/maps';
 import EmbedDialog from '@/features/maps/EmbedDialog.vue';
 import { ApiError } from '@/api/client';
 import { configure, fakeApi, makeMap, mountView } from './helpers';
@@ -94,6 +95,22 @@ describe('MapsView', () => {
     w.findComponent({ name: 'QSelect' }).vm.$emit('update:modelValue', 'draft');
     await flushPromises();
     expect(api.maps.list).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'draft' }));
+  });
+
+  it('starts at page 1 when the status filter changes while a later page is shown', async () => {
+    api.maps.list.mockResolvedValue({ items: [makeMap()], total: 45, totalPages: 3 } as never);
+    const w = await mountMaps();
+    const store = useMapsStore();
+    store.page = 3;
+    await flushPromises();
+    api.maps.list.mockClear();
+    w.findComponent({ name: 'QSelect' }).vm.$emit('update:modelValue', 'published');
+    await flushPromises();
+    expect(store.page).toBe(1);
+    expect(api.maps.list).toHaveBeenCalledTimes(1);
+    expect(api.maps.list).toHaveBeenLastCalledWith(
+      expect.objectContaining({ status: 'published', page: 1 }),
+    );
   });
 
   it('duplicates, publishes and unpublishes', async () => {
