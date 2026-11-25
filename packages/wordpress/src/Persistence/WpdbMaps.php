@@ -14,6 +14,7 @@ use SWMaps\Core\Domain\MapEntity;
 use SWMaps\Core\Domain\MapSettings;
 use SWMaps\Core\Domain\MapStatus;
 use SWMaps\Core\Domain\Viewport;
+use SWMaps\Core\Exception\ConflictException;
 
 final class WpdbMaps implements MapRepositoryInterface {
 
@@ -64,17 +65,38 @@ final class WpdbMaps implements MapRepositoryInterface {
 		$formats = array( '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s' );
 		$table   = Schema::table( 'maps' );
 		if ( 0 === $map->id ) {
-			if ( false === $wpdb->insert( $table, $data, $formats ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-				throw new \RuntimeException( 'Could not store the map.' );
+			$suppress = $wpdb->suppress_errors( true );
+			$result   = $wpdb->insert( $table, $data, $formats ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+			$wpdb->suppress_errors( $suppress );
+			if ( false === $result ) {
+				$this->fail( 'Could not store the map.' );
 			}
 			return $map->withId( (int) $wpdb->insert_id );
 		}
 		unset( $data['created_by'], $data['created_at'] );
-		$formats = array( '%s', '%s', '%s', '%s', '%s', '%s', '%s' );
-		if ( false === $wpdb->update( $table, $data, array( 'id' => $map->id ), $formats, array( '%d' ) ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-			throw new \RuntimeException( 'Could not update the map.' );
+		$formats  = array( '%s', '%s', '%s', '%s', '%s', '%s', '%s' );
+		$suppress = $wpdb->suppress_errors( true );
+		$result   = $wpdb->update( $table, $data, array( 'id' => $map->id ), $formats, array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->suppress_errors( $suppress );
+		if ( false === $result ) {
+			$this->fail( 'Could not update the map.' );
 		}
 		return $map;
+	}
+
+	/**
+	 * A lost race on the unique slug index is a conflict, everything else an unexpected failure.
+	 *
+	 * @throws ConflictException On a duplicate slug.
+	 * @throws \RuntimeException On any other database error.
+	 */
+	private function fail( string $message ): never {
+		global $wpdb;
+		if ( false !== stripos( (string) $wpdb->last_error, 'duplicate entry' ) ) {
+			throw new ConflictException( 'Slug already in use.' );
+		}
+		error_log( 'sw-maps: ' . $message . ' ' . $wpdb->last_error ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+		throw new \RuntimeException( $message );
 	}
 
 	public function delete( int $id ): void {

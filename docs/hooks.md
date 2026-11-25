@@ -27,3 +27,7 @@ Fehlerrichtlinie: Events erst nach konsistentem Commit; Exceptions in Drittanbie
 | `swmap_manage_layers` | Layer verwalten | Administrator, Editor |
 | `swmap_manage_imports` | Importe ausführen | Administrator |
 | `swmap_manage_system` | Provider, Einstellungen, Systemstatus | Administrator (Multisite: Super Admin über `manage_options`-Mapping) |
+
+| `swmap_consent_category` | filter | `string\|null $category` | WP Consent API category required for tiles (default `marketing`; `null` disables gating) |
+| `swmap_consent_api_active` | filter | `bool $active` | Whether a consent implementation is available (default: `function_exists( 'wp_has_consent' )`) |
+| `swmap_can_edit_map` | filter | `bool $allowed, int $map_id, int $user_id` | Restricts (never extends) who may edit a map |

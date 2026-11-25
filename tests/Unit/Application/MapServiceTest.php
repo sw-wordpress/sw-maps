@@ -111,4 +111,37 @@ final class MapServiceTest extends TestCase
         self::assertSame(['layers' => 1, 'features' => 1], $this->f->mapService->counts($copy->id));
         self::assertSame(['layers' => 1, 'features' => 1], $this->f->mapService->counts($m->id));
     }
+
+    public function testLosingTheSlugRaceRetriesWithAnotherSlug(): void
+    {
+        $maps = new class extends \SWMaps\Tests\Support\InMemoryMaps {
+            public int $failures = 2;
+
+            public function save(\SWMaps\Core\Domain\MapEntity $map): \SWMaps\Core\Domain\MapEntity
+            {
+                if ($map->id === 0 && $this->failures-- > 0) {
+                    throw new ConflictException('duplicate');
+                }
+
+                return parent::save($map);
+            }
+        };
+        $service = new \SWMaps\Core\Application\MapService($maps, $this->f->layers, $this->f->features, $this->f->tx, $this->f->clock, $this->f->events);
+        $map = $service->create(['title' => 'Race'], 1);
+        self::assertMatchesRegularExpression('/^race(-[0-9a-f]{4})?$/', $map->slug);
+        self::assertSame(1, count($maps->items));
+    }
+
+    public function testGivesUpAfterRepeatedConflicts(): void
+    {
+        $maps = new class extends \SWMaps\Tests\Support\InMemoryMaps {
+            public function save(\SWMaps\Core\Domain\MapEntity $map): \SWMaps\Core\Domain\MapEntity
+            {
+                throw new ConflictException('duplicate');
+            }
+        };
+        $service = new \SWMaps\Core\Application\MapService($maps, $this->f->layers, $this->f->features, $this->f->tx, $this->f->clock, $this->f->events);
+        $this->expectException(ConflictException::class);
+        $service->create(['title' => 'Race'], 1);
+    }
 }

@@ -7,7 +7,7 @@ namespace SWMaps\Tests\Support;
 use SWMaps\Core\Contracts\MapRepositoryInterface;
 use SWMaps\Core\Domain\MapEntity;
 
-final class InMemoryMaps implements MapRepositoryInterface
+class InMemoryMaps implements MapRepositoryInterface
 {
     /** @var array<int, MapEntity> */
     public array $items = [];

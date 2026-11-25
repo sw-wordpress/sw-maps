@@ -202,6 +202,25 @@ final class RestApiTest extends SwMapsTestCase {
 		$this->assertSame( 201, $feature->get_status() );
 	}
 
+	public function test_duplicate_slug_on_the_unique_index_is_a_conflict_not_a_server_error(): void {
+		$id    = $this->create_map( 'Taken' );
+		$taken = Services::instance()->maps()->get( $id );
+		$copy  = new SWMaps\Core\Domain\MapEntity( 0, $taken->slug, 'Other', '', $taken->status, $taken->viewport, $taken->settings, 1, $taken->createdAt, $taken->updatedAt );
+		$this->expectException( SWMaps\Core\Exception\ConflictException::class );
+		Services::instance()->map_repository()->save( $copy );
+	}
+
+	public function test_parallel_creation_with_the_same_title_never_fails(): void {
+		$this->as_role( 'administrator' );
+		$slugs = array();
+		for ( $i = 0; $i < 4; $i++ ) {
+			$response = $this->rest( 'POST', '/maps', array( 'title' => 'Same title' ) );
+			$this->assertSame( 201, $response->get_status() );
+			$slugs[] = $response->get_data()['slug'];
+		}
+		$this->assertCount( 4, array_unique( $slugs ) );
+	}
+
 	public function test_feature_limit_per_layer(): void {
 		$id    = $this->create_map();
 		$layer = $this->rest( 'POST', "/maps/{$id}/layers", array( 'title' => 'L' ) )->get_data();

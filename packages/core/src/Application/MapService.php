@@ -22,6 +22,8 @@ use SWMaps\Core\Exception\ValidationException;
 
 final class MapService
 {
+    private const SLUG_RETRIES = 5;
+
     public function __construct(
         private readonly MapRepositoryInterface $maps,
         private readonly LayerRepositoryInterface $layers,
@@ -52,12 +54,23 @@ final class MapService
     {
         $title = Input::string($input, 'title', true, 200) ?? '';
         $now = $this->clock->now();
-        $slug = $this->uniqueSlug(Input::string($input, 'slug', false, 100) ?: Slug::from($title));
+        $base = Input::string($input, 'slug', false, 100) ?: Slug::from($title);
         $viewport = Viewport::fromArray(Input::object($input, 'viewport') ?? []);
         $settings = MapSettings::fromArray(Input::object($input, 'settings') ?? []);
-        $map = new MapEntity(0, $slug, $title, Input::string($input, 'description', false, 2000) ?? '', MapStatus::Draft, $viewport, $settings, $userId, $now, $now);
+        $description = Input::string($input, 'description', false, 2000) ?? '';
 
-        return $this->maps->save($map);
+        // Two requests can pick the same free slug at the same time; the unique index decides and the loser retries.
+        for ($attempt = 0;; ++$attempt) {
+            $slug = $this->uniqueSlug($base, $attempt);
+            $map = new MapEntity(0, $slug, $title, $description, MapStatus::Draft, $viewport, $settings, $userId, $now, $now);
+            try {
+                return $this->maps->save($map);
+            } catch (ConflictException $e) {
+                if ($attempt >= self::SLUG_RETRIES) {
+                    throw $e;
+                }
+            }
+        }
     }
 
     /**
@@ -149,12 +162,13 @@ final class MapService
         return ['layers' => count($this->layers->forMap($mapId)), 'features' => $this->features->countForMap($mapId)];
     }
 
-    private function uniqueSlug(string $base): string
+    /** @param int $skip number of candidate suffixes to skip (after a lost race on the unique index) */
+    private function uniqueSlug(string $base, int $skip = 0): string
     {
         $base = Slug::valid($base) ? $base : (Slug::from($base) ?: 'map');
-        $slug = $base;
+        $slug = $skip === 0 ? $base : substr($base, 0, 90) . '-' . bin2hex(random_bytes(2));
         for ($i = 2; $this->maps->slugExists($slug); ++$i) {
-            $slug = substr($base, 0, 95) . '-' . $i;
+            $slug = substr($base, 0, 90) . '-' . $i;
         }
 
         return $slug;

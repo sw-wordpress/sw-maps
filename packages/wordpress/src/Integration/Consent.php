@@ -30,8 +30,17 @@ final class Consent {
 		return is_string( $category ) && in_array( $category, array( 'functional', 'preferences', 'statistics-anonymous', 'statistics', 'marketing' ), true ) ? $category : null;
 	}
 
+	/**
+	 * Whether a WP Consent API implementation is available. Filterable for environments that provide the consent
+	 * decision differently (and for tests).
+	 */
 	public static function api_active(): bool {
-		return function_exists( 'wp_has_consent' );
+		/**
+		 * Filters whether the WP Consent API is considered active.
+		 *
+		 * @param bool $active True when the `wp_has_consent` function exists.
+		 */
+		return true === apply_filters( 'swmap_consent_api_active', function_exists( 'wp_has_consent' ) );
 	}
 
 	/** Declares the plugin's cookie-free usage for the Consent API plugin list. */
