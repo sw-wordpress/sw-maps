@@ -25,10 +25,10 @@ const tools: Array<{
   icon: string;
   label: 'editor.toolSelect' | 'editor.toolPoint' | 'editor.toolLine' | 'editor.toolPolygon';
 }> = [
-  { tool: 'select', icon: 'near_me', label: 'editor.toolSelect' },
-  { tool: 'point', icon: 'place', label: 'editor.toolPoint' },
-  { tool: 'line', icon: 'timeline', label: 'editor.toolLine' },
-  { tool: 'polygon', icon: 'pentagon', label: 'editor.toolPolygon' },
+  { tool: 'select', icon: 'r_near_me', label: 'editor.toolSelect' },
+  { tool: 'point', icon: 'r_place', label: 'editor.toolPoint' },
+  { tool: 'line', icon: 'r_timeline', label: 'editor.toolLine' },
+  { tool: 'polygon', icon: 'r_pentagon', label: 'editor.toolPolygon' },
 ];
 </script>
 
@@ -54,7 +54,7 @@ const tools: Array<{
     <q-btn
       flat
       dense
-      icon="undo"
+      icon="r_undo"
       :aria-label="t('editor.undo')"
       :disable="!canUndo"
       data-test="undo"
@@ -63,7 +63,7 @@ const tools: Array<{
     <q-btn
       flat
       dense
-      icon="redo"
+      icon="r_redo"
       :aria-label="t('editor.redo')"
       :disable="!canRedo"
       data-test="redo"
@@ -73,7 +73,7 @@ const tools: Array<{
       flat
       dense
       no-caps
-      icon="zoom_out_map"
+      icon="r_zoom_out_map"
       :label="t('editor.fitAll')"
       data-test="fit"
       @click="emit('fit')"
@@ -85,8 +85,8 @@ const tools: Array<{
       flat
       toggle-color="primary"
       :options="[
-        { value: false, icon: 'desktop_windows', attrs: { 'aria-label': t('editor.desktop') } },
-        { value: true, icon: 'smartphone', attrs: { 'aria-label': t('editor.mobile') } },
+        { value: false, icon: 'r_desktop_windows', attrs: { 'aria-label': t('editor.desktop') } },
+        { value: true, icon: 'r_smartphone', attrs: { 'aria-label': t('editor.mobile') } },
       ]"
       data-test="preview-toggle"
       @update:model-value="emit('update:mobile', $event)"
@@ -96,7 +96,7 @@ const tools: Array<{
     <q-btn
       color="primary"
       no-caps
-      icon="save"
+      icon="r_save"
       :label="t('editor.save')"
       :disable="!dirty"
       :loading="saving"

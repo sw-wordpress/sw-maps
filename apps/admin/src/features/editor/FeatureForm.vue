@@ -166,7 +166,7 @@ async function chooseImage(): Promise<void> {
           flat
           dense
           no-caps
-          icon="image"
+          icon="r_image"
           :label="t('feature.chooseImage')"
           data-test="choose-image"
           @click="chooseImage"
@@ -176,7 +176,7 @@ async function chooseImage(): Promise<void> {
           flat
           dense
           no-caps
-          icon="close"
+          icon="r_close"
           :label="t('feature.removeImage')"
           data-test="remove-image"
           @click="
@@ -225,7 +225,7 @@ async function chooseImage(): Promise<void> {
       flat
       no-caps
       color="negative"
-      icon="delete"
+      icon="r_delete"
       :label="t('feature.delete')"
       data-test="delete"
       @click="emit('delete')"

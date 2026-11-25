@@ -185,6 +185,23 @@ final class RestApiTest extends SwMapsTestCase {
 		$this->assertSame( 1, $left, 'only the duplicate keeps its feature' );
 	}
 
+	public function test_admin_app_payload_with_null_external_id_is_accepted(): void {
+		$id    = $this->create_map();
+		$layer = $this->rest( 'POST', "/maps/{$id}/layers", array( 'title' => 'L', 'status' => 'published', 'sort_order' => 0, 'visible' => true, 'style' => array() ) );
+		$this->assertSame( 201, $layer->get_status() );
+		$feature = $this->rest(
+			'POST',
+			'/layers/' . $layer->get_data()['id'] . '/features',
+			array(
+				'geometry'    => $this->point(),
+				'properties'  => array( 'title' => 'A', 'description' => '', 'address' => '', 'image_id' => null, 'link' => null, 'icon' => 'builtin:pin' ),
+				'style'       => array(),
+				'external_id' => null,
+			)
+		);
+		$this->assertSame( 201, $feature->get_status() );
+	}
+
 	public function test_feature_limit_per_layer(): void {
 		$id    = $this->create_map();
 		$layer = $this->rest( 'POST', "/maps/{$id}/layers", array( 'title' => 'L' ) )->get_data();

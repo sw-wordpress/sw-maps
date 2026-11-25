@@ -86,7 +86,7 @@ function fitAll(): void {
 <template>
   <div v-if="store.doc">
     <div class="row items-center q-mb-sm">
-      <q-btn flat dense no-caps icon="arrow_back" :label="t('editor.back')" to="/maps" />
+      <q-btn flat dense no-caps icon="r_arrow_back" :label="t('editor.back')" to="/maps" />
       <h2 class="text-h6 q-my-none q-ml-md">{{ store.doc.map.title }}</h2>
     </div>
     <EditorToolbar

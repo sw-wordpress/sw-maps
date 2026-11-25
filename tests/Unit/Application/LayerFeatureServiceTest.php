@@ -115,4 +115,15 @@ final class LayerFeatureServiceTest extends TestCase
         self::assertStringContainsString('"style":{}', json_encode($l->toArray(), JSON_THROW_ON_ERROR));
         self::assertSame($this->mapId, $this->f->mapService->get($this->mapId)->toArray()['id']);
     }
+
+    public function testNullMeansNotGivenForOptionalFields(): void
+    {
+        $l = $this->f->layerService->create($this->mapId, ['title' => 'A']);
+        $f = $this->f->featureService->create($l->id, ['geometry' => ['type' => 'Point', 'coordinates' => [1, 1]], 'external_id' => null]);
+        self::assertNull($f->externalId);
+        $m = $this->f->mapService->update($this->mapId, ['slug' => null, 'description' => null])['map'];
+        self::assertSame('m', $m->slug);
+        $this->expectException(ValidationException::class);
+        $this->f->layerService->create($this->mapId, ['title' => null]);
+    }
 }

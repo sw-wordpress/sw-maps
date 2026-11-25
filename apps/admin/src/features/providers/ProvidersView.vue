@@ -84,7 +84,7 @@ async function test(provider: ProviderData): Promise<void> {
       <q-btn
         color="primary"
         no-caps
-        icon="add"
+        icon="r_add"
         :label="t('providers.add')"
         data-test="add"
         @click="openDialog(null)"
@@ -110,7 +110,7 @@ async function test(provider: ProviderData): Promise<void> {
           flat
           dense
           no-caps
-          icon="wifi_tethering"
+          icon="r_wifi_tethering"
           :label="t('providers.test')"
           data-test="test"
           @click="test(p)"
@@ -119,7 +119,7 @@ async function test(provider: ProviderData): Promise<void> {
           flat
           dense
           round
-          icon="edit"
+          icon="r_edit"
           :aria-label="t('common.edit')"
           data-test="edit"
           @click="openDialog(p)"
@@ -128,7 +128,7 @@ async function test(provider: ProviderData): Promise<void> {
           flat
           dense
           round
-          icon="delete"
+          icon="r_delete"
           color="negative"
           :aria-label="t('common.delete')"
           data-test="delete"

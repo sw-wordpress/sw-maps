@@ -12,7 +12,7 @@ final class Input
     /** @param array<string, mixed> $data */
     public static function string(array $data, string $key, bool $required, int $max): ?string
     {
-        if (!array_key_exists($key, $data)) {
+        if (!array_key_exists($key, $data) || ($data[$key] === null && !$required)) {
             if ($required) {
                 throw ValidationException::field($key, 'Required.');
             }

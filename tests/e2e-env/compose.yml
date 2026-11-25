@@ -1,0 +1,97 @@
+# Throw-away WordPress + MariaDB for the Playwright suite (docs/development.md, "End-to-end tests").
+# Always started through bin/test-e2e.sh, which generates .generated/e2e.env (ports, passwords, plugin path), uses a unique
+# project name and removes containers, network and volumes afterwards. Never point this at a real install.
+name: ${SWMAPS_E2E_PROJECT:-swmaps-e2e}
+
+x-wp-env: &wp-env
+  WORDPRESS_DB_HOST: db
+  WORDPRESS_DB_USER: wp
+  WORDPRESS_DB_PASSWORD: wp
+  WORDPRESS_DB_NAME: wp
+  WORDPRESS_DEBUG: "1"
+  WORDPRESS_CONFIG_EXTRA: |
+    define( 'WP_DEBUG_DISPLAY', false );
+    define( 'WP_DEBUG_LOG', true );
+    define( 'DISALLOW_FILE_EDIT', true );
+    define( 'DISABLE_WP_CRON', true );
+    define( 'AUTOMATIC_UPDATER_DISABLED', true );
+    // The web container never calls out: no update checks, and no request to public tile servers can succeed.
+    if ( getenv( 'SWMAPS_E2E_BLOCK_HTTP' ) ) {
+        define( 'WP_HTTP_BLOCK_EXTERNAL', true );
+    }
+    if ( isset( $$_SERVER['HTTP_HOST'] ) ) {
+        define( 'WP_HOME', 'http://' . $$_SERVER['HTTP_HOST'] );
+        define( 'WP_SITEURL', WP_HOME );
+    }
+
+x-plugin-mount: &plugin-mount
+  type: bind
+  source: ${SWMAPS_E2E_PLUGIN_DIR:?set by bin/test-e2e.sh}
+  target: /var/www/html/wp-content/plugins/sw-maps
+  read_only: true
+
+x-mu-mount: &mu-mount
+  type: bind
+  source: ./mu-plugins
+  target: /var/www/html/wp-content/mu-plugins
+  read_only: true
+
+services:
+  db:
+    image: ${SWMAPS_E2E_DB_IMAGE:-mariadb:11.4}
+    environment:
+      MARIADB_ROOT_PASSWORD: root-${SWMAPS_E2E_PW_ADMIN:?}
+      MARIADB_DATABASE: wp
+      MARIADB_USER: wp
+      MARIADB_PASSWORD: wp
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 2s
+      timeout: 3s
+      retries: 40
+
+  wordpress:
+    image: ${SWMAPS_E2E_WP_IMAGE:-wordpress:6.9-php8.3-apache}
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      <<: *wp-env
+      SWMAPS_E2E_BLOCK_HTTP: "1"
+    ports:
+      - "127.0.0.1:${SWMAPS_E2E_PORT:?}:80"
+    volumes:
+      - wp:/var/www/html
+      - *plugin-mount
+      - *mu-mount
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /var/www/html/wp-config.php && php -r 'exit(@fsockopen(\"127.0.0.1\",80)?0:1);'"]
+      interval: 2s
+      timeout: 3s
+      retries: 40
+
+  # One-shot provisioning (docker compose run --rm wpcli): core install, plugin, role users.
+  wpcli:
+    image: ${SWMAPS_E2E_CLI_IMAGE:-wordpress:cli-php8.3}
+    profiles: ["provision"]
+    user: "33:33"
+    depends_on:
+      wordpress: { condition: service_healthy }
+    environment:
+      <<: *wp-env
+      HOME: /tmp
+      WP_CLI_CACHE_DIR: /tmp/wp-cli-cache
+      SWMAPS_E2E_BASE_URL: ${SWMAPS_E2E_BASE_URL:?}
+      SWMAPS_E2E_PW_ADMIN: ${SWMAPS_E2E_PW_ADMIN:?}
+      SWMAPS_E2E_PW_EDITOR: ${SWMAPS_E2E_PW_EDITOR:?}
+      SWMAPS_E2E_PW_SUBSCRIBER: ${SWMAPS_E2E_PW_SUBSCRIBER:?}
+    volumes:
+      - wp:/var/www/html
+      - *plugin-mount
+      - *mu-mount
+      - ./provision.sh:/provision.sh:ro
+    entrypoint: ["sh", "/provision.sh"]
+
+volumes:
+  wp:

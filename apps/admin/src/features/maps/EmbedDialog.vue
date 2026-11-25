@@ -34,7 +34,7 @@ async function copy(text: string): Promise<void> {
           flat
           dense
           no-caps
-          icon="content_copy"
+          icon="r_content_copy"
           :label="t('common.copy')"
           data-test="copy-shortcode"
           @click="copy(shortcode)"
@@ -47,7 +47,7 @@ async function copy(text: string): Promise<void> {
           flat
           dense
           no-caps
-          icon="content_copy"
+          icon="r_content_copy"
           :label="t('common.copy')"
           @click="copy(php)"
         />

@@ -73,7 +73,7 @@ onMounted(async () => {
       class="q-mt-md"
       color="primary"
       no-caps
-      icon="add"
+      icon="r_add"
       :label="t('dashboard.newMap')"
       to="/maps"
     />

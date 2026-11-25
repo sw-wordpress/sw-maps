@@ -4,6 +4,7 @@ import { Notify, Quasar } from 'quasar';
 import iconSet from 'quasar/icon-set/material-icons-round';
 import 'quasar/dist/quasar.prod.css';
 import '@quasar/extras/material-icons-round/material-icons-round.css';
+import '../../../packages/renderer-openlayers/src/viewer.css';
 import './styles/app.css';
 
 import App from './App.vue';

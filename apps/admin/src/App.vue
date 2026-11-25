@@ -8,13 +8,13 @@ const config = getConfig();
 const canManage = computed(() => hasCapability(config, 'swmap_manage_system'));
 
 const tabs = computed(() => [
-  { to: '/', label: t('nav.dashboard'), icon: 'dashboard' },
-  { to: '/maps', label: t('nav.maps'), icon: 'map' },
+  { to: '/', label: t('nav.dashboard'), icon: 'r_dashboard' },
+  { to: '/maps', label: t('nav.maps'), icon: 'r_map' },
   ...(canManage.value
     ? [
-        { to: '/providers', label: t('nav.providers'), icon: 'layers' },
-        { to: '/settings', label: t('nav.settings'), icon: 'settings' },
-        { to: '/status', label: t('nav.status'), icon: 'monitor_heart' },
+        { to: '/providers', label: t('nav.providers'), icon: 'r_layers' },
+        { to: '/settings', label: t('nav.settings'), icon: 'r_settings' },
+        { to: '/status', label: t('nav.status'), icon: 'r_monitor_heart' },
       ]
     : []),
 ]);

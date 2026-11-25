@@ -215,7 +215,7 @@ function commitSettings(): void {
         flat
         dense
         no-caps
-        icon="my_location"
+        icon="r_my_location"
         :label="t('mapForm.useCurrentView')"
         data-test="use-view"
         @click="emit('use-current-view')"

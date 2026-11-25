@@ -51,7 +51,7 @@ function askDelete(layer: LayerData): void {
         flat
         dense
         round
-        icon="add"
+        icon="r_add"
         :aria-label="t('editor.addLayer')"
         data-test="add-layer"
         @click="emit('add-layer')"
@@ -76,7 +76,7 @@ function askDelete(layer: LayerData): void {
           flat
           dense
           round
-          :icon="layer.visible ? 'visibility' : 'visibility_off'"
+          :icon="layer.visible ? 'r_visibility' : 'r_visibility_off'"
           :aria-label="layer.visible ? t('editor.visible') : t('editor.hidden')"
           data-test="toggle-layer"
           @click="emit('toggle-layer', layer.id, !layer.visible)"
@@ -85,7 +85,7 @@ function askDelete(layer: LayerData): void {
           flat
           dense
           round
-          icon="delete"
+          icon="r_delete"
           color="negative"
           :aria-label="t('editor.deleteLayer')"
           data-test="delete-layer"

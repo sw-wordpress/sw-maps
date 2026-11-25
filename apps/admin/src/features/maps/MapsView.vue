@@ -109,7 +109,7 @@ const columns = computed(() => [
         style="min-width: 220px"
         data-test="search"
       >
-        <template #prepend><q-icon name="search" /></template>
+        <template #prepend><q-icon name="r_search" /></template>
       </q-input>
       <q-select
         v-model="maps.status"
@@ -135,7 +135,7 @@ const columns = computed(() => [
       <q-btn
         color="primary"
         no-caps
-        icon="add"
+        icon="r_add"
         :label="t('maps.new')"
         :loading="creating"
         :disable="newTitle.trim() === ''"
@@ -176,7 +176,7 @@ const columns = computed(() => [
             flat
             dense
             round
-            icon="edit"
+            icon="r_edit"
             :aria-label="t('common.edit')"
             :to="{ name: 'editor', params: { id: p.row.id } }"
           />
@@ -184,7 +184,7 @@ const columns = computed(() => [
             flat
             dense
             round
-            icon="code"
+            icon="r_code"
             :aria-label="t('maps.embed')"
             data-test="embed"
             @click="openEmbed(p.row)"
@@ -193,7 +193,7 @@ const columns = computed(() => [
             flat
             dense
             round
-            icon="content_copy"
+            icon="r_content_copy"
             :aria-label="t('maps.duplicate')"
             data-test="duplicate"
             @click="run(() => maps.duplicate(p.row.id), t('maps.duplicated'))"
@@ -203,7 +203,7 @@ const columns = computed(() => [
             flat
             dense
             round
-            :icon="p.row.status === 'published' ? 'visibility_off' : 'public'"
+            :icon="p.row.status === 'published' ? 'r_visibility_off' : 'r_public'"
             :aria-label="p.row.status === 'published' ? t('maps.unpublish') : t('maps.publish')"
             data-test="toggle-publish"
             @click="
@@ -218,7 +218,7 @@ const columns = computed(() => [
             flat
             dense
             round
-            icon="delete"
+            icon="r_delete"
             color="negative"
             :aria-label="t('common.delete')"
             data-test="delete"
