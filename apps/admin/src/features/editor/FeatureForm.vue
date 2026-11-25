@@ -79,6 +79,11 @@ function commitColor(value: string): void {
   emit('patch', { style: { ...props.feature.style, color: value } });
 }
 
+async function chooseIcon(): Promise<void> {
+  const image = await pickImage();
+  if (image) emit('patch', { properties: { icon: `media:${image.id}` } });
+}
+
 async function chooseImage(): Promise<void> {
   const image = await pickImage();
   if (!image) return;
@@ -145,6 +150,17 @@ async function chooseImage(): Promise<void> {
       data-test="icon"
       @update:model-value="emit('patch', { properties: { icon: $event } })"
     />
+    <div class="swmap-field">
+      <q-btn
+        flat
+        dense
+        no-caps
+        icon="r_add_photo_alternate"
+        :label="t('feature.chooseIcon')"
+        data-test="choose-icon"
+        @click="chooseIcon"
+      />
+    </div>
     <div class="swmap-field">
       <div class="text-caption">{{ t('feature.color') }}</div>
       <input

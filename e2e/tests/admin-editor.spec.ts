@@ -108,3 +108,32 @@ test('mobile preview narrows the canvas', async ({ page }) => {
     .toBeLessThanOrEqual(376);
   expect(wide).toBeGreaterThan(400);
 });
+
+test('the block editor shows a preview of the selected map', async ({ page }) => {
+  const api = await WpApi.create(page);
+  const map = await api.createMap('E2E Block preview');
+  const layer = await api.addLayer(map.id, 'Orte');
+  await api.addMarker(layer, 8.4, 49.0, { title: 'Vorschau-Ort' });
+  await api.publish(map.id);
+
+  await page.goto('/wp-admin/post-new.php?post_type=page');
+  await page.waitForFunction(
+    () => (window as unknown as { wp?: { data?: unknown } }).wp?.data !== undefined,
+  );
+  await page.evaluate((mapId) => {
+    type Api = Record<string, (...args: unknown[]) => unknown>;
+    const wp = (
+      window as unknown as { wp: { data: { dispatch: (store: string) => Api }; blocks: Api } }
+    ).wp;
+    const call = (target: Api, method: string, ...args: unknown[]): unknown =>
+      target[method]!(...args);
+    call(wp.data.dispatch('core/preferences'), 'set', 'core/edit-post', 'welcomeGuide', false);
+    call(wp.data.dispatch('core/preferences'), 'set', 'core/edit-post', 'fullscreenMode', false);
+    const block = call(wp.blocks, 'createBlock', 'sw-maps/map', { mapId });
+    call(wp.data.dispatch('core/block-editor'), 'insertBlock', block);
+  }, map.id);
+  const canvas = page.frameLocator('iframe[name="editor-canvas"]');
+  const preview = canvas.locator('.wp-block-sw-maps-map .swmap__list');
+  await expect(preview).toContainText('Vorschau-Ort', { timeout: 20_000 });
+  await expect(canvas.locator('.wp-block-sw-maps-map .swmap__stage')).toBeVisible();
+});

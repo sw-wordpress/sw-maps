@@ -247,6 +247,17 @@ describe('FeatureForm', () => {
     );
   });
 
+  it('chooses a media library icon', async () => {
+    const w = mount(FeatureForm, { props: { feature: feature() } });
+    await w.find('[data-test=choose-icon]').trigger('click');
+    await flushPromises();
+    expect(w.emitted('patch')).toEqual([[{ properties: { icon: 'media:9' } }]]);
+    vi.mocked(pickImage).mockResolvedValueOnce(null);
+    await w.find('[data-test=choose-icon]').trigger('click');
+    await flushPromises();
+    expect(w.emitted('patch')).toHaveLength(1);
+  });
+
   it('chooses and removes an image through the media library', async () => {
     const w = mount(FeatureForm, { props: { feature: feature() } });
     await w.find('[data-test=choose-image]').trigger('click');

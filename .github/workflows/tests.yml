@@ -1,0 +1,171 @@
+name: Tests and SonarQube
+# Test suites run on pull requests only (the release workflow runs none).
+on:
+  pull_request: null
+
+concurrency:
+  group: tests-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  php:
+    runs-on: ubuntu-latest
+    env:
+      XDEBUG_MODE: coverage
+      SWMAPS_TEST_DB_HOST: 127.0.0.1
+      SWMAPS_TEST_DB_PORT: '33078'
+      SWMAPS_TEST_DB_USER: root
+      SWMAPS_TEST_DB_PASSWORD: wordpress-test
+    steps:
+    - uses: actions/checkout@v5
+    - uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mysqli, pdo_mysql, mbstring, zip, gd
+        tools: composer:v2
+        coverage: xdebug
+    - run: sudo apt-get update && sudo apt-get install -y gettext
+    - run: composer install --prefer-dist --no-interaction --no-progress
+    - run: composer validate --strict
+    - name: Audit Composer packages
+      run: composer audit --locked
+    - run: composer cs && composer cs:wp && composer stan
+    - run: bin/i18n.sh check
+    - name: Install isolated WordPress test dependencies
+      run: composer install --working-dir=tests/wp --prefer-dist --no-interaction --no-progress
+    - name: Merged coverage (unit, WordPress, multisite) with strict > 80 % gate
+      run: bin/coverage-php.sh
+    - name: Upload Clover coverage
+      uses: actions/upload-artifact@v5
+      with:
+        name: php-coverage
+        path: coverage/clover.xml
+        if-no-files-found: error
+        retention-days: 14
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: wordpress-test
+          MARIADB_ROOT_HOST: '%'
+          MARIADB_DATABASE: swmaps_wp_tests
+        ports:
+        - 33078:3306
+        options: --health-cmd="healthcheck.sh --connect --innodb_initialized" --health-interval=5s --health-timeout=5s --health-retries=20
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v5
+    - uses: actions/setup-node@v5
+      with:
+        node-version-file: .nvmrc
+    - name: Install, lint, typecheck and test every package (strict > 80 % coverage each)
+      run: |
+        for dir in packages/map-contracts packages/renderer-openlayers apps/admin; do
+          (cd "$dir" && npm ci --no-audit --no-fund && npm audit --omit=dev --audit-level=high)
+        done
+        bash bin/test-js.sh
+    - name: Build and check the compressed bundle budget
+      run: make build
+    - name: Merge lcov coverage
+      run: |
+        mkdir -p coverage
+        cat packages/map-contracts/coverage/lcov.info packages/renderer-openlayers/coverage/lcov.info apps/admin/coverage/lcov.info > coverage/lcov.info
+    - uses: actions/upload-artifact@v5
+      with:
+        name: frontend-coverage
+        path: coverage/lcov.info
+        if-no-files-found: error
+        retention-days: 14
+  release-package:
+    name: Real build ZIP
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v5
+    - uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, zip, pdo_mysql
+        tools: composer:v2
+        coverage: none
+    - uses: actions/setup-node@v5
+      with:
+        node-version-file: .nvmrc
+    - run: composer install --prefer-dist --no-interaction --no-progress
+    - run: make dist
+    - uses: actions/upload-artifact@v5
+      with:
+        name: release-zip
+        path: dist/sw-maps-*.zip
+        retention-days: 7
+  e2e:
+    name: Playwright (WordPress in Docker, release package)
+    needs: release-package
+    # Playwright supports Ubuntu 24.04.
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v5
+    - uses: actions/setup-node@v5
+      with:
+        node-version-file: .nvmrc
+    - uses: actions/download-artifact@v5
+      with:
+        name: release-zip
+        path: dist
+    - name: Run the whole suite against the unpacked release ZIP (no retries beyond the configured two)
+      run: |
+        npx --yes playwright@1.55.1 install-deps chromium
+        bin/test-zip-install.sh
+    - name: Mock mode (admin app without WordPress)
+      run: |
+        (cd apps/admin && npm ci --no-audit --no-fund)
+        (cd e2e && npm ci --no-audit --no-fund && npx playwright install chromium && npm run test:mock)
+    - uses: actions/upload-artifact@v5
+      if: failure()
+      with:
+        name: playwright-report
+        path: e2e/playwright-report
+        retention-days: 7
+  sonarqube:
+    name: SonarQube Cloud
+    needs:
+    - php
+    - frontend
+    if: |-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
+    - uses: actions/download-artifact@v5
+      with:
+        name: php-coverage
+        path: coverage
+    - uses: actions/download-artifact@v5
+      with:
+        name: frontend-coverage
+        path: coverage
+    - name: Check SonarQube configuration
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
+      run: |
+        if [ -z "$SONAR_TOKEN" ]; then
+          echo '::error::Set the SONAR_TOKEN repository secret before running SonarQube analysis.'
+          exit 1
+        fi
+        if [ -z "$SONAR_ORGANIZATION" ]; then
+          echo '::error::Set the SONAR_ORGANIZATION repository variable to your SonarQube Cloud organization key.'
+          exit 1
+        fi
+        test -s coverage/clover.xml
+        test -s coverage/lcov.info
+    - name: Analyze code and import coverage
+      uses: SonarSource/sonarqube-scan-action@v6
+      with:
+        args: -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

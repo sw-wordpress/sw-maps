@@ -6,14 +6,35 @@
   "category": "widgets",
   "icon": "location-alt",
   "description": "Displays a map created with SW Maps.",
-  "keywords": ["map", "karte", "openstreetmap"],
+  "keywords": [
+    "map",
+    "karte",
+    "openstreetmap"
+  ],
   "textdomain": "sw-maps",
   "attributes": {
-    "mapId": { "type": "integer", "default": 0 },
-    "height": { "type": "string", "default": "" },
-    "clickToLoad": { "type": "boolean" },
-    "showList": { "type": "boolean" }
+    "mapId": {
+      "type": "integer",
+      "default": 0
+    },
+    "height": {
+      "type": "string",
+      "default": ""
+    },
+    "clickToLoad": {
+      "type": "boolean"
+    },
+    "showList": {
+      "type": "boolean"
+    }
   },
-  "supports": { "html": false, "align": ["wide", "full"] },
-  "editorScript": "file:./index.js"
+  "supports": {
+    "html": false,
+    "align": [
+      "wide",
+      "full"
+    ]
+  },
+  "editorScript": "file:./index.js",
+  "editorStyle": "file:./editor.css"
 }

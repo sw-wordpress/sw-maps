@@ -63,6 +63,8 @@ free_port() { python3 -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1
 secret() { openssl rand -hex 12; }
 
 # --- prerequisites: PHP dependencies (production only, in a helper container) and the built admin app -----------------
+# SWMAPS_E2E_SKIP_BUILD=1: the mounted plugin directory is a finished release package (bin/test-zip-install.sh).
+if [ "${SWMAPS_E2E_SKIP_BUILD:-0}" = 1 ]; then :; else
 if [ ! -f "$ROOT/vendor/autoload.php" ] || [ "${SWMAPS_E2E_REBUILD:-0}" = 1 ]; then
   echo "Installing production Composer dependencies in a helper container ..."
   docker run --rm --user "$(id -u):$(id -g)" -e COMPOSER_HOME=/tmp/composer -v "$ROOT:/app" -w /app composer:2 \
@@ -75,6 +77,7 @@ fi
 if [ ! -f "$ROOT/assets/frontend/swmaps-viewer.js" ] || [ "${SWMAPS_E2E_REBUILD:-0}" = 1 ]; then
   echo "Building the frontend bundle ..."
   (cd "$ROOT/packages/renderer-openlayers" && { [ -d node_modules ] || npm ci; } && npm run build)
+fi
 fi
 echo "Preparing the Playwright project ..."
 (cd "$ROOT/e2e" && npm ci --no-audit --no-fund && npx playwright install chromium)
