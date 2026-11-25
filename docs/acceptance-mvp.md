@@ -17,6 +17,7 @@ Nachweise: automatisierte Tests (Dateien siehe unten) plus Lauf gegen das **entp
 Weitere Abnahmetests (M1-26..29): Mobilansicht und Tastatur (`frontend.spec.ts`), Netzwerk/Bundle (`privacy.spec.ts`), Security-Fixtures XSS/IDOR/private Layer/Entwürfe (PHPUnit-WP + `security.spec.ts`), Multisite/Aktivierung/Upgrade/Deinstallation (`MultisiteTest`, `LifecycleTest`, `SchemaTest`).
 
 ## Bekannte Grenzen des MVP
+- `e2e/tests/consent-plugins.spec.ts` versucht denselben Ablauf mit Complianz (wordpress.org). Das Plugin ließ sich ohne dessen interaktiven Assistenten nicht so konfigurieren, dass es Karten sperrt; der Test überspringt sich dann. Complianz und Borlabs sind damit **nicht** nachgewiesen.
 - Die Consent-Kompatibilität ist gegen das Referenz-Plugin „WP Consent API“ mit einer simulierten Opt-in-Konfiguration getestet; konkrete Banner-Plugins (z. B. Complianz, Borlabs) wurden nicht einzeln geprüft.
 - Linien- und Flächenbearbeitung ist im Editor als Prototyp vorhanden (zeichnen, Stützpunkte ändern), aber nicht Teil der MVP-Abnahme (M2-02).
 - Der Mock-Modus der E2E-Tests deckt nur Kernabläufe der Admin-App ab.
