@@ -233,6 +233,19 @@ describe('EditorCanvas', () => {
     expect(r.fitBounds).toHaveBeenCalledWith([1, 2, 3, 4]);
   });
 
+  it('does not move the map back to the start view when only the content changes after the user panned', async () => {
+    const w = mount(EditorCanvas, {
+      props: { data: data(), tool: 'select', selectedId: null, mobile: false },
+    });
+    const r = FakeRenderer.instances[0]!;
+    r.getView.mockReturnValue({ center: [9.9, 50.5], zoom: 14 }); // the user panned and zoomed
+    const edited = data();
+    edited.layers[0]!.features = [];
+    await w.setProps({ data: edited });
+    expect(r.update).toHaveBeenCalled();
+    expect(r.setView).not.toHaveBeenCalled();
+  });
+
   it('mounts when data arrives late and degrades when the renderer fails', async () => {
     const late = mount(EditorCanvas, {
       props: { data: null, tool: 'select', selectedId: null, mobile: false },

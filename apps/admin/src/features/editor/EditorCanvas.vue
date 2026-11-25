@@ -36,6 +36,7 @@ function start(): void {
     instance.on('select', (id) => emit('select', id));
     instance.setTool(props.tool);
     renderer = instance;
+    lastApplied = signature(props.data.viewport);
   } catch (error) {
     console.error('sw-maps: editor map failed', error);
     failed.value = true;

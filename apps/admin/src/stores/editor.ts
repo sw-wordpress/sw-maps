@@ -95,6 +95,11 @@ export const useEditorStore = defineStore('editor', () => {
   async function load(mapId: number): Promise<void> {
     const token = ++loadToken;
     loading.value = true;
+    if (doc.value?.map.id !== mapId) {
+      // Never keep showing (and saving) another map while this one loads or when its request fails.
+      doc.value = null;
+      original.value = null;
+    }
     try {
       const [fetched, provs] = await Promise.all([
         fetchDoc(mapId),

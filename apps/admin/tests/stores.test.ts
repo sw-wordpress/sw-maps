@@ -308,6 +308,17 @@ describe('editor store', () => {
     expect(store.doc?.features.filter((f) => f.id < 0).every((f) => f.layer_id === 77)).toBe(true);
   });
 
+  it('drops the previous map when another one is loaded, also when that request fails', async () => {
+    const store = await loaded();
+    api.maps.get.mockRejectedValueOnce(new ApiError('swmap_not_found', 'Not found.', 404) as never);
+    await expect(store.load(2)).rejects.toThrow();
+    expect(store.doc).toBeNull();
+    expect(store.original).toBeNull();
+    await store.load(1);
+    await store.load(1);
+    expect(store.doc?.map.id).toBe(1);
+  });
+
   it('throws when editing without a loaded map', () => {
     const store = useEditorStore();
     expect(() => store.patchMap({ title: 'x' })).toThrow('No map loaded');
