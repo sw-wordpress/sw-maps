@@ -69,6 +69,11 @@ export class EditableOpenLayersRenderer extends OpenLayersRenderer implements Ed
     });
     map.addInteraction(draw);
     this.draw = draw;
+    // Snap must be the last interaction (OpenLayers dispatches in reverse order), otherwise Draw sees unsnapped pointers.
+    if (this.snap) {
+      map.removeInteraction(this.snap);
+      map.addInteraction(this.snap);
+    }
   }
 
   getTool(): EditTool {

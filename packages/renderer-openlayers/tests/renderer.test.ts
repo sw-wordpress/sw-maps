@@ -332,6 +332,20 @@ describe('EditableOpenLayersRenderer', () => {
     expect(interactions).toContain(inner.modify);
   });
 
+  it('keeps Snap as the last interaction so drawing snaps to existing geometry', () => {
+    const r = editor();
+    const inner = r as unknown as Internals & {
+      snap: unknown;
+      map: { getInteractions(): { getArray(): unknown[] } };
+    };
+    const last = () => inner.map.getInteractions().getArray().at(-1);
+    expect(last()).toBe(inner.snap);
+    for (const tool of ['point', 'line', 'polygon', 'select', 'point'] as const) {
+      r.setTool(tool);
+      expect(last()).toBe(inner.snap);
+    }
+  });
+
   it('ignores map clicks while a draw tool is active', () => {
     const r = editor();
     const events: Array<number | null> = [];
