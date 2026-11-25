@@ -35,7 +35,7 @@ if ( isset( $_GET['swmap_real_consent'] ) ) {
 add_filter(
 	'swmap_consent_category',
 	static function ( $category ) {
-		if ( isset( $_GET['swmap_consent_api'] ) || isset( $_GET['swmap_real_consent'] ) || isset( $_GET['swmap_consent_gate'] ) ) {
+		if ( isset( $_GET['swmap_consent_api'] ) || isset( $_GET['swmap_real_consent'] ) ) {
 			return $category;
 		}
 		return null;

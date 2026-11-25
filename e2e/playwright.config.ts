@@ -23,15 +23,5 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     viewport: { width: 1280, height: 900 },
   },
-  projects: [
-    { name: 'chromium', testIgnore: /consent-plugins/, use: { ...devices['Desktop Chrome'] } },
-    // Runs after everything else: it activates a third-party consent plugin that changes every page of the site.
-    {
-      name: 'consent-plugins',
-      testMatch: /consent-plugins/,
-      dependencies: ['chromium'],
-      fullyParallel: false,
-      use: { ...devices['Desktop Chrome'] },
-    },
-  ],
+  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 });

@@ -112,7 +112,7 @@ Erledigte Aufgaben aus [TODO.md](TODO.md) (Foundation = M0, MVP = M1; Details de
 ### Datenschutz und Barrierefreiheit
 
 - [x] M1-16: WP Consent API: Tile-Requests erst nach Zustimmung; Kompatibilitätstest mit gängigen Consent-Plugins
-  - Ergebnis: `Integration/Consent.php`, `consent.ts` (fail closed); getestet mit echtem wp-consent-api-Plugin und Complianz (E2E); Borlabs (kommerziell) nicht geprüft.
+  - Ergebnis: `Integration/Consent.php`, `consent.ts` (fail closed); getestet mit dem echten wp-consent-api-Plugin (E2E, Opt-in); konkrete Banner-Plugins sind bewusst nicht im Umfang.
 - [x] M1-17: Optional Click-to-load mit lokalem Platzhalter; Standortliste bleibt nutzbar
   - Ergebnis: Click-to-load mit lokalem Platzhalter.
 - [x] M1-18: Datenschutz-Platzhalter und Privacy-Policy-Text (`wp_add_privacy_policy_content`)

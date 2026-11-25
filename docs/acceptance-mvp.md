@@ -17,7 +17,6 @@ Nachweise: automatisierte Tests (Dateien siehe unten) plus Lauf gegen das **entp
 Weitere Abnahmetests (M1-26..29): Mobilansicht und Tastatur (`frontend.spec.ts`), Netzwerk/Bundle (`privacy.spec.ts`), Security-Fixtures XSS/IDOR/private Layer/Entwürfe (PHPUnit-WP + `security.spec.ts`), Multisite/Aktivierung/Upgrade/Deinstallation (`MultisiteTest`, `LifecycleTest`, `SchemaTest`).
 
 ## Bekannte Grenzen des MVP
-- `e2e/tests/consent-plugins.spec.ts` prüft **Complianz** (wordpress.org, EU/Opt-in, echter Banner): ohne Zustimmung keine Kachel-Requests, nach „Akzeptieren“ lädt die Karte. Borlabs ist kommerziell, nicht installierbar und nicht geprüft; es nutzt dieselbe WP Consent API.
-- Die Consent-Kompatibilität ist gegen das Referenz-Plugin „WP Consent API“ mit einer simulierten Opt-in-Konfiguration getestet; konkrete Banner-Plugins (z. B. Complianz, Borlabs) wurden nicht einzeln geprüft.
+- Die Consent-Kompatibilität ist gegen das Referenz-Plugin „WP Consent API“ mit Opt-in-Konfiguration getestet (Entscheidung: das genügt für M1-16). Konkrete Banner-Plugins (Complianz, Borlabs) sind bewusst nicht Teil des Umfangs; sie nutzen dieselbe Schnittstelle.
 - Linien- und Flächenbearbeitung ist im Editor als Prototyp vorhanden (zeichnen, Stützpunkte ändern), aber nicht Teil der MVP-Abnahme (M2-02).
 - Der Mock-Modus der E2E-Tests deckt nur Kernabläufe der Admin-App ab.
