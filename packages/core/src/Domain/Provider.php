@@ -73,6 +73,19 @@ final class Provider
         return str_replace('{key}', rawurlencode($this->publicKey), $this->urlTemplate);
     }
 
+    /**
+     * Hosts the visitor's browser contacts for tiles (shown to the admin before activation). `{s}` subdomain patterns
+     * are reported as written.
+     *
+     * @return list<string>
+     */
+    public function externalHosts(): array
+    {
+        $host = parse_url(str_replace(['{', '}'], ['', ''], $this->urlTemplate), PHP_URL_HOST);
+
+        return is_string($host) && $host !== '' ? [$host] : [];
+    }
+
     /** @return array<string, mixed> */
     public function toPublicArray(): array
     {
