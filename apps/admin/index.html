@@ -7,6 +7,18 @@
   </head>
   <body>
     <div id="sw-maps-app"></div>
+    <!-- Development / mock mode only (this file is not part of the plugin build): simulated wp-admin configuration. -->
+    <script>
+      window.swmapsConfig = {
+        restRoot: '/wp-json/sw-maps/v1/',
+        nonce: 'dev-nonce',
+        locale: 'en_US',
+        version: 'dev',
+        adminUrl: '/',
+        siteUrl: '/',
+        capabilities: ['swmap_edit_maps', 'swmap_publish_maps', 'swmap_manage_layers', 'swmap_manage_system'],
+      };
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
