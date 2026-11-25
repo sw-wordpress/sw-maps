@@ -62,11 +62,12 @@ export function parseAttribution(input: string): AttributionPart[] {
   return parts;
 }
 
-const SAFE_LINK = /^(https?:\/\/[^\s"<>\\]+|mailto:[^\s]+|tel:[^\s]+)$/i;
+const HTTP_LINK = /^https?:\/\/[^\s"<>\\]+$/i;
+const CONTACT_LINK = /^(?:mailto|tel):\S+$/i;
 
 /** Client side re-check of link targets (the server validates as well; this is defence in depth). */
 export function safeLink(url: string | null | undefined): string | null {
-  return typeof url === 'string' && SAFE_LINK.test(url) ? url : null;
+  return typeof url === 'string' && (HTTP_LINK.test(url) || CONTACT_LINK.test(url)) ? url : null;
 }
 
 /** Colour values accepted from style maps (hex only). */

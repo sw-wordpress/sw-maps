@@ -243,7 +243,11 @@ export class OpenLayersRenderer implements MapRenderer {
     this.syncFeatures();
     if (!initialView) this.fitToFeaturesIfAuto();
     this.selectedId = null;
+    this.afterBuild();
   }
+
+  /** Called after every (re)build of the OpenLayers map; subclasses attach their interactions here. */
+  protected afterBuild(): void {}
 
   private teardownMap(): void {
     for (const fn of this.cleanup) fn();

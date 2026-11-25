@@ -101,7 +101,7 @@ function fitAll(): void {
       @save="save"
       @fit="fitAll"
     />
-    <div class="swmap-editor">
+    <div class="swmap-editor" :inert="store.saving">
       <LayerPanel
         :layers="store.doc.layers"
         :features="store.doc.features"

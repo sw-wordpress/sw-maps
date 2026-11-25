@@ -2,10 +2,14 @@
 // Vitest's own `thresholds` accept equality, so this check runs after `vitest run --coverage`.
 // Usage: node scripts/check-coverage.mjs <path to coverage-summary.json>
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { resolve, sep } from 'node:path';
 
 const LIMIT = 80;
 const file = resolve(process.cwd(), process.argv[2] ?? 'coverage/coverage-summary.json');
+if (!file.startsWith(process.cwd() + sep)) {
+  console.error('The coverage file must be inside the current directory.');
+  process.exit(1);
+}
 let summary;
 try {
   summary = JSON.parse(readFileSync(file, 'utf8'));

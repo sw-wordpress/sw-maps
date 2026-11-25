@@ -27,7 +27,7 @@ final class ProviderTest extends TestCase
     {
         return [
             'ok' => ['https://tiles.example.org/{z}/{x}/{y}.png', true],
-            'http ok' => ['http://tiles.local/{z}/{x}/{y}.png?key={key}', true],
+            'http ok' => ['http://tiles.local/{z}/{x}/{y}.png?key={key}', true], // NOSONAR: plain HTTP is allowed for self hosted tile servers
             'tms' => ['https://t.example.org/{z}/{x}/{-y}.png', true],
             'javascript' => ['javascript:alert({z}{x}{y})', false],
             'missing y' => ['https://t.example.org/{z}/{x}.png', false],
@@ -70,7 +70,7 @@ final class ProviderTest extends TestCase
         $ok = ['urlTemplate' => 'https://t.example.org/{z}/{x}/{y}.png', 'attribution' => 'A'];
         $cases = [
             ['name' => '', 'public_config' => $ok],
-            ['name' => 'X', 'public_config' => ['urlTemplate' => 'ftp://x/{z}/{x}/{y}'] + $ok],
+            ['name' => 'X', 'public_config' => ['urlTemplate' => 'ftp://x/{z}/{x}/{y}'] + $ok], // NOSONAR: negative test
             ['name' => 'X', 'public_config' => ['attribution' => '[x](javascript:alert(1))'] + $ok],
             ['name' => 'X', 'public_config' => ['maxZoom' => 30] + $ok],
             ['name' => 'X', 'public_config' => ['tileSize' => 300] + $ok],

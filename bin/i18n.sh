@@ -41,7 +41,7 @@ case "${1:-}" in
     make_pot
     for locale in "${LOCALES[@]}"; do
       po="$LANG_DIR/sw-maps-$locale.po"
-      if [ -f "$po" ]; then msgmerge --quiet --update --no-fuzzy-matching --backup=none --no-wrap "$po" "$POT"; fi
+      if [[ -f "$po" ]]; then msgmerge --quiet --update --no-fuzzy-matching --backup=none --no-wrap "$po" "$POT"; fi
     done
     "$0" compile
     ;;
@@ -56,10 +56,10 @@ case "${1:-}" in
     fi
     for locale in "${LOCALES[@]}"; do
       po="$LANG_DIR/sw-maps-$locale.po"
-      [ -f "$po" ] || { echo "missing $po" >&2; exit 1; }
+      [[ -f "$po" ]] || { echo "missing $po" >&2; exit 1; }
       msgfmt --check-format --statistics -o /dev/null "$po" 2> "$tmp.stat" || exit 1
       if grep -Eq "untranslated|fuzzy" "$tmp.stat"; then echo "$po is incomplete: $(cat "$tmp.stat")" >&2; exit 1; fi
-      [ -f "${po%.po}.mo" ] || { echo "missing ${po%.po}.mo - run bin/i18n.sh compile" >&2; exit 1; }
+      [[ -f "${po%.po}.mo" ]] || { echo "missing ${po%.po}.mo - run bin/i18n.sh compile" >&2; exit 1; }
     done
     echo "translations are complete and up to date"
     ;;

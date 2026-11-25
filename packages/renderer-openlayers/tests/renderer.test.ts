@@ -298,6 +298,25 @@ describe('EditableOpenLayersRenderer', () => {
     expect((moved[0]?.geometry.coordinates as number[])[0]).toBeCloseTo(9, 6);
   });
 
+  it('keeps drawing and editing working after the map was rebuilt', () => {
+    const r = editor();
+    r.setTool('line');
+    const data = makeData();
+    data.settings = { ...data.settings, scale: false };
+    r.update(data);
+    const inner = r as unknown as Internals;
+    expect(r.getTool()).toBe('line');
+    expect(inner.draw).not.toBeNull();
+    r.setTool('select');
+    expect(inner.modify.getActive()).toBe(true);
+    const interactions = (
+      r as unknown as { map: { getInteractions(): { getArray(): unknown[] } } }
+    ).map
+      .getInteractions()
+      .getArray();
+    expect(interactions).toContain(inner.modify);
+  });
+
   it('ignores map clicks while a draw tool is active', () => {
     const r = editor();
     const events: Array<number | null> = [];

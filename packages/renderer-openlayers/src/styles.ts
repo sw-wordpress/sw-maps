@@ -57,7 +57,7 @@ export function createStyleFunction(
           new Style({
             image: new Icon({
               src: icon.src,
-              anchor: icon.custom ? [0.5, 1] : [0.5, 1],
+              anchor: [0.5, 1],
               scale: selected ? 1.25 : 1,
               width: icon.custom ? 32 : undefined,
               height: icon.custom ? 32 : undefined,

@@ -15,9 +15,9 @@ final class Bounds
         public readonly float $maxLongitude,
         public readonly float $maxLatitude
     ) {
-        new Coordinate($minLongitude, $minLatitude);
-        new Coordinate($maxLongitude, $maxLatitude);
-        if ($minLongitude > $maxLongitude || $minLatitude > $maxLatitude) {
+        $min = new Coordinate($minLongitude, $minLatitude);
+        $max = new Coordinate($maxLongitude, $maxLatitude);
+        if ($min->longitude > $max->longitude || $min->latitude > $max->latitude) {
             throw InvalidGeometryException::because('Bounds minimum must not exceed maximum.', 'bounds');
         }
     }

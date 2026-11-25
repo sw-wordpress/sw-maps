@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { computed, ref, shallowRef } from 'vue';
 import type {
   EditTool,
+  FeatureData,
   FeatureProperties,
   Geometry,
   MapRenderData,
@@ -33,6 +34,18 @@ import {
 } from '@/features/editor/model';
 
 type MapPatch = Parameters<typeof updateMap>[1];
+
+const FEATURE_PAGE_SIZE = 500;
+
+/** Reads every page: a layer may hold far more features than one page (limit per layer is configurable). */
+async function fetchAllFeatures(layerId: number): Promise<FeatureData[]> {
+  const items: FeatureData[] = [];
+  for (let page = 1; ; page++) {
+    const result = await api().features.page(layerId, page, FEATURE_PAGE_SIZE);
+    items.push(...result.items);
+    if (page >= result.totalPages) return items;
+  }
+}
 
 export const useEditorStore = defineStore('editor', () => {
   const original = shallowRef<EditorDoc | null>(null);
@@ -73,8 +86,8 @@ export const useEditorStore = defineStore('editor', () => {
 
   async function fetchDoc(mapId: number): Promise<EditorDoc> {
     const [map, layers] = await Promise.all([api().maps.get(mapId), api().layers.forMap(mapId)]);
-    const pages = await Promise.all(layers.map((layer) => api().features.page(layer.id, 1, 500)));
-    return { map, layers, features: pages.flatMap((p) => p.items) };
+    const features = (await Promise.all(layers.map((layer) => fetchAllFeatures(layer.id)))).flat();
+    return { map, layers, features };
   }
 
   async function load(mapId: number): Promise<void> {
@@ -100,7 +113,8 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   function commit(next: EditorDoc): void {
-    if (!doc.value) return;
+    // Edits made while a save is running would be lost when the saved state is loaded: the editor is locked meanwhile.
+    if (!doc.value || saving.value) return;
     history.push(doc.value);
     doc.value = next;
     historyTick.value++;
@@ -185,11 +199,11 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   function undo(): void {
-    if (doc.value) applySnapshot(history.undo(doc.value));
+    if (doc.value && !saving.value) applySnapshot(history.undo(doc.value));
   }
 
   function redo(): void {
-    if (doc.value) applySnapshot(history.redo(doc.value));
+    if (doc.value && !saving.value) applySnapshot(history.redo(doc.value));
   }
 
   /** Explicit save: sends only the differences; the last save wins (no locking). */
@@ -202,14 +216,18 @@ export const useEditorStore = defineStore('editor', () => {
     const activeBefore = activeLayerId.value;
     try {
       const ids = await runOps(api(), mapId, diff(original.value, doc.value));
+      // Everything was written: acknowledge it before refreshing, so a failing refresh can never lead to duplicates.
+      const written = remapIds(doc.value, ids);
+      doc.value = written;
+      original.value = cloneDoc(written);
       selectedFeatureId.value =
         selectedBefore === null ? null : (ids.get(selectedBefore) ?? selectedBefore);
       activeLayerId.value = activeBefore === null ? null : (ids.get(activeBefore) ?? activeBefore);
+      history.clear();
+      historyTick.value++;
       const fresh = await fetchDoc(mapId);
       original.value = fresh;
       doc.value = cloneDoc(fresh);
-      history.clear();
-      historyTick.value++;
       return true;
     } catch (error) {
       if (error instanceof SaveError) {

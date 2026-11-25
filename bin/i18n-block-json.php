@@ -39,7 +39,7 @@ foreach ( glob( $root . '/languages/sw-maps-*.po' ) ?: array() as $po_file ) {
 			),
 			JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT
 		);
-		file_put_contents( sprintf( '%s/languages/sw-maps-%s-%s.json', $root, $locale, md5( $script ) ), $json . "\n" );
+		file_put_contents( sprintf( '%s/languages/sw-maps-%s-%s.json', $root, $locale, md5( $script ) ), $json . "\n" ); // NOSONAR: md5 is dictated by WordPress for script translation file names, not a security use
 	}
 }
 

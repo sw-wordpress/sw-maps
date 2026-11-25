@@ -35,7 +35,8 @@ final class CoordinateTest extends TestCase
     public function testInvalidCoordinatesAreRejected(float $lon, float $lat): void
     {
         $this->expectException(InvalidGeometryException::class);
-        new Coordinate($lon, $lat);
+        $make = static fn (): Coordinate => new Coordinate($lon, $lat);
+        $make();
     }
 
     public function testBoundaryValuesAreAccepted(): void
@@ -75,7 +76,8 @@ final class CoordinateTest extends TestCase
     public function testBoundsRejectInvalid(): void
     {
         $this->expectException(InvalidGeometryException::class);
-        new Bounds(5, 0, 1, 1);
+        $make = static fn (): Bounds => new Bounds(5, 0, 1, 1);
+        $make();
     }
 
     public function testBoundsRejectEmptyAndMalformed(): void

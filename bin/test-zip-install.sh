@@ -10,18 +10,18 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ZIP=""
-if [ $# -gt 0 ] && [ "$1" != "--" ]; then ZIP="$1"; shift; fi
-[ -n "$ZIP" ] || ZIP="$(ls -t "$ROOT"/dist/sw-maps-*.zip 2>/dev/null | head -n 1 || true)"
-[ -n "$ZIP" ] && [ -f "$ZIP" ] || { echo "No ZIP found: run 'make dist' first or pass the path." >&2; exit 2; }
-[ "${1:-}" != "--" ] || shift
+if [[ $# -gt 0 ]] && [[ "$1" != "--" ]]; then ZIP="$1"; shift; fi
+[[ -n "$ZIP" ]] || ZIP="$(ls -t "$ROOT"/dist/sw-maps-*.zip 2>/dev/null | head -n 1 || true)"
+[[ -n "$ZIP" ]] && [[ -f "$ZIP" ]] || { echo "No ZIP found: run 'make dist' first or pass the path." >&2; exit 2; }
+[[ "${1:-}" != "--" ]] || shift
 
 WORK="$(mktemp -d)"
 trap 'rm -r "$WORK"' EXIT
 unzip -q "$ZIP" -d "$WORK"
 PKG="$WORK/sw-maps"
-[ -f "$PKG/sw-maps.php" ] || { echo "Unexpected ZIP layout" >&2; exit 1; }
+[[ -f "$PKG/sw-maps.php" ]] || { echo "Unexpected ZIP layout" >&2; exit 1; }
 for forbidden in node_modules apps tests e2e bin composer.json package.json; do
-  [ ! -e "$PKG/$forbidden" ] || { echo "Release package contains $forbidden" >&2; exit 1; }
+  [[ ! -e "$PKG/$forbidden" ]] || { echo "Release package contains $forbidden" >&2; exit 1; }
 done
 chmod -R a+rX "$PKG"
 

@@ -207,15 +207,14 @@ final class RenderingTest extends SwMapsTestCase {
 		list( $id ) = $this->published_map();
 		$this->assertFalse( Consent::api_active() );
 		$this->assertNull( $this->inline_json( swmap_render_map( $id ) )['consentCategory'] );
-		if ( ! function_exists( 'wp_has_consent' ) ) {
-			eval( 'function wp_has_consent( $category ) { return false; }' ); // phpcs:ignore Squiz.PHP.Eval.Discouraged
-		}
+		add_filter( 'swmap_consent_api_active', '__return_true' );
 		$this->assertSame( 'marketing', $this->inline_json( swmap_render_map( $id ) )['consentCategory'] );
 		add_filter( 'swmap_consent_category', static fn () => 'functional' );
 		$this->assertSame( 'functional', Consent::category() );
 		add_filter( 'swmap_consent_category', static fn () => 'bogus', 20 );
 		$this->assertNull( Consent::category() );
 		remove_all_filters( 'swmap_consent_category' );
+		remove_all_filters( 'swmap_consent_api_active' );
 	}
 
 	public function test_consent_script_dependency_when_registered(): void {

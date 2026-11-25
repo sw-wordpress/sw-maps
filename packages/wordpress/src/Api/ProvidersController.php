@@ -23,7 +23,8 @@ final class ProvidersController extends BaseController {
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'index' ),
-					'permission_callback' => $cap,
+					// Map editors need the basemap configuration to see the map; management data stays restricted.
+					'permission_callback' => $this->can( Capabilities::EDIT_MAPS ),
 				),
 				array(
 					'methods'             => \WP_REST_Server::CREATABLE,
@@ -145,6 +146,16 @@ final class ProvidersController extends BaseController {
 
 	/** @return array<string, mixed> */
 	private function present( Provider $provider ): array {
+		if ( ! current_user_can( Capabilities::MANAGE_SYSTEM ) ) {
+			$data = $provider->toArray();
+			return array(
+				'id'            => $data['id'],
+				'type'          => $data['type'],
+				'name'          => $data['name'],
+				'public_config' => $data['public_config'],
+				'enabled'       => $data['enabled'],
+			);
+		}
 		return $provider->toArray() + array(
 			'secret_defined'    => null !== $provider->secretConstant && defined( $provider->secretConstant ),
 			'external_requests' => $provider->externalHosts(),

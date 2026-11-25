@@ -27,7 +27,8 @@ Authentifizierung: Cookie + REST-Nonce (`X-WP-Nonce`). Alle Endpunkte haben eine
 | GET/PATCH/DELETE | `/layers/{id}` | `swmap_manage_layers` | `Layer` / 204 |
 | GET/POST | `/layers/{id}/features` (`page`, `per_page`) | `swmap_edit_maps` | Liste/`Feature` |
 | GET/PATCH/DELETE | `/features/{id}` | `swmap_edit_maps` | `Feature` / 204 |
-| GET/POST | `/providers`, GET/PATCH/DELETE `/providers/{id}` | `swmap_manage_system` | `Provider` |
+| GET | `/providers` | `swmap_edit_maps` (Karteneditoren erhalten nur `id, type, name, public_config, enabled`; mit `swmap_manage_system` zusätzlich `secret_constant`, `secret_defined`, `external_requests`) | Liste `Provider` |
+| POST | `/providers`, GET/PATCH/DELETE `/providers/{id}` | `swmap_manage_system` | `Provider` |
 | POST | `/providers/{id}/test` | `swmap_manage_system` | `{ ok, status, message }` |
 | GET/PATCH | `/settings` | `swmap_manage_system` | `Settings` |
 | GET | `/status` | `swmap_manage_system` | Systemstatus |

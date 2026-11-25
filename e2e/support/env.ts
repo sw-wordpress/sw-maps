@@ -28,15 +28,15 @@ export function requireEnv(name: string): string {
 export const ROLES = ['administrator', 'editor', 'subscriber'] as const;
 export type Role = (typeof ROLES)[number];
 
-const LOGINS: Record<Role, { login: string; passwordVar: string }> = {
-  administrator: { login: 'admin', passwordVar: 'SWMAPS_E2E_PW_ADMIN' },
-  editor: { login: 'editor', passwordVar: 'SWMAPS_E2E_PW_EDITOR' },
-  subscriber: { login: 'subscriber', passwordVar: 'SWMAPS_E2E_PW_SUBSCRIBER' },
+const LOGINS: Record<Role, { login: string; envVar: string }> = {
+  administrator: { login: 'admin', envVar: 'SWMAPS_E2E_PW_ADMIN' },
+  editor: { login: 'editor', envVar: 'SWMAPS_E2E_PW_EDITOR' },
+  subscriber: { login: 'subscriber', envVar: 'SWMAPS_E2E_PW_SUBSCRIBER' },
 };
 
 export function credentials(role: Role): { login: string; password: string } {
   const entry = LOGINS[role];
-  return { login: entry.login, password: requireEnv(entry.passwordVar) };
+  return { login: entry.login, password: requireEnv(entry.envVar) };
 }
 
 export const authFile = (role: Role): string => resolve(AUTH_DIR, `${role}.json`);

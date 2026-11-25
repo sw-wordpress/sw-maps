@@ -24,35 +24,35 @@ onMounted(async () => {
     <q-markup-table flat dense>
       <tbody>
         <tr>
-          <th class="text-left">{{ t('status.plugin') }}</th>
+          <th scope="row" class="text-left">{{ t('status.plugin') }}</th>
           <td data-test="plugin">{{ store.status.plugin_version }}</td>
         </tr>
         <tr>
-          <th class="text-left">{{ t('status.schema') }}</th>
+          <th scope="row" class="text-left">{{ t('status.schema') }}</th>
           <td data-test="schema">{{ store.status.db_version }} / {{ store.status.db_expected }}</td>
         </tr>
         <tr>
-          <th class="text-left">{{ t('status.php') }}</th>
+          <th scope="row" class="text-left">{{ t('status.php') }}</th>
           <td>{{ store.status.php_version }}</td>
         </tr>
         <tr>
-          <th class="text-left">{{ t('status.wordpress') }}</th>
+          <th scope="row" class="text-left">{{ t('status.wordpress') }}</th>
           <td>{{ store.status.wp_version }}</td>
         </tr>
         <tr>
-          <th class="text-left">{{ t('status.database') }}</th>
+          <th scope="row" class="text-left">{{ t('status.database') }}</th>
           <td>{{ store.status.db_server }}</td>
         </tr>
         <tr>
-          <th class="text-left">{{ t('status.multisite') }}</th>
+          <th scope="row" class="text-left">{{ t('status.multisite') }}</th>
           <td>{{ store.status.multisite ? t('common.yes') : t('common.no') }}</td>
         </tr>
         <tr>
-          <th class="text-left">{{ t('status.environment') }}</th>
+          <th scope="row" class="text-left">{{ t('status.environment') }}</th>
           <td>{{ store.status.environment }}</td>
         </tr>
         <tr>
-          <th class="text-left">{{ t('status.consentApi') }}</th>
+          <th scope="row" class="text-left">{{ t('status.consentApi') }}</th>
           <td data-test="consent">
             {{ store.status.consent_api ? t('status.active') : t('status.inactive') }}
           </td>

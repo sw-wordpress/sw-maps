@@ -19,7 +19,7 @@ ENV_FILE="$GEN_DIR/e2e.env"
 keep=0
 headed=0
 pw_args=()
-while [ $# -gt 0 ]; do
+while [[ $# -gt 0 ]]; do
   case "$1" in
     --keep) keep=1 ;;
     --headed) headed=1 ;;
@@ -43,8 +43,8 @@ compose() { docker compose --project-name "$PROJECT" --env-file "$ENV_FILE" -f "
 cleanup() {
   local code=$?
   trap - EXIT INT TERM
-  if [ -f "$ENV_FILE" ]; then
-    if [ "$keep" = 1 ] && [ "$code" -ne 130 ]; then
+  if [[ -f "$ENV_FILE" ]]; then
+    if [[ "$keep" = 1 ]] && [[ "$code" -ne 130 ]]; then
       echo
       echo "Stack kept (project $PROJECT): $SWMAPS_E2E_BASE_URL (admin / see $ENV_FILE)"
       echo "Remove it with: docker compose --project-name $PROJECT --env-file $ENV_FILE -f $ENV_DIR/compose.yml down -v --remove-orphans"
@@ -64,23 +64,23 @@ secret() { openssl rand -hex 12; }
 
 # --- prerequisites: PHP dependencies (production only, in a helper container) and the built admin app -----------------
 # SWMAPS_E2E_SKIP_BUILD=1: the mounted plugin directory is a finished release package (bin/test-zip-install.sh).
-if [ "${SWMAPS_E2E_SKIP_BUILD:-0}" = 1 ]; then :; else
-if [ ! -f "$ROOT/vendor/autoload.php" ] || [ "${SWMAPS_E2E_REBUILD:-0}" = 1 ]; then
+if [[ "${SWMAPS_E2E_SKIP_BUILD:-0}" = 1 ]]; then :; else
+if [[ ! -f "$ROOT/vendor/autoload.php" ]] || [[ "${SWMAPS_E2E_REBUILD:-0}" = 1 ]]; then
   echo "Installing production Composer dependencies in a helper container ..."
   docker run --rm --user "$(id -u):$(id -g)" -e COMPOSER_HOME=/tmp/composer -v "$ROOT:/app" -w /app composer:2 \
     install --no-dev --no-interaction --prefer-dist --optimize-autoloader --ignore-platform-reqs
 fi
-if [ ! -f "$ROOT/assets/admin/.vite/manifest.json" ] || [ "${SWMAPS_E2E_REBUILD:-0}" = 1 ]; then
+if [[ ! -f "$ROOT/assets/admin/.vite/manifest.json" ]] || [[ "${SWMAPS_E2E_REBUILD:-0}" = 1 ]]; then
   echo "Building the admin app ..."
-  (cd "$ROOT/apps/admin" && { [ -d node_modules ] || npm ci; } && npm run build)
+  (cd "$ROOT/apps/admin" && { [[ -d node_modules ]] || npm ci --ignore-scripts; } && npm run build)
 fi
-if [ ! -f "$ROOT/assets/frontend/swmaps-viewer.js" ] || [ "${SWMAPS_E2E_REBUILD:-0}" = 1 ]; then
+if [[ ! -f "$ROOT/assets/frontend/swmaps-viewer.js" ]] || [[ "${SWMAPS_E2E_REBUILD:-0}" = 1 ]]; then
   echo "Building the frontend bundle ..."
-  (cd "$ROOT/packages/renderer-openlayers" && { [ -d node_modules ] || npm ci; } && npm run build)
+  (cd "$ROOT/packages/renderer-openlayers" && { [[ -d node_modules ]] || npm ci --ignore-scripts; } && npm run build)
 fi
 fi
 echo "Preparing the Playwright project ..."
-(cd "$ROOT/e2e" && npm ci --no-audit --no-fund && npx playwright install chromium)
+(cd "$ROOT/e2e" && npm ci --no-audit --no-fund --ignore-scripts && npm exec --no -- playwright install chromium)
 
 # --- generated, git-ignored environment (ports and throw-away credentials per run) ---------------------------------------
 mkdir -p "$GEN_DIR"
@@ -95,8 +95,8 @@ SWMAPS_E2E_PW_ADMIN=$(secret)
 SWMAPS_E2E_PW_EDITOR=$(secret)
 SWMAPS_E2E_PW_SUBSCRIBER=$(secret)
 EOF
-[ -n "${SWMAPS_E2E_WP_IMAGE:-}" ] && echo "SWMAPS_E2E_WP_IMAGE=$SWMAPS_E2E_WP_IMAGE" >>"$ENV_FILE"
-[ -n "${SWMAPS_E2E_CLI_IMAGE:-}" ] && echo "SWMAPS_E2E_CLI_IMAGE=$SWMAPS_E2E_CLI_IMAGE" >>"$ENV_FILE"
+[[ -n "${SWMAPS_E2E_WP_IMAGE:-}" ]] && echo "SWMAPS_E2E_WP_IMAGE=$SWMAPS_E2E_WP_IMAGE" >>"$ENV_FILE"
+[[ -n "${SWMAPS_E2E_CLI_IMAGE:-}" ]] && echo "SWMAPS_E2E_CLI_IMAGE=$SWMAPS_E2E_CLI_IMAGE" >>"$ENV_FILE"
 echo "SWMAPS_E2E_ENV_FILE=$ENV_FILE" >>"$ENV_FILE"
 set -a
 # shellcheck disable=SC1090
@@ -111,7 +111,7 @@ compose run --rm wpcli
 wait_for() {
   local url="$1" i
   for i in $(seq 1 60); do
-    if [ "$(curl -s -o /dev/null -w '%{http_code}' "$url/wp-login.php")" = 200 ]; then return 0; fi
+    if [[ "$(curl -s -o /dev/null -w '%{http_code}' "$url/wp-login.php")" = 200 ]]; then return 0; fi
     sleep 1
   done
   echo "not ready: $url" >&2
@@ -124,8 +124,8 @@ wait_for_stable_interfaces() {
   local previous="" current stable=0 i
   for i in $(seq 1 60); do
     current="$(ls /sys/class/net 2>/dev/null | sort | tr '\n' ' ')"
-    if [ "$current" = "$previous" ]; then stable=$((stable + 1)); else stable=0; fi
-    [ "$stable" -ge 4 ] && return 0
+    if [[ "$current" = "$previous" ]]; then stable=$((stable + 1)); else stable=0; fi
+    [[ "$stable" -ge 4 ]] && return 0
     previous="$current"
     sleep 1
   done
@@ -137,16 +137,16 @@ wait_for "$SWMAPS_E2E_BASE_URL"
 cd "$ROOT/e2e"
 rm -rf playwright-report test-results .auth screenshots
 set +e
-if [ "$headed" = 1 ]; then
-  npx playwright test --headed "${pw_args[@]}"
+if [[ "$headed" = 1 ]]; then
+  npm exec --no -- playwright test --headed "${pw_args[@]}"
 else
-  npx playwright test "${pw_args[@]}"
+  npm exec --no -- playwright test "${pw_args[@]}"
 fi
 code=$?
 set -e
 echo
 echo "Playwright report: $ROOT/e2e/playwright-report/index.html (traces/screenshots of failures: $ROOT/e2e/test-results, review screenshots: $ROOT/e2e/screenshots)"
-if [ "$code" -ne 0 ]; then
+if [[ "$code" -ne 0 ]]; then
   compose logs --no-log-prefix --tail 200 wordpress 2>&1 | grep -v -E ' "(GET|POST|OPTIONS|HEAD) ' | tail -20 >&2 || true
 fi
 exit "$code"

@@ -34,8 +34,10 @@ export class EditableOpenLayersRenderer extends OpenLayersRenderer implements Ed
     super({ popups: false });
   }
 
-  override mount(target: HTMLElement, options: Parameters<OpenLayersRenderer['mount']>[1]): void {
-    super.mount(target, options);
+  /** The renderer rebuilds its map when interaction settings change: interactions are (re)attached on every build. */
+  protected override afterBuild(): void {
+    const map = this.requireMap();
+    this.draw = null;
     this.modify = new Modify({ source: this.source });
     this.modify.on('modifyend', (event) => {
       for (const feature of event.features.getArray() as Feature[]) {
@@ -45,8 +47,8 @@ export class EditableOpenLayersRenderer extends OpenLayersRenderer implements Ed
       }
     });
     this.snap = new Snap({ source: this.source });
-    this.requireMap().addInteraction(this.modify);
-    this.requireMap().addInteraction(this.snap);
+    map.addInteraction(this.modify);
+    map.addInteraction(this.snap);
     this.setTool(this.tool);
   }
 

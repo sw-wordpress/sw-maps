@@ -41,7 +41,7 @@ final class I18nTest extends TestCase
     public function testCompiledCatalogsAndBlockJsonExist(): void
     {
         self::assertFileExists($this->root . '/languages/sw-maps-de_DE.mo');
-        $json = $this->root . '/languages/sw-maps-de_DE-' . md5('blocks/map/index.js') . '.json';
+        $json = $this->root . '/languages/sw-maps-de_DE-' . md5('blocks/map/index.js') . '.json'; // NOSONAR: WordPress names script translation files by md5, not a security use
         self::assertFileExists($json);
         $data = json_decode((string) file_get_contents($json), true, 512, JSON_THROW_ON_ERROR);
         self::assertSame('Karte auswählen', $data['locale_data']['messages']['Select a map'][0]);

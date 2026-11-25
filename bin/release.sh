@@ -6,7 +6,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VERSION="${SWMAPS_RELEASE_VERSION:?usage: make release VERSION=x.y.z}"
 [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "VERSION must look like 1.2.3" >&2; exit 2; }
 cd "$ROOT"
-[ -z "$(git status --porcelain)" ] || { echo "Working tree is not clean: commit or stash first." >&2; exit 1; }
+[[ -z "$(git status --porcelain)" ]] || { echo "Working tree is not clean: commit or stash first." >&2; exit 1; }
 make check
 sed -i "s/^ \* Version:.*/ * Version:           $VERSION/; s/define( 'SWMAPS_VERSION', '[^']*' )/define( 'SWMAPS_VERSION', '$VERSION' )/" sw-maps.php
 sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" apps/admin/package.json

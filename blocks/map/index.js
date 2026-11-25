@@ -25,7 +25,7 @@
 							label: __( 'Map', 'sw-maps' ),
 							value: attributes.mapId,
 							options: options,
-							onChange: ( value ) => setAttributes( { mapId: parseInt( value, 10 ) || 0 } ),
+							onChange: ( value ) => setAttributes( { mapId: Number.parseInt( value, 10 ) || 0 } ),
 						} ),
 						el( TextControl, {
 							label: __( 'Height', 'sw-maps' ),

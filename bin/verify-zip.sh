@@ -7,7 +7,7 @@ SLUG=sw-maps
 TMP="$(mktemp -d)"
 trap 'rm -r "$TMP"' EXIT
 
-[ -z "${2:-}" ] || [ "$(basename "$ZIP")" = "$2" ] || { echo "Unexpected ZIP name" >&2; exit 1; }
+[[ -z "${2:-}" ]] || [[ "$(basename "$ZIP")" = "$2" ]] || { echo "Unexpected ZIP name" >&2; exit 1; }
 unzip -t "$ZIP" >/dev/null
 unzip -Z1 "$ZIP" > "$TMP/zip-contents.txt"
 for path in sw-maps.php uninstall.php LICENSE README.md vendor/autoload.php assets/admin/app.js assets/admin/app.css assets/frontend/swmaps-viewer.js assets/frontend/swmaps-viewer.css \

@@ -241,6 +241,44 @@ describe('editor store', () => {
     await flushPromises();
   });
 
+  it('loads every page of features of a large layer', async () => {
+    api.features.page
+      .mockResolvedValueOnce({ items: [makeFeature({ id: 1 })], total: 3, totalPages: 3 } as never)
+      .mockResolvedValueOnce({ items: [makeFeature({ id: 2 })], total: 3, totalPages: 3 } as never)
+      .mockResolvedValueOnce({ items: [makeFeature({ id: 3 })], total: 3, totalPages: 3 } as never);
+    const store = await loaded();
+    expect(store.doc?.features.map((f) => f.id)).toEqual([1, 2, 3]);
+    expect(api.features.page).toHaveBeenNthCalledWith(3, 10, 3, 500);
+  });
+
+  it('ignores edits while a save is running', async () => {
+    const store = await loaded();
+    store.patchMap({ title: 'Saved title' });
+    let release: (v: unknown) => void = () => undefined;
+    api.maps.update.mockImplementationOnce(
+      () => new Promise((resolve) => (release = resolve)) as never,
+    );
+    const pending = store.save();
+    store.patchMap({ title: 'Lost?' });
+    store.undo();
+    expect(store.doc?.map.title).toBe('Saved title');
+    release(makeMap());
+    await pending;
+  });
+
+  it('does not create duplicates when only the refresh after a successful save fails', async () => {
+    const store = await loaded();
+    store.createLayer('New layer');
+    store.addGeometry({ type: 'Point', coordinates: [1, 1] });
+    api.layers.forMap.mockRejectedValueOnce(new Error('refresh failed') as never);
+    expect(await store.save()).toBe(false);
+    expect(store.dirty).toBe(false);
+    expect(store.doc?.layers.every((l) => l.id > 0)).toBe(true);
+    expect(await store.save()).toBe(true);
+    expect(api.layers.create).toHaveBeenCalledTimes(1);
+    expect(api.features.create).toHaveBeenCalledTimes(1);
+  });
+
   it('throws when editing without a loaded map', () => {
     const store = useEditorStore();
     expect(() => store.patchMap({ title: 'x' })).toThrow('No map loaded');

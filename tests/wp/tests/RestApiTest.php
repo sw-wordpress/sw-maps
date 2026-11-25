@@ -36,7 +36,6 @@ final class RestApiTest extends SwMapsTestCase {
 			array( 'GET', "/features/{$feat['id']}" ),
 			array( 'PATCH', "/features/{$feat['id']}" ),
 			array( 'DELETE', "/features/{$feat['id']}" ),
-			array( 'GET', '/providers' ),
 			array( 'POST', '/providers' ),
 			array( 'GET', '/providers/1' ),
 			array( 'POST', '/providers/1/test' ),
@@ -45,10 +44,12 @@ final class RestApiTest extends SwMapsTestCase {
 			array( 'GET', '/status' ),
 		);
 		wp_set_current_user( 0 );
+		$this->assertSame( 401, $this->rest( 'GET', '/providers' )->get_status() );
 		foreach ( $routes as list( $method, $route ) ) {
 			$this->assertSame( 401, $this->rest( $method, $route, array() )->get_status(), "anonymous $method $route" );
 		}
 		$this->as_role( 'subscriber' );
+		$this->assertSame( 403, $this->rest( 'GET', '/providers' )->get_status() );
 		foreach ( $routes as list( $method, $route ) ) {
 			$this->assertSame( 403, $this->rest( $method, $route, array() )->get_status(), "subscriber $method $route" );
 		}
@@ -60,7 +61,12 @@ final class RestApiTest extends SwMapsTestCase {
 	public function test_editor_can_edit_but_not_manage_system_or_imports(): void {
 		$this->as_role( 'editor' );
 		$this->assertSame( 201, $this->rest( 'POST', '/maps', array( 'title' => 'E' ) )->get_status() );
-		$this->assertSame( 403, $this->rest( 'GET', '/providers' )->get_status() );
+		$providers = $this->rest( 'GET', '/providers' );
+		$this->assertSame( 200, $providers->get_status(), 'editors read the basemap configuration' );
+		$this->assertStringNotContainsString( 'secret', (string) wp_json_encode( $providers->get_data() ) );
+		$this->assertSame( array( 'id', 'type', 'name', 'public_config', 'enabled' ), array_keys( $providers->get_data()[0] ) );
+		$this->assertSame( 403, $this->rest( 'POST', '/providers', array( 'name' => 'x' ) )->get_status() );
+		$this->assertSame( 403, $this->rest( 'GET', '/providers/1' )->get_status() );
 		$this->assertSame( 403, $this->rest( 'GET', '/settings' )->get_status() );
 		$this->assertFalse( current_user_can( 'swmap_manage_imports' ) );
 	}

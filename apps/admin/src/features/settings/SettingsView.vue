@@ -102,8 +102,8 @@ async function save(): Promise<void> {
     <q-markup-table flat dense>
       <thead>
         <tr>
-          <th class="text-left">{{ t('settings.capability') }}</th>
-          <th class="text-left">{{ t('settings.roles') }}</th>
+          <th scope="row" class="text-left">{{ t('settings.capability') }}</th>
+          <th scope="row" class="text-left">{{ t('settings.roles') }}</th>
         </tr>
       </thead>
       <tbody>

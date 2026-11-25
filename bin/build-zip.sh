@@ -14,9 +14,9 @@ NAME=sw-maps
 
 # The admin app imports the renderer sources, so the renderer's dependencies (OpenLayers) must be installed first.
 echo ">> building the frontend bundle"
-(cd "$ROOT/packages/renderer-openlayers" && npm ci --no-audit --no-fund && npm run build)
+(cd "$ROOT/packages/renderer-openlayers" && npm ci --no-audit --no-fund --ignore-scripts && npm run build)
 echo ">> building the admin app"
-(cd "$ROOT/apps/admin" && npm ci --no-audit --no-fund && npm run build)
+(cd "$ROOT/apps/admin" && npm ci --no-audit --no-fund --ignore-scripts && npm run build)
 node "$ROOT/bin/check-bundle-size.mjs"
 
 echo ">> assembling plugin tree"
@@ -66,10 +66,10 @@ echo ">> installing production dependencies"
 cp "$ROOT/composer.json" "$ROOT/composer.lock" "$STAGE/$NAME/"
 (cd "$STAGE/$NAME" && composer validate --strict && composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-progress --no-scripts)
 RUNTIME_PACKAGES="$(php -r 'echo count(json_decode(file_get_contents($argv[1]), true)["packages"]);' "$ROOT/composer.lock")"
-if [ "$RUNTIME_PACKAGES" != "0" ]; then
+if [[ "$RUNTIME_PACKAGES" != "0" ]]; then
   echo ">> isolating $RUNTIME_PACKAGES runtime package(s) with Mozart"
   docker run --rm --user "$(id -u):$(id -g)" -v "$STAGE/$NAME:/project" coenjacobs/mozart:1.2.3 mozart compose
-  test -f "$STAGE/$NAME/vendor-prefixed/autoload.php"
+  [[ -f "$STAGE/$NAME/vendor-prefixed/autoload.php" ]]
 else
   echo ">> no runtime Composer packages: shipping the optimized autoloader only"
 fi
