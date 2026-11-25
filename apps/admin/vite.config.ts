@@ -35,6 +35,9 @@ export default defineConfig({
   plugins: [woff2Only(), vue({ template: { transformAssetUrls } }), quasar()],
   resolve: { alias },
   css: { postcss: { plugins: [swmapScope()] } },
+  // Dev server (mock mode): scan every view and the renderer package at startup so that no dependency is discovered late,
+  // which would re-optimise and reload while a view is being loaded lazily.
+  optimizeDeps: { entries: ['src/main.ts', 'src/**/*.vue', '../../packages/renderer-openlayers/src/index.ts'] },
   server: { port: 5174, host: '127.0.0.1' },
   build: {
     outDir,
