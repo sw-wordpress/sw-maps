@@ -230,9 +230,10 @@ export const useEditorStore = defineStore('editor', () => {
     try {
       if (baselineStale) {
         // A previous partial save wrote data we could not read back: recover the baseline before diffing.
-        original.value = await fetchDoc(mapId);
+        const recoveredBaseline = await fetchDoc(mapId);
+        if (token !== loadToken) return false; // another map is open now: never touch the shared state
+        original.value = recoveredBaseline;
         baselineStale = false;
-        if (token !== loadToken) return false;
       }
       const ids = await runOps(api(), mapId, diff(original.value, doc.value));
       // Another map was opened meanwhile: the data is saved, the store now belongs to the other document.
@@ -261,6 +262,7 @@ export const useEditorStore = defineStore('editor', () => {
         activeLayerId.value =
           activeBefore === null ? null : (error.ids.get(activeBefore) ?? activeBefore);
         const recovered = await fetchDoc(mapId).catch(() => null);
+        if (token !== loadToken) return false;
         if (recovered) original.value = recovered;
         else baselineStale = true;
         // The undo snapshots predate the partial write (ids, deleted objects): they cannot be saved any more.

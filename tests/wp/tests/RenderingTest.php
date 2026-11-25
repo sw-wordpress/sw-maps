@@ -216,6 +216,21 @@ final class RenderingTest extends SwMapsTestCase {
 		$this->assertNotSame( $allowed, $denied );
 	}
 
+	public function test_block_selector_lists_maps_beyond_the_first_hundred(): void {
+		$this->as_role( 'administrator' );
+		$oldest = Services::instance()->maps()->create( array( 'title' => 'Oldest map' ), get_current_user_id() );
+		global $wpdb;
+		$wpdb->update( SWMaps\WordPress\Persistence\Schema::table( 'maps' ), array( 'updated_at' => '2001-01-01 00:00:00' ), array( 'id' => $oldest->id ) );
+		for ( $i = 0; $i < 105; $i++ ) {
+			Services::instance()->maps()->create( array( 'title' => 'Filler ' . $i ), get_current_user_id() );
+		}
+		wp_register_script( 'sw-maps-map-editor-script', '', array(), '1', true );
+		Block::editor_data();
+		$data = implode( '', (array) wp_scripts()->get_data( 'sw-maps-map-editor-script', 'before' ) );
+		$this->assertStringContainsString( 'Oldest map', $data );
+		$this->assertStringContainsString( 'Filler 104', $data );
+	}
+
 	public function test_consent_category_only_when_consent_api_is_active(): void {
 		list( $id ) = $this->published_map();
 		$this->assertFalse( Consent::api_active() );

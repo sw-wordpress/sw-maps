@@ -339,6 +339,28 @@ describe('editor store', () => {
     expect(api.features.create).toHaveBeenLastCalledWith(88, expect.anything());
   });
 
+  it('never installs a recovery read of map A after map B was opened', async () => {
+    const store = await loaded();
+    store.createLayer('New layer');
+    api.layers.create.mockResolvedValueOnce(makeLayer({ id: 90 }) as never);
+    store.addGeometry({ type: 'Point', coordinates: [1, 1] });
+    api.features.create.mockRejectedValueOnce(new ApiError('x', 'Bad', 400) as never);
+    let release: (v: unknown) => void = () => undefined;
+    api.layers.forMap.mockImplementationOnce(
+      () => new Promise((resolve) => (release = resolve)) as never,
+    );
+    const pending = store.save();
+    await flushPromises();
+    api.maps.get.mockResolvedValueOnce(makeMap({ id: 2, title: 'Map B' }) as never);
+    api.layers.forMap.mockResolvedValueOnce([] as never);
+    await store.load(2);
+    release([makeLayer({ id: 10 })]);
+    expect(await pending).toBe(false);
+    expect(store.doc?.map.id).toBe(2);
+    expect(store.original?.map.id).toBe(2);
+    expect(store.dirty).toBe(false);
+  });
+
   it('throws when editing without a loaded map', () => {
     const store = useEditorStore();
     expect(() => store.patchMap({ title: 'x' })).toThrow('No map loaded');

@@ -17,6 +17,9 @@ final class Block {
 
 	public const NAME = 'sw-maps/map';
 
+	/** Upper bound of 100 map pages for the block selector (10,000 maps). */
+	private const MAX_SELECTOR_PAGES = 100;
+
 	public static function register(): void {
 		register_block_type(
 			SWMAPS_DIR . 'blocks/map',
@@ -57,16 +60,23 @@ final class Block {
 		if ( ! current_user_can( Capabilities::EDIT_MAPS ) ) {
 			return;
 		}
-		$maps = array();
-		foreach ( Services::instance()->maps()->list( '', null, 1, 100 )['items'] as $map ) {
-			if ( ! Access::can_edit_map( $map->id ) ) {
-				continue; // Same object-level rule as the REST list: no metadata of maps the user may not edit.
+		$maps     = array();
+		$page     = 1;
+		$per_page = 100;
+		// All pages (bounded): the selector must offer every map the user may edit, also older ones.
+		do {
+			$result = Services::instance()->maps()->list( '', null, $page, $per_page );
+			foreach ( $result['items'] as $map ) {
+				if ( ! Access::can_edit_map( $map->id ) ) {
+					continue; // Same object-level rule as the REST list: no metadata of maps the user may not edit.
+				}
+				$maps[] = array(
+					'value' => $map->id,
+					'label' => $map->title . ( $map->isPublished() ? '' : ' (' . __( 'Draft', 'sw-maps' ) . ')' ),
+				);
 			}
-			$maps[] = array(
-				'value' => $map->id,
-				'label' => $map->title . ( $map->isPublished() ? '' : ' (' . __( 'Draft', 'sw-maps' ) . ')' ),
-			);
-		}
+			++$page;
+		} while ( $page <= self::MAX_SELECTOR_PAGES && ( $page - 1 ) * $per_page < $result['total'] );
 		wp_add_inline_script( 'sw-maps-map-editor-script', 'window.swmapBlockMaps = ' . wp_json_encode( $maps ) . ';', 'before' );
 	}
 }
