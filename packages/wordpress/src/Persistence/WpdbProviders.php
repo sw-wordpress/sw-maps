@@ -87,7 +87,8 @@ final class WpdbProviders implements ProviderRepositoryInterface {
 			$int( 'maxZoom', 19 ),
 			$int( 'tileSize', 256 ),
 			$text( 'publicKey' ),
-			null === $row['secret_constant'] ? null : (string) $row['secret_constant'],
+			// Rows written before the namespace rule (or edited by hand) must not break the page: an invalid name is dropped.
+			null !== $row['secret_constant'] && Provider::validSecretName( (string) $row['secret_constant'] ) ? (string) $row['secret_constant'] : null,
 			(bool) $row['enabled']
 		);
 	}

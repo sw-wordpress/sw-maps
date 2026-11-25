@@ -75,6 +75,9 @@ final class ProviderTest extends TestCase
             ['name' => 'X', 'public_config' => ['maxZoom' => 30] + $ok],
             ['name' => 'X', 'public_config' => ['tileSize' => 300] + $ok],
             ['name' => 'X', 'public_config' => $ok, 'secret_constant' => 'lowercase'],
+            ['name' => 'X', 'public_config' => $ok, 'secret_constant' => 'DB_PASSWORD'],
+            ['name' => 'X', 'public_config' => $ok, 'secret_constant' => 'AUTH_KEY'],
+            ['name' => 'X', 'public_config' => $ok, 'secret_constant' => 'SWMAP_'],
             ['name' => 'X', 'public_config' => $ok, 'secret_constant' => 5],
             ['name' => 'X', 'public_config' => $ok, 'enabled' => 'yes'],
         ];

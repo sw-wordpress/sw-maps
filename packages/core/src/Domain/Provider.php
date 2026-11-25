@@ -9,6 +9,8 @@ use SWMaps\Core\Exception\ValidationException;
 /** Basemap provider (raster XYZ). The secret itself lives in wp-config; only its constant name is stored. */
 final class Provider
 {
+    /** Only constants in this namespace can be used as provider secrets: core credentials (DB_PASSWORD, AUTH_KEY ...) never. */
+    public const SECRET_PREFIX = 'SWMAP_';
     public const OSM_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
     public const OSM_ATTRIBUTION = '© [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors';
 
@@ -47,12 +49,17 @@ final class Provider
         if (!in_array($tileSize, [256, 512], true)) {
             $errors['public_config.tileSize'] = 'Tile size must be 256 or 512.';
         }
-        if ($secretConstant !== null && preg_match('/^[A-Z][A-Z0-9_]{2,63}$/', $secretConstant) !== 1) {
-            $errors['secret_constant'] = 'Must be an upper case constant name.';
+        if ($secretConstant !== null && !self::validSecretName($secretConstant)) {
+            $errors['secret_constant'] = 'Must be an upper case constant name starting with ' . self::SECRET_PREFIX . '.';
         }
         if ($errors !== []) {
             throw new ValidationException($errors);
         }
+    }
+
+    public static function validSecretName(string $name): bool
+    {
+        return preg_match('/^' . self::SECRET_PREFIX . '[A-Z0-9_]{1,57}$/', $name) === 1;
     }
 
     public static function validUrlTemplate(string $url): bool

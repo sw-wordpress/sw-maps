@@ -137,7 +137,8 @@ final class ProvidersController extends BaseController {
 
 	private function secret_value( Provider $provider ): ?string {
 		$name = $provider->secretConstant;
-		if ( null === $name || ! defined( $name ) ) {
+		// Defence in depth for rows written before the prefix rule: never resolve constants outside the plugin's namespace.
+		if ( null === $name || ! str_starts_with( $name, Provider::SECRET_PREFIX ) || ! defined( $name ) ) {
 			return null;
 		}
 		$value = constant( $name );
@@ -157,7 +158,7 @@ final class ProvidersController extends BaseController {
 			);
 		}
 		return $provider->toArray() + array(
-			'secret_defined'    => null !== $provider->secretConstant && defined( $provider->secretConstant ),
+			'secret_defined'    => null !== $provider->secretConstant && str_starts_with( $provider->secretConstant, Provider::SECRET_PREFIX ) && defined( $provider->secretConstant ),
 			'external_requests' => $provider->externalHosts(),
 		);
 	}

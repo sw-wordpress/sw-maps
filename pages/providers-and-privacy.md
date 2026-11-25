@@ -1,7 +1,7 @@
 # Anbieter und Datenschutz
 
 ## Anbieter
-Unter *Anbieter* werden Rasterkacheln (XYZ) konfiguriert: URL mit `{z}/{x}/{y}`, Quellenangabe (Text, Links als `[Label](https://…)`), Zoomgrenzen, Kachelgröße, optionaler öffentlicher Schlüssel (`{key}` in der URL). Geheime Schlüssel gehören als Konstante in die `wp-config.php`; im Anbieter steht nur der **Name** der Konstante (z. B. `SWMAP_TILES_KEY`). Der Schlüssel selbst wird nie gespeichert, exportiert oder an den Browser gesendet.
+Unter *Anbieter* werden Rasterkacheln (XYZ) konfiguriert: URL mit `{z}/{x}/{y}`, Quellenangabe (Text, Links als `[Label](https://…)`), Zoomgrenzen, Kachelgröße, optionaler öffentlicher Schlüssel (`{key}` in der URL). Geheime Schlüssel gehören als Konstante in die `wp-config.php`; im Anbieter steht nur der **Name** der Konstante (muss mit `SWMAP_` beginnen, z. B. `SWMAP_TILES_KEY`; Kernkonstanten wie `DB_PASSWORD` sind nicht erlaubt). Der Schlüssel selbst wird nie gespeichert, exportiert oder an den Browser gesendet.
 
 Vor dem Aktivieren zeigt das Plugin, welche Server die Browser der Besucher kontaktieren. *Verbindung testen* ruft serverseitig eine Kachel ab.
 
