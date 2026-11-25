@@ -33,7 +33,13 @@ mkuser editor editor "$SWMAPS_E2E_PW_EDITOR"
 mkuser subscriber subscriber "$SWMAPS_E2E_PW_SUBSCRIBER"
 
 # Complianz (consent banner plugin using the WP Consent API) is only installed; the consent-plugins spec activates it.
-wp plugin install complianz-gdpr >/dev/null 2>&1 && wp eval 'update_option( "cmplz_options", array_merge( (array) get_option( "cmplz_options", array() ), array( "regions" => "eu", "use_country" => false, "cmplz_wizard_completed_once" => true ) ) );' >/dev/null 2>&1 || echo "complianz-gdpr could not be installed (no network)" >&2
+if wp plugin install complianz-gdpr >/dev/null 2>&1; then
+  # Headless equivalent of the setup wizard: EU region (opt-in), data sharing, wizard completed -> the banner is shown.
+  wp option update cmplz_wizard_completed_once 1 >/dev/null
+  wp eval '$o = (array) get_option( "cmplz_options" ); $o["regions"] = "eu"; $o["uses_ad_cookies"] = "yes"; $o["compile_statistics"] = "no"; update_option( "cmplz_options", $o );'
+else
+  echo "complianz-gdpr could not be installed (no network)" >&2
+fi
 
 wp plugin list --format=csv --fields=name,status,version
 echo "Provisioning done."
