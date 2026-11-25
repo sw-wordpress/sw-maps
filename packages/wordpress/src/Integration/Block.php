@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace SWMaps\WordPress\Integration;
 
+use SWMaps\WordPress\Access;
 use SWMaps\WordPress\Capabilities;
 use SWMaps\WordPress\Services;
 
@@ -58,6 +59,9 @@ final class Block {
 		}
 		$maps = array();
 		foreach ( Services::instance()->maps()->list( '', null, 1, 100 )['items'] as $map ) {
+			if ( ! Access::can_edit_map( $map->id ) ) {
+				continue; // Same object-level rule as the REST list: no metadata of maps the user may not edit.
+			}
 			$maps[] = array(
 				'value' => $map->id,
 				'label' => $map->title . ( $map->isPublished() ? '' : ' (' . __( 'Draft', 'sw-maps' ) . ')' ),

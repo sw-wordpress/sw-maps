@@ -61,6 +61,8 @@ export const useEditorStore = defineStore('editor', () => {
   const saveError = ref<unknown>(null);
   /** Incremented by every load(): a save that finishes after another map was opened must not touch the new document. */
   let loadToken = 0;
+  /** True when a partial save wrote data but the server state could not be re-read: saving is blocked until it is. */
+  let baselineStale = false;
 
   const dirty = computed(
     () => original.value !== null && doc.value !== null && !docEquals(original.value, doc.value),
@@ -94,6 +96,7 @@ export const useEditorStore = defineStore('editor', () => {
 
   async function load(mapId: number): Promise<void> {
     const token = ++loadToken;
+    baselineStale = false;
     loading.value = true;
     if (doc.value?.map.id !== mapId) {
       // Never keep showing (and saving) another map while this one loads or when its request fails.
@@ -225,6 +228,12 @@ export const useEditorStore = defineStore('editor', () => {
     const selectedBefore = selectedFeatureId.value;
     const activeBefore = activeLayerId.value;
     try {
+      if (baselineStale) {
+        // A previous partial save wrote data we could not read back: recover the baseline before diffing.
+        original.value = await fetchDoc(mapId);
+        baselineStale = false;
+        if (token !== loadToken) return false;
+      }
       const ids = await runOps(api(), mapId, diff(original.value, doc.value));
       // Another map was opened meanwhile: the data is saved, the store now belongs to the other document.
       if (token !== loadToken) return true;
@@ -251,7 +260,9 @@ export const useEditorStore = defineStore('editor', () => {
           selectedBefore === null ? null : (error.ids.get(selectedBefore) ?? selectedBefore);
         activeLayerId.value =
           activeBefore === null ? null : (error.ids.get(activeBefore) ?? activeBefore);
-        original.value = await fetchDoc(mapId).catch(() => original.value);
+        const recovered = await fetchDoc(mapId).catch(() => null);
+        if (recovered) original.value = recovered;
+        else baselineStale = true;
         // The undo snapshots predate the partial write (ids, deleted objects): they cannot be saved any more.
         history.clear();
         historyTick.value++;

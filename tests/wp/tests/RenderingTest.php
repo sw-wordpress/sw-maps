@@ -203,6 +203,19 @@ final class RenderingTest extends SwMapsTestCase {
 		$this->assertStringContainsString( 'For block', implode( '', (array) $before ) );
 	}
 
+	public function test_block_selector_respects_per_map_authorization(): void {
+		list( $allowed ) = $this->published_map( 'Allowed map' );
+		list( $denied )  = $this->published_map( 'Denied secret map' );
+		add_filter( 'swmap_can_edit_map', static fn ( bool $ok, int $map_id ): bool => $map_id === $allowed, 10, 2 );
+		wp_register_script( 'sw-maps-map-editor-script', '', array(), '1', true );
+		$this->as_role( 'editor' );
+		Block::editor_data();
+		$data = implode( '', (array) wp_scripts()->get_data( 'sw-maps-map-editor-script', 'before' ) );
+		$this->assertStringContainsString( 'Allowed map', $data );
+		$this->assertStringNotContainsString( 'Denied secret map', $data );
+		$this->assertNotSame( $allowed, $denied );
+	}
+
 	public function test_consent_category_only_when_consent_api_is_active(): void {
 		list( $id ) = $this->published_map();
 		$this->assertFalse( Consent::api_active() );

@@ -320,6 +320,25 @@ describe('editor store', () => {
     expect(store.doc?.map.id).toBe(1);
   });
 
+  it('blocks further saves until the baseline is recovered after a partial save whose recovery read failed', async () => {
+    const store = await loaded();
+    store.createLayer('New layer');
+    api.layers.create.mockResolvedValueOnce(makeLayer({ id: 88 }) as never);
+    api.layers.forMap.mockRejectedValueOnce(new Error('offline') as never); // the recovery read fails
+    store.addGeometry({ type: 'Point', coordinates: [1, 1] });
+    api.features.create.mockRejectedValueOnce(new ApiError('x', 'Bad', 400) as never);
+    expect(await store.save()).toBe(false);
+    // The next save first recovers the baseline (server now holds layer 88), then saves only what is missing.
+    api.layers.forMap.mockResolvedValue([
+      makeLayer(),
+      makeLayer({ id: 88, title: 'New layer' }),
+    ] as never);
+    api.features.create.mockResolvedValueOnce(makeFeature({ id: 5 }) as never);
+    expect(await store.save()).toBe(true);
+    expect(api.layers.create).toHaveBeenCalledTimes(1);
+    expect(api.features.create).toHaveBeenLastCalledWith(88, expect.anything());
+  });
+
   it('throws when editing without a loaded map', () => {
     const store = useEditorStore();
     expect(() => store.patchMap({ title: 'x' })).toThrow('No map loaded');
