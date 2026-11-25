@@ -28,9 +28,13 @@ final class GeometryValidator
             GeometryType::Point => $this->position($coordinates, $count),
             GeometryType::MultiPoint => $this->positions($coordinates, 1, $count),
             GeometryType::LineString => $this->positions($coordinates, 2, $count),
-            GeometryType::MultiLineString => $this->each($coordinates, fn (mixed $l): array => $this->positions($this->arr($l), 2, $count)),
+            GeometryType::MultiLineString => $this->each($coordinates, function (mixed $l) use (&$count): array {
+                return $this->positions($this->arr($l), 2, $count);
+            }),
             GeometryType::Polygon => $this->polygon($coordinates, $count),
-            GeometryType::MultiPolygon => $this->each($coordinates, fn (mixed $p): array => $this->polygon($this->arr($p), $count)),
+            GeometryType::MultiPolygon => $this->each($coordinates, function (mixed $p) use (&$count): array {
+                return $this->polygon($this->arr($p), $count);
+            }),
         };
         if ($count > $this->maxCoordinates) {
             throw InvalidGeometryException::because(sprintf('Geometry exceeds the limit of %d coordinates.', $this->maxCoordinates));

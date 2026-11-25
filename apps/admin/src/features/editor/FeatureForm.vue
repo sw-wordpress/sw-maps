@@ -81,7 +81,15 @@ function commitColor(value: string): void {
 
 async function chooseIcon(): Promise<void> {
   const image = await pickImage();
-  if (image) emit('patch', { properties: { icon: `media:${image.id}` } });
+  if (image) {
+    // The URL lets the editor canvas draw the icon right away (the server resolves it again on reload).
+    emit('patch', {
+      properties: {
+        icon: `media:${image.id}`,
+        icon_url: image.sizes?.['thumbnail']?.url ?? image.url,
+      },
+    });
+  }
 }
 
 async function chooseImage(): Promise<void> {

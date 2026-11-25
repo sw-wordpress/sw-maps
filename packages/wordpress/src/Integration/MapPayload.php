@@ -56,7 +56,7 @@ final class MapPayload {
 	}
 
 	/** @return array<string, mixed> */
-	private static function feature( Feature $feature ): array {
+	public static function feature( Feature $feature ): array {
 		$properties = $feature->properties->toArray();
 		return array(
 			'id'         => $feature->id,
@@ -72,7 +72,7 @@ final class MapPayload {
 	/**
 	 * Local raster images from the media library only (no SVG, no external URLs).
 	 */
-	private static function attachment_url( ?int $id, string $size ): ?string {
+	public static function attachment_url( ?int $id, string $size ): ?string {
 		if ( null === $id || 'attachment' !== get_post_type( $id ) ) {
 			return null;
 		}

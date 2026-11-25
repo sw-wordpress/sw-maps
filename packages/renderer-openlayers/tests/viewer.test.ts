@@ -195,6 +195,34 @@ describe('consent and click-to-load', () => {
     expect(root.dataset['state']).toBe('ready');
   });
 
+  it('subscribes for the lifetime of the viewer and stops the map when consent is withdrawn', () => {
+    let granted = true;
+    let notify: () => void = () => undefined;
+    const data = makeData({ consentCategory: 'marketing' });
+    const { root, viewer } = mount(
+      markup(data, 'data-lazy="0"'),
+      deps({
+        hasConsent: () => granted,
+        onConsentChange: (cb) => ((notify = cb), () => undefined),
+      }),
+    );
+    expect(viewer.currentState).toBe('ready');
+    root.querySelector<HTMLButtonElement>('button[data-feature-id="1"]')!.click();
+    expect(root.querySelector('.swmap-popup')).not.toBeNull();
+    notify(); // an unrelated change while consent is still given
+    expect(viewer.currentState).toBe('ready');
+    granted = false;
+    notify();
+    expect(viewer.currentState).toBe('waiting-consent');
+    expect(root.querySelector('.swmap__canvas')).toBeNull();
+    expect(root.querySelector('.swmap-popup')).toBeNull();
+    expect(root.querySelector('.swmap__placeholder')?.textContent).toBe('Consent required');
+    expect(root.querySelector<HTMLButtonElement>('button[data-feature-id]')!.hidden).toBe(true);
+    granted = true;
+    notify();
+    expect(viewer.currentState).toBe('ready');
+  });
+
   it('click-to-load keeps a local placeholder until the visitor clicks', () => {
     const data = makeData();
     data.settings = { ...data.settings, clickToLoad: true };

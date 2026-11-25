@@ -11,7 +11,9 @@ namespace SWMaps\WordPress\Api;
 
 use SWMaps\Core\Application\FeatureService;
 use SWMaps\WordPress\Access;
+use SWMaps\Core\Domain\Feature;
 use SWMaps\WordPress\Capabilities;
+use SWMaps\WordPress\Integration\MapPayload;
 use SWMaps\WordPress\Settings;
 
 final class FeaturesController extends BaseController {
@@ -78,7 +80,7 @@ final class FeaturesController extends BaseController {
 			function () use ( $request ) {
 				$per_page = (int) $request->get_param( 'per_page' );
 				$result   = $this->services()->features()->page( $this->id( $request ), (int) $request->get_param( 'page' ), $per_page );
-				return $this->paged( array_map( static fn ( $f ): array => $f->toArray(), $result['items'] ), $result['total'], $per_page );
+				return $this->paged( array_map( array( $this, 'present' ), $result['items'] ), $result['total'], $per_page );
 			}
 		);
 	}
@@ -91,17 +93,17 @@ final class FeaturesController extends BaseController {
 				if ( $this->services()->feature_repository()->count( $layer_id ) >= Settings::get()['max_features_per_layer'] ) {
 					return new \WP_Error( 'swmap_limit_exceeded', __( 'The feature limit of this layer is reached.', 'sw-maps' ), array( 'status' => 413 ) );
 				}
-				return new \WP_REST_Response( $this->services()->features()->create( $layer_id, $this->body( $request ) )->toArray(), 201 );
+				return new \WP_REST_Response( $this->present( $this->services()->features()->create( $layer_id, $this->body( $request ) ) ), 201 );
 			}
 		);
 	}
 
 	public function show( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
-		return $this->run( fn () => new \WP_REST_Response( $this->services()->features()->get( $this->id( $request ) )->toArray() ) );
+		return $this->run( fn () => new \WP_REST_Response( $this->present( $this->services()->features()->get( $this->id( $request ) ) ) ) );
 	}
 
 	public function update( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
-		return $this->run( fn () => new \WP_REST_Response( $this->services()->features()->update( $this->id( $request ), $this->body( $request ) )->toArray() ) );
+		return $this->run( fn () => new \WP_REST_Response( $this->present( $this->services()->features()->update( $this->id( $request ), $this->body( $request ) ) ) ) );
 	}
 
 	public function destroy( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
@@ -111,5 +113,16 @@ final class FeaturesController extends BaseController {
 				return new \WP_REST_Response( null, 204 );
 			}
 		);
+	}
+
+	/**
+	 * Feature for the editor: the stored data plus the resolved local media URLs the renderer needs.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function present( Feature $feature ): array {
+		$data               = $feature->toArray();
+		$data['properties'] = MapPayload::feature( $feature )['properties'];
+		return $data;
 	}
 }

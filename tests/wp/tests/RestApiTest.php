@@ -227,6 +227,22 @@ final class RestApiTest extends SwMapsTestCase {
 		$this->assertCount( 4, array_unique( $slugs ) );
 	}
 
+	public function test_feature_responses_include_resolved_media_urls_for_the_editor(): void {
+		$id    = $this->create_map();
+		$layer = $this->rest( 'POST', "/maps/{$id}/layers", array( 'title' => 'L' ) )->get_data();
+		$png   = self::factory()->attachment->create_upload_object( DIR_TESTDATA . '/images/canola.jpg' );
+		$feat  = $this->rest( 'POST', "/layers/{$layer['id']}/features", array( 'geometry' => $this->point(), 'properties' => array( 'image_id' => $png, 'icon' => 'media:' . $png ) ) )->get_data();
+		$this->assertStringContainsString( 'canola', (string) $feat['properties']['icon_url'] );
+		$this->assertStringContainsString( 'canola', (string) $feat['properties']['image_url'] );
+		$list = $this->rest( 'GET', "/layers/{$layer['id']}/features" )->get_data();
+		$this->assertStringContainsString( 'canola', (string) $list[0]['properties']['icon_url'] );
+		$one = $this->rest( 'GET', "/features/{$feat['id']}" )->get_data();
+		$this->assertStringContainsString( 'canola', (string) $one['properties']['image_url'] );
+		$updated = $this->rest( 'PATCH', "/features/{$feat['id']}", array( 'properties' => array( 'title' => 'T' ) ) )->get_data();
+		$this->assertStringContainsString( 'canola', (string) $updated['properties']['icon_url'] );
+		$this->assertSame( 'builtin:pin', $this->rest( 'POST', "/layers/{$layer['id']}/features", array( 'geometry' => $this->point() ) )->get_data()['properties']['icon'] );
+	}
+
 	public function test_feature_limit_per_layer(): void {
 		$id    = $this->create_map();
 		$layer = $this->rest( 'POST', "/maps/{$id}/layers", array( 'title' => 'L' ) )->get_data();

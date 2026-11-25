@@ -77,6 +77,7 @@ export class MapViewer {
       return;
     }
     this.bindList();
+    this.watchConsent();
     const lazy = this.root.dataset['lazy'] !== '0' && typeof IntersectionObserver !== 'undefined';
     if (!lazy) {
       this.activate();
@@ -110,9 +111,6 @@ export class MapViewer {
     if (!this.deps.hasConsent(data.consentCategory)) {
       this.setState('waiting-consent');
       this.showPlaceholder(data.strings.consentRequired, null);
-      this.unsubscribeConsent ??= this.deps.onConsentChange(() => {
-        if (this.state === 'waiting-consent') this.activate();
-      });
       return;
     }
     if (data.settings.clickToLoad && !this.clicked) {
@@ -121,6 +119,41 @@ export class MapViewer {
       return;
     }
     this.load(data);
+  }
+
+  /**
+   * For the lifetime of a consent-gated viewer: granting consent starts the map, withdrawing it stops all tile
+   * requests at once (the renderer is destroyed and the placeholder returns).
+   */
+  private watchConsent(): void {
+    const category = this.data?.consentCategory ?? null;
+    if (category === null || this.unsubscribeConsent !== null) return;
+    this.unsubscribeConsent = this.deps.onConsentChange(() => {
+      if (this.state === 'waiting-consent') {
+        this.activate();
+      } else if (
+        (this.state === 'ready' || this.state === 'loading') &&
+        !this.deps.hasConsent(category)
+      ) {
+        this.withdraw();
+      }
+    });
+  }
+
+  private withdraw(): void {
+    const data = this.data;
+    if (!data) return;
+    this.renderer?.destroy();
+    this.renderer = null;
+    this.clicked = false;
+    this.stage?.querySelector('.swmap__notice')?.remove();
+    for (const button of this.list?.querySelectorAll<HTMLButtonElement>(
+      'button[data-feature-id]',
+    ) ?? [])
+      button.hidden = true;
+    this.markSelected(null);
+    this.setState('waiting-consent');
+    this.showPlaceholder(data.strings.consentRequired, null);
   }
 
   private load(data: MapRenderData): void {

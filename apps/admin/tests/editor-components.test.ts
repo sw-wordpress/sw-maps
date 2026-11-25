@@ -251,7 +251,9 @@ describe('FeatureForm', () => {
     const w = mount(FeatureForm, { props: { feature: feature() } });
     await w.find('[data-test=choose-icon]').trigger('click');
     await flushPromises();
-    expect(w.emitted('patch')).toEqual([[{ properties: { icon: 'media:9' } }]]);
+    expect(w.emitted('patch')).toEqual([
+      [{ properties: { icon: 'media:9', icon_url: 'https://example.org/thumb.jpg' } }],
+    ]);
     vi.mocked(pickImage).mockResolvedValueOnce(null);
     await w.find('[data-test=choose-icon]').trigger('click');
     await flushPromises();

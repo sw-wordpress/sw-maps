@@ -82,4 +82,24 @@ final class GeometryTest extends TestCase
         $g = Geometry::create(GeometryType::LineString, [[0, 0, 100], [1, 1, 200]]);
         self::assertSame([[0.0, 0.0], [1.0, 1.0]], $g->coordinates);
     }
+
+    public function testTheLimitCountsAllMembersOfMultiGeometries(): void
+    {
+        $validator = new GeometryValidator(3);
+        foreach (
+            [
+            [GeometryType::MultiLineString, [[[0, 0], [1, 1]], [[2, 2], [3, 3]]]],
+            [GeometryType::MultiPolygon, [[self::RING], [self::RING]]],
+            [GeometryType::LineString, [[0, 0], [1, 1], [2, 2], [3, 3], [4, 4]]],
+            ] as [$type, $coordinates]
+        ) {
+            try {
+                Geometry::create($type, $coordinates, $validator);
+                self::fail('accepted an oversized ' . $type->value);
+            } catch (InvalidGeometryException $e) {
+                self::assertStringContainsString('limit of 3', $e->getMessage());
+            }
+        }
+        self::assertSame(GeometryType::MultiLineString, Geometry::create(GeometryType::MultiLineString, [[[0, 0], [1, 1]]], $validator)->type);
+    }
 }
