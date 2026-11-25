@@ -15,7 +15,7 @@
     "lint": "eslint .",
     "format:check": "prettier --check .",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage && node ../../scripts/check-coverage.mjs coverage/coverage-summary.json"
+    "test:coverage": "vitest run --coverage && node ../../scripts/check-coverage.mjs"
   },
   "dependencies": {
     "ol": "^10.6.1"

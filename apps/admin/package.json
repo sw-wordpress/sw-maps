@@ -16,7 +16,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage && node ../../scripts/check-coverage.mjs coverage/coverage-summary.json"
+    "test:coverage": "vitest run --coverage && node ../../scripts/check-coverage.mjs"
   },
   "dependencies": {
     "@quasar/extras": "^2.1.0",

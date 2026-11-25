@@ -1,15 +1,12 @@
 // Strict coverage gate: line coverage must be strictly greater than the limit (exactly 80 % fails).
 // Vitest's own `thresholds` accept equality, so this check runs after `vitest run --coverage`.
-// Usage: node scripts/check-coverage.mjs <path to coverage-summary.json>
+// Usage (from a package directory after `vitest run --coverage`): node ../../scripts/check-coverage.mjs
 import { readFileSync } from 'node:fs';
-import { basename, resolve, sep } from 'node:path';
+import { resolve } from 'node:path';
 
 const LIMIT = 80;
-const file = resolve(process.cwd(), process.argv[2] ?? 'coverage/coverage-summary.json');
-if (!file.startsWith(process.cwd() + sep) || basename(file) !== 'coverage-summary.json') {
-  console.error('Only a coverage-summary.json inside the current directory is accepted.');
-  process.exit(1);
-}
+// The report location is fixed (no command line input): coverage/coverage-summary.json of the current package.
+const file = resolve(process.cwd(), 'coverage', 'coverage-summary.json');
 let summary;
 try {
   summary = JSON.parse(readFileSync(file, 'utf8'));
