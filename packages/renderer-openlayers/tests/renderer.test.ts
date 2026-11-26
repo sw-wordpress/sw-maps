@@ -8,6 +8,7 @@ import type Draw from 'ol/interaction/Draw.js';
 import { ModifyEvent } from 'ol/interaction/Modify.js';
 import type Modify from 'ol/interaction/Modify.js';
 import { fromLonLat } from 'ol/proj.js';
+import type { StyleMap } from '@sw-maps/map-contracts';
 import { EditableOpenLayersRenderer, OpenLayersRenderer } from '../src';
 import { feature, makeData } from './fixtures';
 
@@ -370,8 +371,8 @@ describe('line and area styles', () => {
     getImage(): { getOpacity(): number };
   };
   function styleOf(
-    style: Record<string, unknown>,
-    layerStyle: Record<string, unknown> = {},
+    style: StyleMap,
+    layerStyle: StyleMap = {},
     geometry = 'LineString',
   ) {
     const data = makeData();
@@ -390,7 +391,7 @@ describe('line and area styles', () => {
                 ],
               },
         properties: feature(20).properties,
-        style: style as never,
+        style,
       },
     ];
     const r = mounted(data);
