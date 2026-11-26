@@ -59,32 +59,36 @@ msgstr ""
 msgid "SW Maps requires JavaScript."
 msgstr ""
 
-#: packages/wordpress/src/Api/BaseController.php:42
+#: packages/wordpress/src/Api/BaseController.php:43
 msgid "You are not allowed to do this."
 msgstr ""
 
-#: packages/wordpress/src/Api/BaseController.php:65
+#: packages/wordpress/src/Api/BaseController.php:66
 msgid "The geometry is invalid."
 msgstr ""
 
-#: packages/wordpress/src/Api/BaseController.php:75
+#: packages/wordpress/src/Api/BaseController.php:76
 #: packages/wordpress/src/Api/SettingsController.php:53
 msgid "Invalid input."
 msgstr ""
 
-#: packages/wordpress/src/Api/BaseController.php:83
+#: packages/wordpress/src/Api/BaseController.php:86
+msgid "The file cannot be imported."
+msgstr ""
+
+#: packages/wordpress/src/Api/BaseController.php:94
 msgid "Not found."
 msgstr ""
 
-#: packages/wordpress/src/Api/BaseController.php:86
+#: packages/wordpress/src/Api/BaseController.php:97
 msgid "This value is already in use."
 msgstr ""
 
-#: packages/wordpress/src/Api/BaseController.php:89
+#: packages/wordpress/src/Api/BaseController.php:100
 msgid "Unexpected error."
 msgstr ""
 
-#: packages/wordpress/src/Api/FeaturesController.php:92
+#: packages/wordpress/src/Api/FeaturesController.php:94
 msgid "The feature limit of this layer is reached."
 msgstr ""
 
@@ -92,27 +96,27 @@ msgstr ""
 msgid "You are not allowed to publish maps."
 msgstr ""
 
-#: packages/wordpress/src/Api/ProvidersController.php:119
+#: packages/wordpress/src/Api/ProvidersController.php:120
 msgid "The tile server is not reachable."
 msgstr ""
 
-#: packages/wordpress/src/Api/ProvidersController.php:130
+#: packages/wordpress/src/Api/ProvidersController.php:131
 msgid "Connection successful."
 msgstr ""
 
-#: packages/wordpress/src/Api/ProvidersController.php:130
+#: packages/wordpress/src/Api/ProvidersController.php:131
 msgid "The tile server did not return a tile."
 msgstr ""
 
-#: packages/wordpress/src/Integration/Block.php:23
+#: packages/wordpress/src/Integration/Block.php:27
 msgid "SW Map"
 msgstr ""
 
-#: packages/wordpress/src/Integration/Block.php:24
+#: packages/wordpress/src/Integration/Block.php:28
 msgid "Displays a map created with SW Maps."
 msgstr ""
 
-#: packages/wordpress/src/Integration/Block.php:63
+#: packages/wordpress/src/Integration/Block.php:75
 msgid "Draft"
 msgstr ""
 

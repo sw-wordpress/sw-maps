@@ -7,6 +7,8 @@ export class ApiError extends Error {
   readonly status: number;
   /** Field level validation messages (`details` of the REST error). */
   readonly details: { field: string; message: string }[];
+  /** Machine readable rejection reason of an import (`too_large`, `forbidden`, …). */
+  reason: string | null = null;
 
   constructor(
     code: string,
@@ -60,7 +62,7 @@ export interface ClientOptions {
 interface WpErrorBody {
   code?: unknown;
   message?: unknown;
-  data?: { status?: unknown; details?: unknown } | null;
+  data?: { status?: unknown; details?: unknown; reason?: unknown } | null;
 }
 
 function toDetails(value: unknown): { field: string; message: string }[] {
@@ -79,7 +81,9 @@ export function normaliseError(status: number, body: unknown): ApiError {
     const b = body as WpErrorBody;
     if (typeof b.code === 'string' && typeof b.message === 'string') {
       const dataStatus = typeof b.data?.status === 'number' ? b.data.status : status;
-      return new ApiError(b.code, b.message, dataStatus, toDetails(b.data?.details));
+      const error = new ApiError(b.code, b.message, dataStatus, toDetails(b.data?.details));
+      if (typeof b.data?.reason === 'string') error.reason = b.data.reason;
+      return error;
     }
   }
   return new ApiError('swmap_http_error', `HTTP ${status}`, status);

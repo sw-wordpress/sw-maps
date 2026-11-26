@@ -14,7 +14,7 @@
 - Deutsche und englische Oberfläche (gettext, SPA-Kataloge, Block-Editor-Katalog).
 
 - Oberfläche an SW BackupIt angelehnt: Navigationsleiste mit Einklappen und Dunkelmodus, Seitenköpfe, Karten, Kennzahlen-Kacheln, Statusanzeigen, responsiver Karteneditor.
-- Import (REST `POST /imports`): GeoJSON, GPX und CSV mit Vorschau, Feldzuordnung, Validierungsbericht und den Modi neuer Layer, Ergänzen, Upsert nach externer ID und bestätigtes Ersetzen; sichere Parser mit Größen- und Anzahlgrenzen, XML ohne Entities/DTD; Streckenlänge (Haversine) und vereinfachte Darstellungsgeometrien im Core.
+- Import-Assistent im Karteneditor und REST `POST /imports`: GeoJSON, GPX und CSV mit Vorschau, Feldzuordnung, Validierungsbericht und den Modi neuer Layer, Ergänzen, Upsert nach externer ID und bestätigtes Ersetzen; sichere Parser mit Größen- und Anzahlgrenzen, XML ohne Entities/DTD; Streckenlänge (Haversine) und vereinfachte Darstellungsgeometrien im Core.
 
 ### Bugs
 

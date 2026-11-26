@@ -264,4 +264,30 @@ describe('EditorCanvas', () => {
     expect(spy).toHaveBeenCalled();
     await broken.setProps({ data: null });
   });
+
+  it('offers the import only to users who may import and only without unsaved changes, then reloads', async () => {
+    const w = await mountEditor();
+    const store = useEditorStore();
+    const button = () => w.find('[data-test=import]');
+    expect(button().exists()).toBe(true);
+    expect(button().attributes('disabled')).toBeUndefined();
+    store.patchMap({ title: 'changed' });
+    await flushPromises();
+    expect(button().attributes('disabled')).toBeDefined();
+    store.patchMap({ title: 'Test map' });
+    await flushPromises();
+    await button().trigger('click');
+    await flushPromises();
+    expect(document.body.querySelector('[data-test=import-dialog]')).not.toBeNull();
+    const before = api.layers.forMap.mock.calls.length;
+    w.findComponent({ name: 'ImportDialog' }).vm.$emit('imported', 12);
+    await flushPromises();
+    expect(api.layers.forMap.mock.calls.length).toBeGreaterThan(before);
+  });
+
+  it('hides the import without the capability', async () => {
+    configure(['swmap_edit_maps', 'swmap_manage_layers']);
+    const w = await mountEditor();
+    expect(w.find('[data-test=import]').exists()).toBe(false);
+  });
 });

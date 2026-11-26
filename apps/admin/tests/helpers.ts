@@ -14,6 +14,7 @@ export function configure(
     'swmap_edit_maps',
     'swmap_publish_maps',
     'swmap_manage_layers',
+    'swmap_manage_imports',
     'swmap_manage_system',
   ],
 ): void {
@@ -174,6 +175,24 @@ export function fakeApi(): FakeApi {
         max_features_per_layer: 5000,
         click_to_load: false,
         ...b,
+      })),
+    },
+    imports: {
+      run: vi.fn(async () => ({
+        mode: 'new_layer',
+        layer_id: 12,
+        total: 2,
+        created: 2,
+        updated: 0,
+        skipped: 0,
+        error_count: 0,
+        errors: [],
+        warnings: [],
+        columns: ['name'],
+        mapping: { title: 'name' },
+        media_relink_hint: false,
+        imported: false,
+        preview: [{ title: 'A', type: 'Point', external_id: null }],
       })),
     },
     status: {

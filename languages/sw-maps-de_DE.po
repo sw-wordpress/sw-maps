@@ -52,32 +52,36 @@ msgstr "Die SW-Maps-Oberfläche wurde nicht gebaut. Release-Paket installieren o
 msgid "SW Maps requires JavaScript."
 msgstr "SW Maps benötigt JavaScript."
 
-#: packages/wordpress/src/Api/BaseController.php:42
+#: packages/wordpress/src/Api/BaseController.php:43
 msgid "You are not allowed to do this."
 msgstr "Sie dürfen das nicht tun."
 
-#: packages/wordpress/src/Api/BaseController.php:65
+#: packages/wordpress/src/Api/BaseController.php:66
 msgid "The geometry is invalid."
 msgstr "Die Geometrie ist ungültig."
 
-#: packages/wordpress/src/Api/BaseController.php:75
+#: packages/wordpress/src/Api/BaseController.php:76
 #: packages/wordpress/src/Api/SettingsController.php:53
 msgid "Invalid input."
 msgstr "Ungültige Eingabe."
 
-#: packages/wordpress/src/Api/BaseController.php:83
+#: packages/wordpress/src/Api/BaseController.php:86
+msgid "The file cannot be imported."
+msgstr "Die Datei kann nicht importiert werden."
+
+#: packages/wordpress/src/Api/BaseController.php:94
 msgid "Not found."
 msgstr "Nicht gefunden."
 
-#: packages/wordpress/src/Api/BaseController.php:86
+#: packages/wordpress/src/Api/BaseController.php:97
 msgid "This value is already in use."
 msgstr "Dieser Wert wird bereits verwendet."
 
-#: packages/wordpress/src/Api/BaseController.php:89
+#: packages/wordpress/src/Api/BaseController.php:100
 msgid "Unexpected error."
 msgstr "Unerwarteter Fehler."
 
-#: packages/wordpress/src/Api/FeaturesController.php:92
+#: packages/wordpress/src/Api/FeaturesController.php:94
 msgid "The feature limit of this layer is reached."
 msgstr "Das Standortlimit dieses Layers ist erreicht."
 
@@ -85,27 +89,27 @@ msgstr "Das Standortlimit dieses Layers ist erreicht."
 msgid "You are not allowed to publish maps."
 msgstr "Sie dürfen Karten nicht veröffentlichen."
 
-#: packages/wordpress/src/Api/ProvidersController.php:119
+#: packages/wordpress/src/Api/ProvidersController.php:120
 msgid "The tile server is not reachable."
 msgstr "Der Kachelserver ist nicht erreichbar."
 
-#: packages/wordpress/src/Api/ProvidersController.php:130
+#: packages/wordpress/src/Api/ProvidersController.php:131
 msgid "Connection successful."
 msgstr "Verbindung erfolgreich."
 
-#: packages/wordpress/src/Api/ProvidersController.php:130
+#: packages/wordpress/src/Api/ProvidersController.php:131
 msgid "The tile server did not return a tile."
 msgstr "Der Kachelserver hat keine Kachel geliefert."
 
-#: packages/wordpress/src/Integration/Block.php:23
+#: packages/wordpress/src/Integration/Block.php:27
 msgid "SW Map"
 msgstr "SW-Karte"
 
-#: packages/wordpress/src/Integration/Block.php:24
+#: packages/wordpress/src/Integration/Block.php:28
 msgid "Displays a map created with SW Maps."
 msgstr "Zeigt eine mit SW Maps erstellte Karte an."
 
-#: packages/wordpress/src/Integration/Block.php:63
+#: packages/wordpress/src/Integration/Block.php:75
 msgid "Draft"
 msgstr "Entwurf"
 

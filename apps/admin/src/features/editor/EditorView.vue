@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import type { Geometry } from '@sw-maps/map-contracts';
 import { boundsOf, flattenPositions } from '@sw-maps/map-contracts';
 import { useNotify } from '@/composables/useNotify';
+import { getConfig, hasCapability } from '@/config';
 import { setUnsavedMessage } from '@/router';
 import { useEditorStore } from '@/stores/editor';
 import { errorMessage } from '@/utils/errors';
@@ -13,6 +14,7 @@ import EditorToolbar from './EditorToolbar.vue';
 import FeatureForm from './FeatureForm.vue';
 import LayerPanel from './LayerPanel.vue';
 import MapSettingsForm from './MapSettingsForm.vue';
+import ImportDialog from '@/features/imports/ImportDialog.vue';
 
 const props = defineProps<{ id: string }>();
 const { t } = useI18n();
@@ -22,6 +24,8 @@ const mobile = ref(false);
 const tab = ref<'map' | 'feature'>('map');
 const canvas = ref<InstanceType<typeof EditorCanvas> | null>(null);
 const failed = ref(false);
+const importOpen = ref(false);
+const canImport = hasCapability(getConfig(), 'swmap_manage_imports');
 
 const renderData = computed(() => store.renderData(viewerStrings(t)));
 
@@ -69,6 +73,11 @@ function onDraw(geometry: Geometry): void {
   store.tool = 'select';
 }
 
+async function onImported(): Promise<void> {
+  await load();
+  fitAll();
+}
+
 function useCurrentView(): void {
   const view = canvas.value?.getView();
   if (view)
@@ -92,6 +101,26 @@ import DataState from '@/components/ui/DataState.vue';
       :title="store.doc.map.title || t('maps.untitled')"
       back-to="/maps"
       :back-label="t('editor.back')"
+    >
+      <q-btn
+        v-if="canImport"
+        outline
+        no-caps
+        icon="r_upload_file"
+        :label="t('import.open')"
+        :disable="store.dirty || store.saving"
+        data-test="import"
+        @click="importOpen = true"
+      >
+        <q-tooltip v-if="store.dirty">{{ t('import.saveFirst') }}</q-tooltip>
+      </q-btn>
+    </PageHeader>
+    <ImportDialog
+      v-if="canImport"
+      v-model="importOpen"
+      :map-id="store.doc.map.id"
+      :layers="store.doc.layers"
+      @imported="onImported"
     />
     <EditorToolbar
       v-model:tool="store.tool"

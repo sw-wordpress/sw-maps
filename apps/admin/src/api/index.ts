@@ -31,6 +31,28 @@ export interface ConnectionTest {
   message: string;
 }
 
+export interface ImportIssue {
+  index: number;
+  message: string;
+}
+
+export interface ImportReport {
+  mode: string;
+  layer_id: number | null;
+  total: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  error_count: number;
+  errors: ImportIssue[];
+  warnings: ImportIssue[];
+  columns: string[];
+  mapping: Record<string, string>;
+  media_relink_hint: boolean;
+  imported: boolean;
+  preview: { title: string; type: string; external_id: string | null }[];
+}
+
 export type Body = Record<string, unknown>;
 
 export function createApi(client: ApiClient) {
@@ -80,6 +102,9 @@ export function createApi(client: ApiClient) {
     },
     status: {
       get: () => client.request<StatusData>('GET', 'status'),
+    },
+    imports: {
+      run: (body: Body) => client.request<ImportReport>('POST', 'imports', { body }),
     },
   };
 }
