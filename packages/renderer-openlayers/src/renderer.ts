@@ -11,7 +11,7 @@ import ScaleLine from 'ol/control/ScaleLine.js';
 import Zoom from 'ol/control/Zoom.js';
 import DragPan from 'ol/interaction/DragPan.js';
 import { defaults as defaultInteractions } from 'ol/interaction/defaults.js';
-import { createEmpty, extend } from 'ol/extent.js';
+import { createEmpty, extend, getCenter, getHeight, getWidth } from 'ol/extent.js';
 import { fromLonLat, toLonLat, transformExtent } from 'ol/proj.js';
 import type MapBrowserEvent from 'ol/MapBrowserEvent.js';
 import type { Coordinate } from 'ol/coordinate.js';
@@ -570,7 +570,45 @@ export class OpenLayersRenderer implements MapRenderer {
     });
   }
 
-  /** A click on a group zooms to its members; at the maximum zoom coincident markers stay grouped (use the list). */
+  /** Lists the members of a cluster that cannot be separated by zooming; choosing one opens its popup. */
+  private openChooser(members: Feature[], position: Coordinate): void {
+    const element = this.overlay?.getElement();
+    if (!element || !this.data) return;
+    const doc = element.ownerDocument;
+    const root = doc.createElement('div');
+    root.className = 'swmap-popup swmap-chooser';
+    root.setAttribute('role', 'dialog');
+    const close = doc.createElement('button');
+    close.type = 'button';
+    close.className = 'swmap-popup__close';
+    close.setAttribute('aria-label', this.data.strings.closePopup);
+    close.textContent = '×';
+    close.addEventListener('click', (event) => {
+      event.stopPropagation();
+      this.selectFeature(null);
+    });
+    const list = doc.createElement('ul');
+    list.className = 'swmap-chooser__list';
+    for (const member of members) {
+      const id = member.get(FEATURE_ID) as number;
+      const item = doc.createElement('li');
+      const button = doc.createElement('button');
+      button.type = 'button';
+      button.textContent = this.metas.get(id)?.properties.title || '—';
+      button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        this.selectFeature(id);
+      });
+      item.append(button);
+      list.append(item);
+    }
+    root.append(close, list);
+    element.replaceChildren(root);
+    this.overlay?.setPosition(position);
+    this.popupFor = null;
+  }
+
+  /** A click on a group zooms to its members; when that cannot separate them, a chooser lists the members. */
   private expandCluster(members: Feature[]): void {
     const extent = createEmpty();
     for (const member of members) {
@@ -578,6 +616,13 @@ export class OpenLayersRenderer implements MapRenderer {
       if (geometry) extend(extent, geometry.getExtent());
     }
     const view = this.requireMap().getView();
+    const coincident = getWidth(extent) === 0 && getHeight(extent) === 0;
+    const atLimit = (view.getZoom() ?? 0) >= view.getMaxZoom() - 0.01;
+    if ((coincident || atLimit) && this.overlay) {
+      // Zooming cannot separate them: offer the members as a list (works without the page's location list).
+      this.openChooser(members, getCenter(extent));
+      return;
+    }
     view.fit(extent, {
       padding: [64, 64, 64, 64],
       maxZoom: view.getMaxZoom(),

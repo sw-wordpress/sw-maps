@@ -69,7 +69,7 @@ describe('clustering', () => {
   const group = (...ids: number[]) =>
     new Feature({
       features: ids.map((id) => {
-        const f = new Feature(new Point(fromLonLat([8.4, 49])));
+        const f = new Feature(new Point(fromLonLat([8.4 + id * 0.01, 49])));
         f.set('swmapId', id);
         return f;
       }),
@@ -121,6 +121,54 @@ describe('clustering', () => {
     i.map.forEachFeatureAtPixel = (() => new Feature({ features: [] })) as never;
     i.onMapClick({ pixel: [0, 0] });
     expect(events).toEqual([3, null]);
+  });
+
+  it('lists coincident members instead of zooming and opens the chosen one', () => {
+    const data = clusterData();
+    data.layers[0]!.features = [
+      feature(1, 8.4, 49, 'Alpha'),
+      feature(2, 8.4, 49, 'Beta'),
+      feature(3, 8.4, 49, ''),
+    ];
+    const r = mounted(data);
+    const i = internals(r);
+    const fit = vi.fn();
+    i.map.getView().fit = fit as never;
+    const member = (id: number) => {
+      const f = new Feature(new Point(fromLonLat([8.4, 49])));
+      f.set('swmapId', id);
+      return f;
+    };
+    const events: Array<number | null> = [];
+    r.on('select', (id) => events.push(id));
+    i.map.forEachFeatureAtPixel = (() =>
+      new Feature({ features: [member(1), member(2), member(3)] })) as never;
+    i.onMapClick({ pixel: [0, 0] });
+    expect(fit).not.toHaveBeenCalled();
+    const buttons = [...target.querySelectorAll<HTMLButtonElement>('.swmap-chooser__list button')];
+    expect(buttons.map((b) => b.textContent)).toEqual(['Alpha', 'Beta', '—']);
+    buttons[1]!.click();
+    expect(events).toEqual([2]);
+    expect(target.querySelector('.swmap-popup__title')?.textContent).toBe('Beta');
+    i.onMapClick({ pixel: [0, 0] });
+    target.querySelector<HTMLButtonElement>('.swmap-chooser .swmap-popup__close')!.click();
+    expect(events.at(-1)).toBeNull();
+    expect(target.querySelector('.swmap-chooser')).toBeNull();
+  });
+
+  it('lists members at the maximum zoom even when they are not at the same spot', () => {
+    const r = mounted(clusterData());
+    const i = internals(r);
+    r.setView({ zoom: 2 });
+    const view = i.map.getView() as unknown as { getMaxZoom(): number; getZoom(): number };
+    vi.spyOn(view, 'getZoom').mockReturnValue(view.getMaxZoom());
+    const a = new Feature(new Point(fromLonLat([8.4, 49])));
+    const b = new Feature(new Point(fromLonLat([8.4001, 49.0001])));
+    a.set('swmapId', 1);
+    b.set('swmapId', 2);
+    i.map.forEachFeatureAtPixel = (() => new Feature({ features: [a, b] })) as never;
+    i.onMapClick({ pixel: [0, 0] });
+    expect(target.querySelectorAll('.swmap-chooser__list button')).toHaveLength(2);
   });
 
   it('rebuilds when clustering is switched off and on', () => {

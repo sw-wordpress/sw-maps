@@ -22,6 +22,7 @@
 - Optionaler AJAX-Modus pro Karte (öffentlicher Endpunkt `/public/maps/{id}/features` mit bbox, Zoom und Kategoriefilter, begrenzte Seitengröße, entprellt und abbrechbar); große Linien und Flächen werden für die Ausgabe vereinfacht (gespeicherte Geometrie unverändert; Filter `swmap_simplify_min_points`, `swmap_simplify_tolerance`).
 - PMTiles-Anbieter für Raster-Archive (Verbindungstest, externer Host wird vor der Aktivierung angezeigt); Zusatzfelder (Bezeichnung/Wert) für Standorte, auch aus CSV-Spalten; Streckenlänge (Haversine) im Editor.
 - Stilregeln pro Layer (nach Kategorie), Multi-Geometrien per „Teil hinzufügen“, Hover-Tooltip im Viewer.
+- Gruppen, die sich nicht durch Zoomen trennen lassen, öffnen eine Auswahlliste der Standorte; REST liefert `length_m` für Linien.
 
 ### Bugs
 

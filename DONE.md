@@ -159,7 +159,7 @@ Erledigte Aufgaben aus [TODO.md](TODO.md) (Foundation = M0, MVP = M1; Details de
 - [x] M2-04: Kategorien und Tags mit Filter, Legende und individueller Gestaltung (nicht nur per Farbe unterscheidbar)
   - Ergebnis: Seitenweite Kategorien (REST `/categories`, Verwaltung im Editor), Zuordnung je Standort, Filter-Legende mit Symbol und Farbe im Viewer, Kategorie-Stil als Standard für Farbe und Symbol. Tags als eigenes Konzept gibt es nicht (Kategorien decken den Fall ab).
 - [x] M2-05: Marker-Clustering (klickbar, auflösbar)
-  - Ergebnis: Clustering per Karteneinstellung (`cluster`): Gruppen mit Anzahl, Klick zoomt auf die Marker. Einschränkung: Marker an exakt derselben Stelle bleiben beim höchsten Zoom gruppiert (Liste verwenden).
+  - Ergebnis: Clustering per Karteneinstellung (`cluster`): Gruppen mit Anzahl, Klick zoomt auf die Marker. Lassen sich die Marker einer Gruppe durch Zoomen nicht trennen (gleiche Stelle oder höchster Zoom), öffnet der Klick eine Auswahlliste der Mitglieder, auch ohne Standortliste (AJAX-Modus).
 - [x] M2-06: Synchronisierte Standortliste mit Suche und Filter
   - Ergebnis: Serverseitig gerenderte Liste mit Suche und Kategoriefilter, Liste und Karte werden gemeinsam gefiltert (`filters.ts`).
 - [x] M2-07: Popup, Tooltip oder Detail-Seitenleiste; strukturierte Zusatzfelder
