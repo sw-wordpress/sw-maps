@@ -341,7 +341,7 @@ function askDelete(layer: LayerData): void {
           />
         </div>
       </div>
-      <q-list dense>
+      <q-list dense role="group" :aria-label="layer.title">
         <q-item
           v-for="f in featuresOf(layer.id)"
           :key="f.id"

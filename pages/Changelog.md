@@ -29,6 +29,8 @@
 - WP-CLI: `wp sw-maps status`, `maps list`, `import` und `export` (Exit-Codes, Rückfragen, JSON-Ausgabe), siehe `docs/cli.md`.
 - Diagnose im Systemstatus: Schemazustand, wirksame Grenzen und Erreichbarkeit der aktivierten Anbieter (auf Knopfdruck).
 - Löschwarnung mit Export-Hinweis bei „Daten beim Deinstallieren löschen“.
+- Barrierefreiheit: Kontrast des Sprunglinks im Dunkelmodus und der Zusatzzeilen, ARIA-Rolle der Standortlisten; automatische axe-Prüfung aller Admin-Routen und der Frontend-Karte (hell/dunkel).
+- Große Tracks werden deutlich schneller für die Ausgabe vereinfacht; die Suche im Viewer ist entprellt.
 
 ### Bugs
 

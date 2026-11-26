@@ -1,7 +1,7 @@
 # TODO
 
 Abgeleitet aus [docs/PLAN.md](docs/PLAN.md) (P§ = Abschnitt im Plan). Erledigtes wandert nach `DONE.md`, Ideen und Zeitpunkte nach 1.0 stehen in [docs/BACKLOG.md](docs/BACKLOG.md).
-Die Reihenfolge der Meilensteine ist verbindlich: M0 → M4 (M0 und M1 sind abgeschlossen, M2 ebenfalls, siehe [DONE.md](DONE.md)). Innerhalb eines Meilensteins ist die Listenreihenfolge die Ausführungsreihenfolge.
+Die Reihenfolge der Meilensteine ist verbindlich: M0 → M4 (M0, M1 und M2 sind abgeschlossen, M3 ebenfalls, siehe [DONE.md](DONE.md)). Innerhalb eines Meilensteins ist die Listenreihenfolge die Ausführungsreihenfolge.
 Task-IDs sind stabil. Jede Aufgabe liefert Tests, i18n (de/en), Dokumentation und Changelog-Eintrag (`pages/Changelog.md`, Unreleased) und erfüllt die Qualitäts-Gates (PHPStan Level 8, WPCS/PSR-12, >80 % Coverage je Sprache).
 
 ## M2 – Geodaten (P§16 Phase 2)
@@ -9,8 +9,6 @@ Task-IDs sind stabil. Jede Aufgabe liefert Tests, i18n (de/en), Dokumentation un
 
 ## M3 – Betrieb (P§16 Phase 3)
 
-- [ ] M3-07: Benchmarks 100 / 1.000 / 10.000 Punkte und große Tracks; Payload, Laufzeit, Speicher, Browser-Interaktion dokumentieren
-- [ ] M3-09: Accessibility-Tests: axe über Admin-Routen und Frontend-Karte inkl. Standortliste (hell/dunkel), Tastaturbedienung
 
 ## M4 – Vorbereitung 1.0 (P§16 Phase 4)
 

@@ -3,6 +3,7 @@ import type { MapRenderData } from '@sw-maps/map-contracts';
 import { DEFAULT_COLOR, markerSvg } from './markers';
 
 const MIN_FEATURES_FOR_SEARCH = 5;
+const SEARCH_DEBOUNCE_MS = 150;
 
 export interface FilterState {
   query: string;
@@ -61,12 +62,20 @@ export function buildFilterBar(
     input.className = 'swmap__search';
     input.setAttribute('aria-label', data.strings.search);
     input.placeholder = data.strings.search;
+    // Debounced: filtering thousands of list items on every keystroke would stall typing.
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const onInput = (): void => {
-      query = input.value;
-      emit();
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        query = input.value;
+        emit();
+      }, SEARCH_DEBOUNCE_MS);
     };
     input.addEventListener('input', onInput);
-    cleanup.push(() => input.removeEventListener('input', onInput));
+    cleanup.push(() => {
+      clearTimeout(timer);
+      input.removeEventListener('input', onInput);
+    });
     element.append(input);
   }
   if (categories.length > 0) {

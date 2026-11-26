@@ -1,24 +1,17 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { authFile, PLUGIN_PAGE } from '../support/env';
+import { authFile } from '../support/env';
 import { mockTiles } from '../support/tiles';
 import { WpApi } from '../support/wp';
+import { openAdmin } from '../support/admin';
 
 test.use({ storageState: authFile('administrator') });
 
 const tool = (page: Page, name: string) => page.locator(`[data-test="tool-${name}"]`);
 
 async function openEditorFor(page: Page, title: string): Promise<number> {
-  await page.goto(`${PLUGIN_PAGE}#/maps`);
-  // On a cold stack the very first admin page can stay blank (the app chunk is still being served): reload once.
+  await openAdmin(page, '#/maps', (p) => p.locator('input[data-test="new-title"]'));
   const field = page.locator('input[data-test="new-title"]');
-  const shown = await field.waitFor({ state: 'visible', timeout: 10_000 }).then(
-    () => true,
-    () => false,
-  );
-  if (!shown) {
-    await page.reload();
-  }
   await field.fill(title);
   await page.locator('[data-test="create"]').click();
   await expect(page.locator('.swmap-editor__canvas .ol-viewport')).toBeVisible();

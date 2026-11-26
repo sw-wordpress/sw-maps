@@ -82,4 +82,37 @@ final class DistanceSimplifierTest extends TestCase
         self::assertGreaterThan(Simplifier::toleranceForZoom(10), Simplifier::toleranceForZoom(5));
         self::assertEqualsWithDelta(360 / 256, Simplifier::toleranceForZoom(0), 1e-12);
     }
+
+    public function testDenseTracksStayWithinTheToleranceAndAreSimplifiedFast(): void
+    {
+        $points = [];
+        for ($i = 0; $i < 30000; ++$i) {
+            $points[] = [8 + $i * 0.00001, 49 + sin($i / 50) * 0.01];
+        }
+        $line = Geometry::create(GeometryType::LineString, $points);
+        $tolerance = Simplifier::toleranceForZoom(14);
+        $start = microtime(true);
+        $simple = (new Simplifier())->simplify($line, $tolerance);
+        self::assertLessThan(2.0, microtime(true) - $start, 'linear pre-filter keeps the simplification fast');
+        self::assertSame($points[0], $simple->coordinates[0]);
+        self::assertSame($points[29999], $simple->coordinates[count($simple->coordinates) - 1]);
+        self::assertLessThan(1500, count($simple->coordinates));
+        // Every original vertex lies within about one tolerance of the simplified line.
+        $worst = 0.0;
+        $kept = $simple->coordinates;
+        foreach (array_filter($points, static fn (int $i): bool => $i % 500 === 0, ARRAY_FILTER_USE_KEY) as $p) {
+            $best = INF;
+            for ($k = 1, $m = count($kept); $k < $m; ++$k) {
+                [$ax, $ay] = $kept[$k - 1];
+                [$bx, $by] = $kept[$k];
+                $dx = $bx - $ax;
+                $dy = $by - $ay;
+                $len2 = $dx * $dx + $dy * $dy;
+                $t = $len2 === 0.0 ? 0.0 : max(0.0, min(1.0, (($p[0] - $ax) * $dx + ($p[1] - $ay) * $dy) / $len2));
+                $best = min($best, hypot($p[0] - ($ax + $t * $dx), $p[1] - ($ay + $t * $dy)));
+            }
+            $worst = max($worst, $best);
+        }
+        self::assertLessThanOrEqual($tolerance * 1.6, $worst);
+    }
 }
