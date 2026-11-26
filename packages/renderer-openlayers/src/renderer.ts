@@ -110,22 +110,24 @@ export class OpenLayersRenderer implements MapRenderer {
     return { center: [lon ?? 0, lat ?? 0], zoom: view.getZoom() ?? 0 };
   }
 
-  /** Visible area in WGS84 (clamped to the valid range), used to load features for the viewport. */
+  /**
+   * Visible area in WGS84 for loading features. Longitudes are normalised into [-180, 180]; when the view crosses
+   * the antimeridian (or shows another world copy) minLon is greater than maxLon, which the server treats as two
+   * ranges. A view of a whole world or more covers every longitude.
+   */
   getBounds(): BoundsTuple {
     const map = this.requireMap();
     const extent = map.getView().calculateExtent(map.getSize());
-    const [minLon = -180, minLat = -85, maxLon = 180, maxLat = 85] = transformExtent(
+    const [west = -180, south = -85, east = 180, north = 85] = transformExtent(
       extent,
       'EPSG:3857',
       'EPSG:4326',
     );
     const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
-    return [
-      clamp(minLon, -180, 180),
-      clamp(minLat, -90, 90),
-      clamp(maxLon, -180, 180),
-      clamp(maxLat, -90, 90),
-    ];
+    const lat: [number, number] = [clamp(south, -90, 90), clamp(north, -90, 90)];
+    if (east - west >= 360) return [-180, lat[0], 180, lat[1]];
+    const wrap = (lon: number): number => ((((lon + 180) % 360) + 360) % 360) - 180;
+    return [wrap(west), lat[0], wrap(east), lat[1]];
   }
 
   fitBounds(bounds: BoundsTuple, options: { padding?: number; maxZoom?: number } = {}): void {

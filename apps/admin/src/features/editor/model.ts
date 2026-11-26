@@ -465,8 +465,11 @@ export function toPublicProvider(provider: ProviderData | null): PublicProvider 
   if (!provider) return null;
   const c = provider.public_config;
   return {
-    type: 'xyz',
-    urlTemplate: c.urlTemplate.replace('{key}', encodeURIComponent(c.publicKey)),
+    type: provider.type,
+    urlTemplate:
+      provider.type === 'pmtiles'
+        ? c.urlTemplate
+        : c.urlTemplate.replace('{key}', encodeURIComponent(c.publicKey)),
     attribution: c.attribution,
     minZoom: c.minZoom,
     maxZoom: c.maxZoom,

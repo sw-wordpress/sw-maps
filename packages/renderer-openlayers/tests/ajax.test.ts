@@ -211,6 +211,34 @@ describe('viewer in AJAX mode', () => {
   });
 });
 
+describe('renderer bounds across the dateline', () => {
+  function boundsAt(lon: number, zoom: number, width = 600) {
+    document.body.innerHTML = '<div class="swmap__stage" style="width:600px;height:400px"></div>';
+    const r = new OpenLayersRenderer({ popups: true });
+    r.mount(document.querySelector<HTMLElement>('.swmap__stage')!, {
+      data: makeData({ viewport: { ...makeData().viewport, minZoom: 0 } }),
+    });
+    (r as unknown as { map: { setSize(s: number[]): void } }).map.setSize([width, 400]);
+    r.setView({ center: [lon, 0], zoom });
+    return r.getBounds();
+  }
+
+  it('wraps a view over the antimeridian into minLon > maxLon', () => {
+    const [min, , max] = boundsAt(180, 5);
+    expect(min).toBeGreaterThan(0);
+    expect(max).toBeLessThan(0);
+  });
+
+  it('normalises another world copy and covers all longitudes for a world-wide view', () => {
+    const [min, , max] = boundsAt(250, 5);
+    expect(min).toBeGreaterThanOrEqual(-180);
+    expect(max).toBeLessThanOrEqual(180);
+    expect(min).toBeLessThan(max);
+    const [wmin, , wmax] = boundsAt(0, 0, 1200);
+    expect([wmin, wmax]).toEqual([-180, 180]);
+  });
+});
+
 describe('renderer bounds', () => {
   it('reports the visible area in WGS84, clamped to valid values', () => {
     document.body.innerHTML = '<div class="swmap__stage" style="width:600px;height:400px"></div>';

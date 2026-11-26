@@ -85,8 +85,15 @@ final class WpdbFeatures implements FeatureRepositoryInterface {
 		$table    = Schema::table( 'features' );
 		$links    = Schema::table( 'feature_categories' );
 		$layer_in = implode( ',', array_fill( 0, count( $layerIds ), '%d' ) );
-		$where    = "f.layer_id IN ({$layer_in}) AND f.bbox_max_lon >= %f AND f.bbox_min_lon <= %f AND f.bbox_max_lat >= %f AND f.bbox_min_lat <= %f";
-		$args     = array_merge( array_map( 'intval', $layerIds ), array( $bounds[0], $bounds[2], $bounds[1], $bounds[3] ) );
+		if ( $bounds[0] <= $bounds[2] ) {
+			$lon_sql  = '(f.bbox_max_lon >= %f AND f.bbox_min_lon <= %f)';
+			$lon_args = array( $bounds[0], $bounds[2] );
+		} else { // Crosses the antimeridian: [minLon, 180] and [-180, maxLon].
+			$lon_sql  = '(f.bbox_max_lon >= %f OR f.bbox_min_lon <= %f)';
+			$lon_args = array( $bounds[0], $bounds[2] );
+		}
+		$where = "f.layer_id IN ({$layer_in}) AND {$lon_sql} AND f.bbox_max_lat >= %f AND f.bbox_min_lat <= %f";
+		$args  = array_merge( array_map( 'intval', $layerIds ), $lon_args, array( $bounds[1], $bounds[3] ) );
 		if ( array() !== $categoryIds ) {
 			$cat_in = implode( ',', array_fill( 0, count( $categoryIds ), '%d' ) );
 			$where .= " AND EXISTS (SELECT 1 FROM {$links} fc WHERE fc.feature_id = f.id AND fc.category_id IN ({$cat_in}))";

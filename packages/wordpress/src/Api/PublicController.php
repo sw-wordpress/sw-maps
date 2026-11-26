@@ -114,7 +114,8 @@ final class PublicController extends BaseController {
 			}
 		}
 		list( $min_lon, $min_lat, $max_lon, $max_lat ) = array_map( 'floatval', $parts );
-		if ( $min_lon > $max_lon || $min_lat > $max_lat || $min_lon < -180 || $max_lon > 180 || $min_lat < -90 || $max_lat > 90 ) {
+		// min_lon > max_lon is valid: the area crosses the antimeridian (two ranges).
+		if ( $min_lat > $max_lat || $min_lon < -180 || $min_lon > 180 || $max_lon < -180 || $max_lon > 180 || $min_lat < -90 || $max_lat > 90 ) {
 			return null;
 		}
 		return array( $min_lon, $min_lat, $max_lon, $max_lat );

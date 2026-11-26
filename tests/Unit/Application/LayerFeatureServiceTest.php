@@ -37,6 +37,18 @@ final class LayerFeatureServiceTest extends TestCase
         self::assertContains('layer:' . $a->id . ':' . $this->mapId, $this->f->events->log);
     }
 
+    public function testBoundsQueryWrapsAroundTheAntimeridian(): void
+    {
+        $layer = $this->f->layerService->create($this->mapId, ['title' => 'W']);
+        foreach ([[179.5, 0], [-179.5, 0], [0, 0]] as [$lon, $lat]) {
+            $this->f->featureService->create($layer->id, ['geometry' => ['type' => 'Point', 'coordinates' => [$lon, $lat]]]);
+        }
+        $wrapped = $this->f->features->inBounds([$layer->id], [170.0, -10.0, -170.0, 10.0], [], 1, 10);
+        self::assertSame(2, $wrapped['total']);
+        $plain = $this->f->features->inBounds([$layer->id], [-10.0, -10.0, 10.0, 10.0], [], 1, 10);
+        self::assertSame(1, $plain['total']);
+    }
+
     public function testLayerStyleRulesAreValidated(): void
     {
         $rules = [['categoryId' => 3, 'style' => ['color' => '#ff0000', 'weight' => 5]]];

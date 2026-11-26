@@ -49,7 +49,11 @@ final class InMemoryFeatures implements FeatureRepositoryInterface
         $matching = array_values(array_filter($this->forLayers($layerIds), static function (Feature $f) use ($bounds, $categoryIds): bool {
             $b = $f->bounds();
 
-            return $b->maxLongitude >= $bounds[0] && $b->minLongitude <= $bounds[2] && $b->maxLatitude >= $bounds[1] && $b->minLatitude <= $bounds[3]
+            $lon = $bounds[0] <= $bounds[2]
+                ? $b->maxLongitude >= $bounds[0] && $b->minLongitude <= $bounds[2]
+                : $b->maxLongitude >= $bounds[0] || $b->minLongitude <= $bounds[2];
+
+            return $lon && $b->maxLatitude >= $bounds[1] && $b->minLatitude <= $bounds[3]
                 && ($categoryIds === [] || array_intersect($categoryIds, $f->categoryIds) !== []);
         }));
 

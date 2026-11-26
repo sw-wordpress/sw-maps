@@ -838,7 +838,18 @@ final class RestApiTest extends SwMapsTestCase {
 		)->get_data();
 		$this->assertSame( array( 3, 2, 1 ), array( $paged['total'], $paged['total_pages'], count( $paged['layers'][0]['features'] ) ) );
 		$this->assertSame( 400, $this->rest( 'GET', $route, null, array( 'bbox' => 'a,b,c,d' ) )->get_status() );
-		$this->assertSame( 400, $this->rest( 'GET', $route, null, array( 'bbox' => '9,48,8,50' ) )->get_status(), 'min must not exceed max' );
+		$this->assertSame( 400, $this->rest( 'GET', $route, null, array( 'bbox' => '8,50,9,48' ) )->get_status(), 'min latitude must not exceed max' );
+		$this->as_role( 'administrator' );
+		$this->rest( 'POST', "/layers/{$layer['id']}/features", array( 'geometry' => $this->point( 179.5, 0.0 ), 'properties' => array( 'title' => 'East' ) ) );
+		$this->rest( 'POST', "/layers/{$layer['id']}/features", array( 'geometry' => $this->point( -179.5, 0.0 ), 'properties' => array( 'title' => 'West' ) ) );
+		$this->rest( 'POST', "/layers/{$layer['id']}/features", array( 'geometry' => $this->point( 0.0, 0.0 ), 'properties' => array( 'title' => 'Middle' ) ) );
+		wp_set_current_user( 0 );
+		$wrapped = $this->rest( 'GET', $route, null, array( 'bbox' => '170,-10,-170,10' ) );
+		$this->assertSame( 200, $wrapped->get_status(), 'an area across the antimeridian is valid' );
+		$titles = array_column( array_column( $wrapped->get_data()['layers'][0]['features'], 'properties' ), 'title' );
+		sort( $titles );
+		$this->assertSame( array( 'East', 'West' ), $titles, 'both sides of the dateline, nothing from the middle' );
+		$this->assertSame( 2, $wrapped->get_data()['total'] );
 		$this->assertSame( 400, $this->rest( 'GET', $route, null, array( 'bbox' => '8,48,9' ) )->get_status() );
 		$this->assertSame(
 			400,

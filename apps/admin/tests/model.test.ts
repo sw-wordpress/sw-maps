@@ -352,6 +352,20 @@ describe('render data', () => {
     expect(pub.urlTemplate).toBe('https://t.example.org/{z}/{x}/{y}.png?k=a%20b');
     expect(JSON.stringify(pub)).not.toContain('SECRET');
     expect(toPublicProvider(null)).toBeNull();
+    const archive = toPublicProvider(
+      makeProvider({
+        type: 'pmtiles',
+        public_config: {
+          ...makeProvider().public_config,
+          urlTemplate: 'https://x.test/a.pmtiles?k={key}',
+        },
+      }),
+    );
+    expect(archive).toMatchObject({
+      type: 'pmtiles',
+      urlTemplate: 'https://x.test/a.pmtiles?k={key}',
+    });
+    expect(toPublicProvider(makeProvider())?.type).toBe('xyz');
   });
 
   it('builds editor render data with full interaction and visible layers only', () => {
