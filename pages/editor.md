@@ -7,7 +7,7 @@
 - **Vorschau:** Umschalter Desktop/Mobil in der Werkzeugleiste.
 
 ## Kategorien, Stile und Zusatzfelder
-- **Kategorien** gelten seitenweit (Standortformular → *Kategorien verwalten*): Name, Farbe und Symbol. Ein Standort kann mehrere Kategorien haben; Farbe und Symbol der ersten Kategorie gelten, solange der Standort nichts Eigenes wählt (Reihenfolge Standort > Regel > Kategorie > Layer). **Stilregeln** je Layer (Layer-Einstellungen): „Standorte der Kategorie X erhalten diese Farbe“. Besucher filtern über die Legende, deren Knöpfe das Symbol zeigen (nicht nur die Farbe).
+- **Kategorien** gelten seitenweit (Standortformular → *Kategorien verwalten*): Name, Farbe und Symbol. Ein Standort kann mehrere Kategorien haben; Farbe und Symbol der Kategorie mit der niedrigsten ID gelten, solange der Standort nichts Eigenes wählt (Reihenfolge Standort > Regel > Kategorie > Layer). **Stilregeln** je Layer (Layer-Einstellungen): „Standorte der Kategorie X erhalten diese Farbe“. Besucher filtern über die Legende, deren Knöpfe das Symbol zeigen (nicht nur die Farbe).
 - **Linien und Flächen:** Stärke, Muster (durchgezogen, gestrichelt, gepunktet), Deckkraft, Flächenfüllung; die Länge (Haversine) steht im Kopf des Formulars.
 - **Zusatzfelder:** bis zu 10 Paare aus Bezeichnung und Wert, im Popup als Liste (reiner Text).
 

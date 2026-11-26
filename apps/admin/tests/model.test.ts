@@ -200,6 +200,11 @@ describe('layer order', () => {
 });
 
 describe('diff and save plan', () => {
+  it('keeps assignments in the stored order so the preview matches the saved result', () => {
+    const doc = updateFeature(base(), 100, { categories: [9, 2, 5] });
+    expect(doc.features[0]!.categories).toEqual([2, 5, 9]);
+  });
+
   it('detects category changes and sends them with the feature', () => {
     const original = base();
     const working = updateFeature(original, 100, { categories: [3, 4] });

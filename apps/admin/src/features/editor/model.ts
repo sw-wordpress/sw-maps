@@ -168,7 +168,8 @@ export function updateFeature(
   if (feature) {
     if (patch.properties) Object.assign(feature.properties, patch.properties);
     if (patch.style) feature.style = { ...patch.style };
-    if (patch.categories) feature.categories = [...patch.categories];
+    // Canonical order (as stored): the lowest category id supplies the default colour and icon.
+    if (patch.categories) feature.categories = [...patch.categories].sort((a, b) => a - b);
   }
   return next;
 }
