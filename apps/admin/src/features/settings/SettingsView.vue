@@ -4,6 +4,8 @@ import { useI18n } from 'vue-i18n';
 import type { SettingsData } from '@/api';
 import { useNotify } from '@/composables/useNotify';
 import { useSettingsStore } from '@/stores/settings';
+import { api } from '@/api';
+import { downloadFile } from '@/utils/download';
 import { errorMessage } from '@/utils/errors';
 
 const { t } = useI18n();
@@ -36,6 +38,15 @@ onMounted(async () => {
     notify.error(errorMessage(error, t('app.loadFailed')));
   }
 });
+
+/** Everything the plugin stores about maps, as one file (useful before enabling data deletion on uninstall). */
+async function exportAll(): Promise<void> {
+  try {
+    downloadFile(await api().exports.all());
+  } catch (error) {
+    notify.error(errorMessage(error, t('settings.exportFailed')));
+  }
+}
 
 async function save(): Promise<void> {
   saving.value = true;
@@ -85,6 +96,16 @@ import DataState from '@/components/ui/DataState.vue';
           data-test="max-features"
         />
         <h3 class="text-subtitle1 q-mt-md">{{ t('settings.uninstall') }}</h3>
+        <q-btn
+          flat
+          no-caps
+          icon="r_download"
+          :label="t('settings.exportAll')"
+          class="q-mb-sm"
+          data-test="export-all"
+          @click="exportAll"
+        />
+        <div />
         <q-toggle
           v-model="form.delete_data_on_uninstall"
           color="negative"

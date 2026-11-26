@@ -8,6 +8,7 @@ import type {
 import { getConfig } from '@/config';
 import type { Paged, RequestOptions } from './client';
 import { ApiClient } from './client';
+import type { ExportFile } from '@/utils/download';
 
 export interface SettingsData {
   delete_data_on_uninstall: boolean;
@@ -60,6 +61,13 @@ export interface ImportReport {
   media_relink_hint: boolean;
   imported: boolean;
   preview: { title: string; type: string; external_id: string | null }[];
+}
+
+export interface PackageReport {
+  maps: { id: number; title: string; layers: number; features: number }[];
+  categories_created: number;
+  categories_matched: number;
+  media_relink_hint: boolean;
 }
 
 export type Body = Record<string, unknown>;
@@ -121,6 +129,13 @@ export function createApi(client: ApiClient) {
     },
     imports: {
       run: (body: Body) => client.request<ImportReport>('POST', 'imports', { body }),
+      package: (content: string) =>
+        client.request<PackageReport>('POST', 'imports/package', { body: { content } }),
+    },
+    exports: {
+      map: (id: number, format: 'geojson' | 'csv' | 'json') =>
+        client.request<ExportFile>('GET', `maps/${id}/export`, { query: { format } }),
+      all: () => client.request<ExportFile>('GET', 'export'),
     },
   };
 }

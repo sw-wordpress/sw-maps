@@ -956,4 +956,50 @@ final class RestApiTest extends SwMapsTestCase {
 		$this->assertSame( 0, $this->rest( 'POST', "/providers/{$id}/test" )->get_data()['status'] );
 		remove_filter( 'pre_http_request', $down );
 	}
+
+	public function test_export_and_package_import_roundtrip_with_permissions(): void {
+		$map_id = $this->create_map( 'Export me' );
+		$layer  = $this->rest( 'POST', "/maps/{$map_id}/layers", array( 'title' => 'Orte' ) )->get_data();
+		$cat    = $this->rest( 'POST', '/categories', array( 'title' => 'Huts' ) )->get_data();
+		$this->rest( 'POST', "/layers/{$layer['id']}/features", array( 'geometry' => $this->point( 8.4, 49.0 ), 'properties' => array( 'title' => 'Hut' ), 'categories' => array( $cat['id'] ), 'external_id' => 'h1' ) );
+
+		$json = $this->rest( 'GET', "/maps/{$map_id}/export" );
+		$this->assertSame( 200, $json->get_status() );
+		$this->assertSame( 'application/json', $json->get_data()['mime_type'] );
+		$package = json_decode( $json->get_data()['content'], true );
+		$this->assertSame( 'sw-maps-package', $package['format'] );
+		$this->assertStringNotContainsString( 'secret', $json->get_data()['content'] );
+		$geo = $this->rest( 'GET', "/maps/{$map_id}/export", null, array( 'format' => 'geojson', 'layer_id' => $layer['id'] ) )->get_data();
+		$this->assertCount( 1, json_decode( $geo['content'], true )['features'] );
+		$csv = $this->rest( 'GET', "/maps/{$map_id}/export", null, array( 'format' => 'csv' ) )->get_data();
+		$this->assertStringContainsString( 'Hut', $csv['content'] );
+		$this->assertSame( 400, $this->rest( 'GET', "/maps/{$map_id}/export", null, array( 'format' => 'xml' ) )->get_status() );
+		$this->assertSame( 404, $this->rest( 'GET', '/maps/999999/export' )->get_status() );
+		$all = $this->rest( 'GET', '/export' );
+		$this->assertSame( 200, $all->get_status() );
+		$this->assertStringContainsString( 'Export me', $all->get_data()['content'] );
+
+		$imported = $this->rest( 'POST', '/imports/package', array( 'content' => $json->get_data()['content'] ) );
+		$this->assertSame( 201, $imported->get_status() );
+		$new_id = $imported->get_data()['maps'][0]['id'];
+		$this->assertNotSame( $map_id, $new_id );
+		$this->assertSame( 'draft', $this->rest( 'GET', "/maps/{$new_id}" )->get_data()['status'] );
+		$new_layer = $this->rest( 'GET', "/maps/{$new_id}/layers" )->get_data()[0];
+		$features  = $this->rest( 'GET', "/layers/{$new_layer['id']}/features" )->get_data();
+		$this->assertSame( array( $cat['id'] ), $features[0]['categories'], 'the existing category is matched by slug' );
+		$this->assertSame( 0, $imported->get_data()['categories_created'] );
+
+		$this->assertSame( 422, $this->rest( 'POST', '/imports/package', array( 'content' => '{"format":"x"}' ) )->get_status() );
+		$this->assertSame( 400, $this->rest( 'POST', '/imports/package', array() )->get_status() );
+
+		$this->as_role( 'editor' );
+		$this->assertSame( 403, $this->rest( 'GET', '/export' )->get_status(), 'exporting every map needs the system capability' );
+		wp_set_current_user( 0 );
+		foreach ( array( array( 'GET', "/maps/{$map_id}/export" ), array( 'GET', '/export' ), array( 'POST', '/imports/package' ) ) as list( $method, $route ) ) {
+			$this->assertSame( 401, $this->rest( $method, $route, array() )->get_status(), "anonymous $method $route" );
+		}
+		$this->as_role( 'subscriber' );
+		$this->assertSame( 403, $this->rest( 'GET', "/maps/{$map_id}/export" )->get_status() );
+		$this->assertSame( 403, $this->rest( 'POST', '/imports/package', array( 'content' => '{}' ) )->get_status() );
+	}
 }

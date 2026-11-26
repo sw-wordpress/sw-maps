@@ -184,3 +184,10 @@ Erledigte Aufgaben aus [TODO.md](TODO.md) (Foundation = M0, MVP = M1; Details de
   - Ergebnis: `Simplifier` (Douglas-Peucker, Endpunkte bleiben) im öffentlichen Payload ab 500 Koordinaten (`swmap_simplify_min_points`, `swmap_simplify_tolerance`); gespeicherte Geometrie unverändert (WP-Test).
 - [x] M2-17: Playwright: Track importieren, Filter, Clustering; Tests für alle Importformate inkl. Fehlerfälle
   - Ergebnis: `e2e/tests/m2-geodata.spec.ts`: Import GeoJSON (Polygonloch bleibt erhalten, Upsert per externer ID), GPX-Track, CSV mit Semikolon/Dezimalkomma, Fehlerfälle (XXE-Datei, ungültige Einträge blockieren bis zum Überspringen), Kategorie-Filter, Suche, Clustering (Klick zoomt), AJAX-Modus (nur sichtbarer Ausschnitt, nichts inline).
+
+## M3 – Betrieb (P§16 Phase 3)
+
+- [x] M3-01: Export: GeoJSON (Features/Layer), CSV (Punkte), versionierter Plugin-JSON-Export (ohne Zugangsdaten und ohne Medien)
+  - Ergebnis: `MapExporter` (Core): GeoJSON (Karte oder Layer), CSV (Punkte, Formelschutz), versionierte Plugin-Datei ohne Zugangsdaten und Medien; REST `GET /maps/{id}/export`, `GET /export`; Export im Kartenmenü und in den Einstellungen („Alle Karten exportieren“). Tests: `ExportImportTest`, `RestApiTest`, `export.test.ts`.
+- [x] M3-02: Karte duplizieren, exportieren und importieren (Plugin-JSON)
+  - Ergebnis: `PackageImporter` (Core): validiert vor dem Schreiben, Transaktion, Kategorien per Slug zugeordnet oder angelegt, neue Entwurfskarten mit eindeutigem Slug; REST `POST /imports/package` und Dialog „Kartendatei importieren“. Duplizieren stammt aus M1.

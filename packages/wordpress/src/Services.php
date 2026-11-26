@@ -16,6 +16,8 @@ use SWMaps\Core\Application\MapService;
 use SWMaps\Core\Application\ProviderService;
 use SWMaps\Core\Application\PublicFeatureService;
 use SWMaps\Core\Contracts\CategoryRepositoryInterface;
+use SWMaps\Core\Export\MapExporter;
+use SWMaps\Core\Export\PackageImporter;
 use SWMaps\Core\Contracts\FeatureRepositoryInterface;
 use SWMaps\Core\Contracts\LayerRepositoryInterface;
 use SWMaps\Core\Contracts\MapRepositoryInterface;
@@ -87,6 +89,15 @@ final class Services {
 
 	public function category_repository(): CategoryRepositoryInterface {
 		return $this->category_repo;
+	}
+
+	public function exporter(): MapExporter {
+		return new MapExporter( $this->map_repo, $this->layer_repo, $this->feature_repo, $this->category_repo, $this->clock );
+	}
+
+	public function package_importer(): PackageImporter {
+		$max = Settings::get()['max_features_per_layer'];
+		return new PackageImporter( $this->map_repo, $this->layer_repo, $this->feature_repo, $this->category_repo, $this->tx, $this->clock, $this->events, new ImportLimits( maxFeatures: $max ) );
 	}
 
 	public function public_features(): PublicFeatureService {

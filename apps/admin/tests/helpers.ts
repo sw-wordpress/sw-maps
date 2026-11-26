@@ -205,7 +205,25 @@ export function fakeApi(): FakeApi {
         ...b,
       })),
     },
+    exports: {
+      map: vi.fn(async (_id: number, format: string) => ({
+        filename: `map.${format}`,
+        mime_type: 'application/json',
+        content: '{}',
+      })),
+      all: vi.fn(async () => ({
+        filename: 'all.json',
+        mime_type: 'application/json',
+        content: '{}',
+      })),
+    },
     imports: {
+      package: vi.fn(async () => ({
+        maps: [{ id: 30, title: 'Imported', layers: 1, features: 2 }],
+        categories_created: 1,
+        categories_matched: 0,
+        media_relink_hint: true,
+      })),
       run: vi.fn(async () => ({
         mode: 'new_layer',
         layer_id: 12,
