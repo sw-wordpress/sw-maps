@@ -62,9 +62,15 @@ final class ProviderService
             ? (Input::string($config, $key, false, $max) ?? $fallback) : $fallback;
         $int = static fn (string $key, int $fallback): int => Input::int($config, $key, 0, 22) ?? $fallback;
 
+        $typeName = Input::string($data, 'type', false, 20);
+        $type = $typeName === null ? ($base->type ?? ProviderType::Xyz) : (ProviderType::tryFrom($typeName) ?? throw ValidationException::field('type', 'Unknown provider type.'));
+        if ($base !== null && $type !== $base->type) {
+            throw ValidationException::field('type', 'The type of a provider cannot be changed.');
+        }
+
         return new Provider(
             $id,
-            ProviderType::Xyz,
+            $type,
             $name,
             array_key_exists('urlTemplate', $config) ? (is_string($config['urlTemplate']) ? trim($config['urlTemplate']) : '') : ($base->urlTemplate ?? ''),
             $string('attribution', $base->attribution ?? '', 500),

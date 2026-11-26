@@ -18,9 +18,10 @@ final class WpdbFeatures implements FeatureRepositoryInterface {
 
 	public function find( int $id ): ?Feature {
 		global $wpdb;
-		$table = Schema::table( 'features' );
-		$row   = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE id = %d", $id ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		return is_array( $row ) ? $this->hydrate( $row ) : null;
+		$table   = Schema::table( 'features' );
+		$row     = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE id = %d", $id ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$feature = is_array( $row ) ? $this->hydrate( $row ) : null;
+		return null === $feature ? null : $this->attach_categories( array( $feature ) )[0];
 	}
 
 	public function page( int $layerId, int $page, int $perPage ): array {
@@ -39,6 +40,71 @@ final class WpdbFeatures implements FeatureRepositoryInterface {
 		$placeholders = implode( ',', array_fill( 0, count( $layerIds ), '%d' ) );
 		$rows         = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE layer_id IN ({$placeholders}) ORDER BY layer_id ASC, id ASC", ...array_map( 'intval', $layerIds ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 		return $this->hydrate_all( $rows );
+	}
+
+	/**
+	 * @param int      $layerId Layer ID.
+	 * @param string[] $externalIds External IDs.
+	 * @return array<string, Feature>
+	 */
+	public function byExternalIds( int $layerId, array $externalIds ): array {
+		global $wpdb;
+		if ( array() === $externalIds ) {
+			return array();
+		}
+		$table = Schema::table( 'features' );
+		$out   = array();
+		foreach ( array_chunk( $externalIds, 200 ) as $chunk ) {
+			$placeholders = implode( ',', array_fill( 0, count( $chunk ), '%s' ) );
+			$rows         = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE layer_id = %d AND external_id IN ({$placeholders})", $layerId, ...$chunk ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare,WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+			foreach ( $this->hydrate_all( $rows ) as $feature ) {
+				if ( null !== $feature->externalId ) {
+					$out[ $feature->externalId ] = $feature;
+				}
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * @param int[]   $layerIds Layer ids.
+	 * @param float[] $bounds minLon, minLat, maxLon, maxLat.
+	 * @param int[]   $categoryIds Category filter (any).
+	 * @param int     $page Page.
+	 * @param int     $perPage Page size.
+	 * @return array{items: list<Feature>, total: int}
+	 */
+	public function inBounds( array $layerIds, array $bounds, array $categoryIds, int $page, int $perPage ): array {
+		global $wpdb;
+		if ( array() === $layerIds ) {
+			return array(
+				'items' => array(),
+				'total' => 0,
+			);
+		}
+		$table    = Schema::table( 'features' );
+		$links    = Schema::table( 'feature_categories' );
+		$layer_in = implode( ',', array_fill( 0, count( $layerIds ), '%d' ) );
+		if ( $bounds[0] <= $bounds[2] ) {
+			$lon_sql  = '(f.bbox_max_lon >= %f AND f.bbox_min_lon <= %f)';
+			$lon_args = array( $bounds[0], $bounds[2] );
+		} else { // Crosses the antimeridian: [minLon, 180] and [-180, maxLon].
+			$lon_sql  = '(f.bbox_max_lon >= %f OR f.bbox_min_lon <= %f)';
+			$lon_args = array( $bounds[0], $bounds[2] );
+		}
+		$where = "f.layer_id IN ({$layer_in}) AND {$lon_sql} AND f.bbox_max_lat >= %f AND f.bbox_min_lat <= %f";
+		$args  = array_merge( array_map( 'intval', $layerIds ), $lon_args, array( $bounds[1], $bounds[3] ) );
+		if ( array() !== $categoryIds ) {
+			$cat_in = implode( ',', array_fill( 0, count( $categoryIds ), '%d' ) );
+			$where .= " AND EXISTS (SELECT 1 FROM {$links} fc WHERE fc.feature_id = f.id AND fc.category_id IN ({$cat_in}))";
+			$args   = array_merge( $args, array_map( 'intval', $categoryIds ) );
+		}
+		$total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} f WHERE {$where}", ...$args ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+		$rows  = $wpdb->get_results( $wpdb->prepare( "SELECT f.* FROM {$table} f WHERE {$where} ORDER BY f.layer_id ASC, f.id ASC LIMIT %d OFFSET %d", ...array_merge( $args, array( $perPage, ( $page - 1 ) * $perPage ) ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare,WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+		return array(
+			'items' => $this->hydrate_all( $rows ),
+			'total' => $total,
+		);
 	}
 
 	public function count( int $layerId ): int {
@@ -76,12 +142,15 @@ final class WpdbFeatures implements FeatureRepositoryInterface {
 			if ( false === $wpdb->insert( $table, $data, $fmt ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 				throw new \RuntimeException( 'Could not store the feature.' );
 			}
-			return $feature->withId( (int) $wpdb->insert_id );
+			$saved = $feature->withId( (int) $wpdb->insert_id );
+			$this->sync_categories( $saved );
+			return $saved;
 		}
 		unset( $data['layer_id'], $data['external_id'] );
 		if ( false === $wpdb->update( $table, $data, array( 'id' => $feature->id ), array( '%s', '%s', '%f', '%f', '%f', '%f', '%s', '%s', '%s' ), array( '%d' ) ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 			throw new \RuntimeException( 'Could not update the feature.' );
 		}
+		$this->sync_categories( $feature );
 		return $feature;
 	}
 
@@ -120,7 +189,50 @@ final class WpdbFeatures implements FeatureRepositoryInterface {
 				$out[] = $feature;
 			}
 		}
-		return $out;
+		return $this->attach_categories( $out );
+	}
+
+	/**
+	 * Loads the category assignments of all given features with one query.
+	 *
+	 * @param Feature[] $features Features.
+	 * @return list<Feature>
+	 */
+	private function attach_categories( array $features ): array {
+		global $wpdb;
+		if ( array() === $features ) {
+			return $features;
+		}
+		$ids          = array_map( static fn ( Feature $f ): int => $f->id, $features );
+		$table        = Schema::table( 'feature_categories' );
+		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+		$rows         = $wpdb->get_results( $wpdb->prepare( "SELECT feature_id, category_id FROM {$table} WHERE feature_id IN ({$placeholders}) ORDER BY category_id ASC", ...$ids ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+		$by_feature   = array();
+		foreach ( is_array( $rows ) ? $rows : array() as $row ) {
+			$by_feature[ (int) $row['feature_id'] ][] = (int) $row['category_id'];
+		}
+		return array_values( array_map( static fn ( Feature $f ): Feature => $f->with( null, null, null, null, $by_feature[ $f->id ] ?? array() ), $features ) );
+	}
+
+	/**
+	 * Replaces the assignments of a feature.
+	 *
+	 * @param Feature $feature Saved feature (with id).
+	 */
+	private function sync_categories( Feature $feature ): void {
+		global $wpdb;
+		$table = Schema::table( 'feature_categories' );
+		$wpdb->delete( $table, array( 'feature_id' => $feature->id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		foreach ( $feature->categoryIds as $category_id ) {
+			$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+				$table,
+				array(
+					'feature_id'  => $feature->id,
+					'category_id' => $category_id,
+				),
+				array( '%d', '%d' )
+			); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+		}
 	}
 
 	/**

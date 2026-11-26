@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { EditorDoc, SaveApi } from '@/features/editor/model';
 import {
+  appendPart,
+  moveLayer,
+  partTool,
   History,
   SaveError,
   addFeature,
@@ -118,7 +121,108 @@ describe('History', () => {
   });
 });
 
+describe('multi geometry parts', () => {
+  const point = { type: 'Point' as const, coordinates: [1, 1] };
+  const line = {
+    type: 'LineString' as const,
+    coordinates: [
+      [0, 0],
+      [1, 1],
+    ],
+  };
+  const polygon = {
+    type: 'Polygon' as const,
+    coordinates: [
+      [
+        [0, 0],
+        [1, 0],
+        [1, 1],
+        [0, 0],
+      ],
+    ],
+  };
+
+  it('maps feature types to the tool that draws a part', () => {
+    expect(
+      ['Point', 'MultiPoint', 'LineString', 'MultiLineString', 'Polygon', 'MultiPolygon'].map((t) =>
+        partTool(t as never),
+      ),
+    ).toEqual(['point', 'point', 'line', 'line', 'polygon', 'polygon']);
+  });
+
+  it('turns single geometries into multi geometries and extends existing ones', () => {
+    const doc = (geometry: unknown) => ({
+      ...base(),
+      features: [makeFeature({ geometry: geometry as never })],
+    });
+    const a = appendPart(doc(point), 100, { type: 'Point', coordinates: [2, 2] });
+    expect(a.features[0]!.geometry).toEqual({
+      type: 'MultiPoint',
+      coordinates: [
+        [1, 1],
+        [2, 2],
+      ],
+    });
+    const b = appendPart(a, 100, { type: 'Point', coordinates: [3, 3] });
+    expect((b.features[0]!.geometry.coordinates as unknown[]).length).toBe(3);
+    const l = appendPart(doc(line), 100, line);
+    expect(l.features[0]!.geometry.type).toBe('MultiLineString');
+    const p = appendPart(doc(polygon), 100, polygon);
+    expect(p.features[0]!.geometry.type).toBe('MultiPolygon');
+    const d = doc(line);
+    expect(appendPart(d, 100, point)).toBe(d);
+    expect(appendPart(d, 999, line)).toBe(d);
+    expect(appendPart(d, 100, { type: 'MultiPoint', coordinates: [] })).toBe(d);
+  });
+});
+
+describe('layer order', () => {
+  const three = (): EditorDoc => {
+    let doc = base();
+    doc = addLayer(doc, -1, 'B');
+    doc = addLayer(doc, -2, 'C');
+    return doc;
+  };
+
+  it('swaps neighbours, keeps the array sorted and ignores moves past the ends', () => {
+    const doc = three();
+    const order = (d: EditorDoc) => d.layers.map((l) => l.id);
+    const first = doc.layers[0]!.id;
+    expect(order(moveLayer(doc, first, -1))).toEqual(order(doc));
+    expect(moveLayer(doc, first, -1)).toBe(doc);
+    const down = moveLayer(doc, first, 1);
+    expect(order(down)).toEqual([doc.layers[1]!.id, first, doc.layers[2]!.id]);
+    expect(down.layers.map((l) => l.sort_order)).toEqual([0, 1, 2]);
+    expect(moveLayer(down, -2, 1)).toBe(down);
+    expect(moveLayer(down, 999, 1)).toBe(down);
+    expect(diff(doc, down).some((o) => o.kind === 'layer-update')).toBe(true);
+  });
+});
+
 describe('diff and save plan', () => {
+  it('keeps assignments in the stored order so the preview matches the saved result', () => {
+    const doc = updateFeature(base(), 100, { categories: [9, 2, 5] });
+    expect(doc.features[0]!.categories).toEqual([2, 5, 9]);
+  });
+
+  it('detects category changes and sends them with the feature', () => {
+    const original = base();
+    const working = updateFeature(original, 100, { categories: [3, 4] });
+    expect(docEquals(original, working)).toBe(false);
+    const ops = diff(original, working);
+    expect(ops).toHaveLength(1);
+    expect(ops[0]).toMatchObject({
+      kind: 'feature-update',
+      id: 100,
+      patch: { categories: [3, 4] },
+    });
+    const created = addFeature(original, -5, 10, { type: 'Point', coordinates: [1, 1] });
+    expect(diff(original, created)[0]).toMatchObject({
+      kind: 'feature-create',
+      body: { categories: [] },
+    });
+  });
+
   it('is empty without changes', () => {
     expect(diff(base(), base())).toEqual([]);
   });
@@ -253,6 +357,20 @@ describe('render data', () => {
     expect(pub.urlTemplate).toBe('https://t.example.org/{z}/{x}/{y}.png?k=a%20b');
     expect(JSON.stringify(pub)).not.toContain('SECRET');
     expect(toPublicProvider(null)).toBeNull();
+    const archive = toPublicProvider(
+      makeProvider({
+        type: 'pmtiles',
+        public_config: {
+          ...makeProvider().public_config,
+          urlTemplate: 'https://x.test/a.pmtiles?k={key}',
+        },
+      }),
+    );
+    expect(archive).toMatchObject({
+      type: 'pmtiles',
+      urlTemplate: 'https://x.test/a.pmtiles?k={key}',
+    });
+    expect(toPublicProvider(makeProvider())?.type).toBe('xyz');
   });
 
   it('builds editor render data with full interaction and visible layers only', () => {
@@ -267,6 +385,8 @@ describe('render data', () => {
       drag: true,
       fullscreen: false,
       clickToLoad: false,
+      cluster: false,
+      ajax: false,
     });
     expect(data.viewport.autoBounds).toBe(false);
     expect(data.consentCategory).toBeNull();

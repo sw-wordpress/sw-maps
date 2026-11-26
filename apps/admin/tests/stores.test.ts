@@ -1,3 +1,4 @@
+import { nextTick } from 'vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises } from '@vue/test-utils';
 import { ApiError } from '@/api/client';
@@ -119,6 +120,98 @@ describe('editor store', () => {
     expect(store.dirty).toBe(false);
     expect(store.provider?.name).toBe('OpenStreetMap');
     expect(store.renderData(viewerStrings((k) => k))?.layers).toHaveLength(1);
+  });
+
+  it('loads categories and keeps category management out of the dirty state', async () => {
+    api.features.page.mockResolvedValue({
+      items: [makeFeature({ categories: [20, 22] })],
+      total: 1,
+      totalPages: 1,
+    } as never);
+    const store = await loaded();
+    expect(store.categories.map((c) => c.title)).toEqual(['Huts']);
+    expect(store.renderData(viewerStrings((k) => k))?.categories?.[0]?.title).toBe('Huts');
+    await store.saveCategory(null, { title: 'Aaa' });
+    await store.saveCategory(20, { title: 'Zzz' });
+    expect(store.categories.map((c) => c.title)).toEqual(['Aaa', 'Zzz']);
+    await store.removeCategory(20);
+    expect(api.categories.remove).toHaveBeenCalledWith(20);
+    expect(store.categories.map((c) => c.id)).toEqual([21]);
+    expect(store.doc?.features[0]?.categories).toEqual([22]);
+    expect(store.dirty).toBe(false);
+  });
+
+  it('adds a drawn part to the pending feature as a multi geometry', async () => {
+    const store = await loaded();
+    store.startAddPart(999);
+    expect(store.appendTo).toBeNull();
+    store.startAddPart(100);
+    expect(store.appendTo).toBe(100);
+    expect(store.tool).toBe('point');
+    store.drawn({ type: 'Point', coordinates: [9, 50] });
+    expect(store.doc?.features).toHaveLength(1);
+    expect(store.doc?.features[0]?.geometry.type).toBe('MultiPoint');
+    expect([store.appendTo, store.tool]).toEqual([null, 'select']);
+    store.startAddPart(100);
+    store.drawn({
+      type: 'LineString',
+      coordinates: [
+        [0, 0],
+        [1, 1],
+      ],
+    });
+    expect(store.doc?.features[0]?.geometry.type).toBe('MultiPoint');
+    store.drawn({ type: 'Point', coordinates: [5, 5] });
+    expect(store.doc?.features).toHaveLength(2);
+  });
+
+  it('cancels a pending part when the tool changes or another map is loaded', async () => {
+    const store = await loaded();
+    store.startAddPart(100);
+    store.tool = 'select';
+    await nextTick();
+    expect(store.appendTo).toBeNull();
+    store.drawn({ type: 'Point', coordinates: [2, 2] });
+    expect(store.doc?.features).toHaveLength(2);
+    store.startAddPart(100);
+    store.tool = 'line';
+    await nextTick();
+    expect(store.appendTo).toBeNull();
+    store.startAddPart(100);
+    await store.load(1);
+    expect(store.appendTo).toBeNull();
+  });
+
+  it('removes a deleted category from the undo history too', async () => {
+    api.features.page.mockResolvedValue({
+      items: [makeFeature({ categories: [20] })],
+      total: 1,
+      totalPages: 1,
+    } as never);
+    const store = await loaded();
+    store.patchFeature(100, { properties: { title: 'Changed' } });
+    await store.removeCategory(20);
+    store.undo();
+    expect(store.doc?.features[0]?.categories).toEqual([]);
+    store.redo();
+    expect(store.doc?.features[0]?.categories).toEqual([]);
+  });
+
+  it('assigns categories through the working copy and saves them with the feature', async () => {
+    const store = await loaded();
+    store.patchFeature(100, { categories: [20] });
+    expect(store.dirty).toBe(true);
+    await store.save();
+    expect(api.features.update).toHaveBeenCalledWith(
+      100,
+      expect.objectContaining({ categories: [20] }),
+    );
+  });
+
+  it('tolerates a failing category list', async () => {
+    api.categories.list.mockRejectedValueOnce(new ApiError('rest_forbidden', 'no', 403) as never);
+    const store = await loaded();
+    expect(store.categories).toEqual([]);
   });
 
   it('tolerates a failing provider list (no permission)', async () => {

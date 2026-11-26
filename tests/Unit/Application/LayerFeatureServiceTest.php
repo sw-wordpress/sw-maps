@@ -37,6 +37,53 @@ final class LayerFeatureServiceTest extends TestCase
         self::assertContains('layer:' . $a->id . ':' . $this->mapId, $this->f->events->log);
     }
 
+    public function testFeaturesReportTheirLineLength(): void
+    {
+        $layer = $this->f->layerService->create($this->mapId, ['title' => 'T']);
+        $line = $this->f->featureService->create($layer->id, ['geometry' => ['type' => 'LineString', 'coordinates' => [[0, 0], [0, 1]]]]);
+        $point = $this->f->featureService->create($layer->id, ['geometry' => ['type' => 'Point', 'coordinates' => [0, 0]]]);
+        self::assertEqualsWithDelta(111195.0, $line->toArray()['length_m'], 100.0);
+        self::assertSame(0.0, $point->toArray()['length_m']);
+    }
+
+    public function testBoundsQueryWrapsAroundTheAntimeridian(): void
+    {
+        $layer = $this->f->layerService->create($this->mapId, ['title' => 'W']);
+        foreach ([[179.5, 0], [-179.5, 0], [0, 0]] as [$lon, $lat]) {
+            $this->f->featureService->create($layer->id, ['geometry' => ['type' => 'Point', 'coordinates' => [$lon, $lat]]]);
+        }
+        $wrapped = $this->f->features->inBounds([$layer->id], [170.0, -10.0, -170.0, 10.0], [], 1, 10);
+        self::assertSame(2, $wrapped['total']);
+        $plain = $this->f->features->inBounds([$layer->id], [-10.0, -10.0, 10.0, 10.0], [], 1, 10);
+        self::assertSame(1, $plain['total']);
+    }
+
+    public function testLayerStyleRulesAreValidated(): void
+    {
+        $rules = [['categoryId' => 3, 'style' => ['color' => '#ff0000', 'weight' => 5]]];
+        $layer = $this->f->layerService->create($this->mapId, ['title' => 'R', 'style' => ['color' => '#111111', 'rules' => $rules]]);
+        self::assertSame($rules, $layer->style['rules']);
+        self::assertSame($rules, $this->f->layerService->update($layer->id, ['style' => ['rules' => $rules]])->style['rules']);
+        $bad = [
+            'x',
+            array_fill(0, 11, $rules[0]),
+            [['categoryId' => 'a', 'style' => []]],
+            [['categoryId' => 0, 'style' => []]],
+            [['categoryId' => 1]],
+            [['categoryId' => 1, 'style' => ['rules' => []]]],
+            [['categoryId' => 1, 'style' => ['color' => '<script>']]],
+            ['categoryId' => 1],
+        ];
+        foreach ($bad as $value) {
+            try {
+                $this->f->layerService->update($layer->id, ['style' => ['rules' => $value]]);
+                self::fail('expected ValidationException');
+            } catch (ValidationException) {
+                self::assertTrue(true);
+            }
+        }
+    }
+
     public function testLayerErrors(): void
     {
         $l = $this->f->layerService->create($this->mapId, ['title' => 'A']);

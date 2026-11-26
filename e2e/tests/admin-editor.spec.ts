@@ -10,7 +10,16 @@ const tool = (page: Page, name: string) => page.locator(`[data-test="tool-${name
 
 async function openEditorFor(page: Page, title: string): Promise<number> {
   await page.goto(`${PLUGIN_PAGE}#/maps`);
-  await page.locator('input[data-test="new-title"]').fill(title);
+  // On a cold stack the very first admin page can stay blank (the app chunk is still being served): reload once.
+  const field = page.locator('input[data-test="new-title"]');
+  const shown = await field.waitFor({ state: 'visible', timeout: 10_000 }).then(
+    () => true,
+    () => false,
+  );
+  if (!shown) {
+    await page.reload();
+  }
+  await field.fill(title);
   await page.locator('[data-test="create"]').click();
   await expect(page.locator('.swmap-editor__canvas .ol-viewport')).toBeVisible();
   return Number(/maps\/(\d+)/.exec(page.url())?.[1]);
@@ -43,11 +52,20 @@ test('create a map, place, move and publish a marker', async ({ page, baseURL })
   expect(saved[0]!.properties['title']).toBe('Mein Marker');
   const before = saved[0]!.geometry.coordinates;
 
+  // The save reloads the map and rebuilds the canvas data: let that finish before dragging.
+  await page.waitForLoadState('networkidle');
+
   // Drag the marker with the select tool.
   await tool(page, 'select').click();
-  await page.mouse.move(x, y);
+  // The page can have scrolled meanwhile: the marker still sits at the centre of the (possibly moved) canvas.
+  const now = (await canvas.boundingBox())!;
+  const mx = now.x + now.width / 2;
+  const my = now.y + now.height / 2;
+  // Several pointer moves: the Modify interaction hit-tests the vertex under the pointer on move events.
+  await page.mouse.move(mx - 12, my - 12);
+  await page.mouse.move(mx, my, { steps: 6 });
   await page.mouse.down();
-  await page.mouse.move(x + 60, y + 40, { steps: 8 });
+  await page.mouse.move(mx + 60, my + 40, { steps: 8 });
   await page.mouse.up();
   await expect(page.locator('[data-test="dirty"]')).toBeVisible();
   await page.locator('[data-test="save"]').click();

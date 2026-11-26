@@ -41,7 +41,7 @@ describe('bootstrap', () => {
     await flushPromises();
     const el = document.getElementById('sw-maps-app')!;
     expect(el.classList.contains('swmap-root')).toBe(true);
-    expect(el.querySelector('.swmap-nav')).not.toBeNull();
+    expect(el.querySelector('.swmap-rail')).not.toBeNull();
     expect(el.textContent).toContain('Karten');
   });
 });

@@ -32,6 +32,35 @@ final class InMemoryFeatures implements FeatureRepositoryInterface
         return array_values(array_filter($this->items, static fn (Feature $f): bool => in_array($f->layerId, $layerIds, true)));
     }
 
+    public function byExternalIds(int $layerId, array $externalIds): array
+    {
+        $out = [];
+        foreach ($this->forLayers([$layerId]) as $f) {
+            // Like the default (case-insensitive) database collation.
+            if ($f->externalId !== null && in_array(mb_strtolower($f->externalId), array_map('mb_strtolower', $externalIds), true)) {
+                $out[$f->externalId] = $f;
+            }
+        }
+
+        return $out;
+    }
+
+    public function inBounds(array $layerIds, array $bounds, array $categoryIds, int $page, int $perPage): array
+    {
+        $matching = array_values(array_filter($this->forLayers($layerIds), static function (Feature $f) use ($bounds, $categoryIds): bool {
+            $b = $f->bounds();
+
+            $lon = $bounds[0] <= $bounds[2]
+                ? $b->maxLongitude >= $bounds[0] && $b->minLongitude <= $bounds[2]
+                : $b->maxLongitude >= $bounds[0] || $b->minLongitude <= $bounds[2];
+
+            return $lon && $b->maxLatitude >= $bounds[1] && $b->minLatitude <= $bounds[3]
+                && ($categoryIds === [] || array_intersect($categoryIds, $f->categoryIds) !== []);
+        }));
+
+        return ['items' => array_slice($matching, ($page - 1) * $perPage, $perPage), 'total' => count($matching)];
+    }
+
     public function count(int $layerId): int
     {
         return count($this->forLayers([$layerId]));

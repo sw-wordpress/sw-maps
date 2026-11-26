@@ -5,14 +5,18 @@ import Overlay from 'ol/Overlay.js';
 import TileLayer from 'ol/layer/Tile.js';
 import VectorLayer from 'ol/layer/Vector.js';
 import VectorSource from 'ol/source/Vector.js';
+import ClusterSource from 'ol/source/Cluster.js';
 import XYZ from 'ol/source/XYZ.js';
 import ScaleLine from 'ol/control/ScaleLine.js';
 import Zoom from 'ol/control/Zoom.js';
 import DragPan from 'ol/interaction/DragPan.js';
 import { defaults as defaultInteractions } from 'ol/interaction/defaults.js';
+import { createEmpty, extend, getCenter, getHeight, getWidth } from 'ol/extent.js';
 import { fromLonLat, toLonLat, transformExtent } from 'ol/proj.js';
 import type MapBrowserEvent from 'ol/MapBrowserEvent.js';
 import type { Coordinate } from 'ol/coordinate.js';
+import type Point from 'ol/geom/Point.js';
+import type { StyleFunction } from 'ol/style/Style.js';
 import { boundsOf, flattenPositions } from '@sw-maps/map-contracts';
 import type {
   BoundsTuple,
@@ -28,7 +32,9 @@ import { Emitter } from './emitter';
 import { toOlGeometry } from './geometry';
 import { buildPopup } from './popup';
 import type { FeatureMeta } from './styles';
-import { createStyleFunction } from './styles';
+import { closePmtiles, createPmtilesSource } from './pmtiles';
+import { ruleStyle } from './styles';
+import { createClusterStyleFunction, createStyleFunction, layerInRange } from './styles';
 
 export interface RendererConfig {
   /** Viewer: popups on selection. Editor: selection is shown by the properties panel instead. */
@@ -37,12 +43,16 @@ export interface RendererConfig {
 
 const FEATURE_ID = 'swmapId';
 const AUTO_BOUNDS_MAX_ZOOM = 16;
+const CLUSTER_DISTANCE = 40;
 
 export class OpenLayersRenderer implements MapRenderer {
   protected map: OlMap | null = null;
   protected data: MapRenderData | null = null;
   protected readonly source = new VectorSource();
   protected vectorLayer: VectorLayer | null = null;
+  private clusterLayer: VectorLayer | null = null;
+  private clusterSource: ClusterSource | null = null;
+  private visibleIds: Set<number> | null = null;
   protected tileLayer: TileLayer<XYZ> | null = null;
   protected readonly events = new Emitter<RendererEventMap>();
   protected selectedId: number | null = null;
@@ -100,6 +110,26 @@ export class OpenLayersRenderer implements MapRenderer {
     return { center: [lon ?? 0, lat ?? 0], zoom: view.getZoom() ?? 0 };
   }
 
+  /**
+   * Visible area in WGS84 for loading features. Longitudes are normalised into [-180, 180]; when the view crosses
+   * the antimeridian (or shows another world copy) minLon is greater than maxLon, which the server treats as two
+   * ranges. A view of a whole world or more covers every longitude.
+   */
+  getBounds(): BoundsTuple {
+    const map = this.requireMap();
+    const extent = map.getView().calculateExtent(map.getSize());
+    const [west = -180, south = -85, east = 180, north = 85] = transformExtent(
+      extent,
+      'EPSG:3857',
+      'EPSG:4326',
+    );
+    const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
+    const lat: [number, number] = [clamp(south, -90, 90), clamp(north, -90, 90)];
+    if (east - west >= 360) return [-180, lat[0], 180, lat[1]];
+    const wrap = (lon: number): number => ((((lon + 180) % 360) + 360) % 360) - 180;
+    return [wrap(west), lat[0], wrap(east), lat[1]];
+  }
+
   fitBounds(bounds: BoundsTuple, options: { padding?: number; maxZoom?: number } = {}): void {
     const pad = options.padding ?? 32;
     this.requireMap()
@@ -123,6 +153,7 @@ export class OpenLayersRenderer implements MapRenderer {
     if (id !== null && !this.metas.has(id)) id = null;
     this.selectedId = id;
     this.vectorLayer?.changed();
+    this.clusterLayer?.changed();
     if (id === null) {
       this.closePopup();
     } else {
@@ -153,6 +184,22 @@ export class OpenLayersRenderer implements MapRenderer {
     return this.map;
   }
 
+  /** Zoom of a resolution, used for the per-layer zoom limits. */
+  protected zoomOf = (resolution: number): number | null =>
+    this.map?.getView().getZoomForResolution(resolution) ?? null;
+
+  protected isVisible = (id: number): boolean =>
+    this.visibleIds === null || this.visibleIds.has(id);
+
+  /** Shows only the given features (search/filter of the viewer); null shows all. Hidden features are deselected. */
+  setVisibleIds(ids: Iterable<number> | null): void {
+    this.visibleIds = ids === null ? null : new Set(ids);
+    if (this.selectedId !== null && !this.isVisible(this.selectedId)) this.selectFeature(null);
+    this.clusterSource?.refresh();
+    this.vectorLayer?.changed();
+    this.clusterLayer?.changed();
+  }
+
   protected metaOf = (feature: unknown): FeatureMeta | undefined => {
     const id = (feature as Feature).get(FEATURE_ID) as number | undefined;
     return id === undefined ? undefined : this.metas.get(id);
@@ -166,6 +213,15 @@ export class OpenLayersRenderer implements MapRenderer {
   protected onMapClick(event: MapBrowserEvent): void {
     const map = this.requireMap();
     const hit = map.forEachFeatureAtPixel(event.pixel, (f) => f as Feature, { hitTolerance: 8 });
+    const members = hit?.get('features') as Feature[] | undefined;
+    if (members && members.length > 1) {
+      this.expandCluster(members);
+      return;
+    }
+    if (members) {
+      this.selectFeature((members[0]?.get(FEATURE_ID) as number | undefined) ?? null);
+      return;
+    }
     const id = hit ? ((hit.get(FEATURE_ID) as number | undefined) ?? null) : null;
     this.selectFeature(id);
   }
@@ -216,13 +272,47 @@ export class OpenLayersRenderer implements MapRenderer {
       source: this.createTileSource(data) ?? undefined,
       visible: provider !== null,
     });
+    const featureStyle = createStyleFunction(
+      this.metaOf,
+      () => this.selectedId,
+      this.isVisible,
+      this.zoomOf,
+    );
     this.vectorLayer = new VectorLayer({
       source: this.source,
-      style: createStyleFunction(this.metaOf, () => this.selectedId),
+      style: settings.cluster
+        ? (feature, resolution) =>
+            feature.getGeometry()?.getType() === 'Point'
+              ? undefined
+              : (featureStyle as StyleFunction)(feature, resolution)
+        : featureStyle,
     });
+    const layers: Array<TileLayer<XYZ> | VectorLayer> = [this.tileLayer, this.vectorLayer];
+    if (settings.cluster) {
+      this.clusterSource = new ClusterSource({
+        source: this.source,
+        distance: CLUSTER_DISTANCE,
+        geometryFunction: (feature) => {
+          const geometry = feature.getGeometry();
+          const id = feature.get(FEATURE_ID) as number;
+          const meta = this.metas.get(id);
+          const inRange = meta
+            ? layerInRange(meta.layer.style, this.map?.getView().getZoom() ?? null)
+            : true;
+          return geometry?.getType() === 'Point' && this.isVisible(id) && inRange
+            ? (geometry as Point)
+            : null;
+        },
+      });
+      this.clusterLayer = new VectorLayer({
+        source: this.clusterSource,
+        style: createClusterStyleFunction(featureStyle),
+      });
+      layers.push(this.clusterLayer);
+    }
     this.map = new OlMap({
       target: canvas,
-      layers: [this.tileLayer, this.vectorLayer],
+      layers,
       view,
       controls,
       interactions,
@@ -234,10 +324,20 @@ export class OpenLayersRenderer implements MapRenderer {
       target.append(this.attribution);
     }
     if (settings.fullscreen && doc.fullscreenEnabled) this.addFullscreenButton(target, doc);
-    if (this.config.popups) this.overlay = this.createOverlay(doc);
+    if (this.config.popups) {
+      this.overlay = this.createOverlay(doc);
+      this.createTooltip(doc);
+    }
 
     this.map.on('singleclick', (event) => this.onMapClick(event));
-    this.map.on('moveend', () => this.events.emit('viewchange', this.getView()));
+    let lastZoom = Math.round((this.map.getView().getZoom() ?? 0) * 2);
+    this.map.on('moveend', () => {
+      this.events.emit('viewchange', this.getView());
+      // Layers with zoom limits change the clustered point set when the zoom changes.
+      const zoom = Math.round((this.map?.getView().getZoom() ?? 0) * 2);
+      if (zoom !== lastZoom && this.hasZoomLimits()) this.clusterSource?.refresh();
+      lastZoom = zoom;
+    });
 
     this.signatures.clear();
     this.syncFeatures();
@@ -266,8 +366,18 @@ export class OpenLayersRenderer implements MapRenderer {
       this.map.dispose();
       this.map = null;
     }
+    this.clusterSource?.dispose();
+    this.clusterSource = null;
+    this.clusterLayer = null;
     this.vectorLayer = null;
+    closePmtiles(this.tileLayer?.getSource());
     this.tileLayer = null;
+  }
+
+  private hasZoomLimits(): boolean {
+    return (this.data?.layers ?? []).some(
+      (l) => typeof l.style['minZoom'] === 'number' || typeof l.style['maxZoom'] === 'number',
+    );
   }
 
   private computeSettingsKey(data: MapRenderData): string {
@@ -275,6 +385,8 @@ export class OpenLayersRenderer implements MapRenderer {
     const p = data.provider;
     // The tile grid (size, zoom range) is fixed when the source is created: changing it needs a rebuild.
     return JSON.stringify([
+      p?.type,
+      p?.type === 'pmtiles' ? p.urlTemplate : null,
       p?.tileSize,
       p?.minZoom,
       p?.maxZoom,
@@ -284,6 +396,7 @@ export class OpenLayersRenderer implements MapRenderer {
       s.scrollZoom,
       s.touch,
       s.drag,
+      s.cluster,
       data.provider === null,
     ]);
   }
@@ -291,6 +404,11 @@ export class OpenLayersRenderer implements MapRenderer {
   private createTileSource(data: MapRenderData): XYZ | null {
     const p = data.provider;
     if (!p) return null;
+    if (p.type === 'pmtiles') {
+      return createPmtilesSource(p, () =>
+        this.events.emit('error', new Error('Vector tiles are not supported.')),
+      );
+    }
     return new XYZ({
       url: p.urlTemplate,
       minZoom: p.minZoom,
@@ -306,7 +424,7 @@ export class OpenLayersRenderer implements MapRenderer {
     const source = this.tileLayer?.getSource();
     const p = data.provider;
     if (!p || !source) return;
-    if (source.getUrls()?.[0] !== p.urlTemplate) source.setUrl(p.urlTemplate);
+    if (p.type === 'xyz' && source.getUrls()?.[0] !== p.urlTemplate) source.setUrl(p.urlTemplate);
     if (this.attribution) {
       const next = buildAttribution(
         p.attribution,
@@ -375,6 +493,42 @@ export class OpenLayersRenderer implements MapRenderer {
     return overlay;
   }
 
+  /** Hover label with the title of a location (pointer devices; the popup stays the full detail view). */
+  private createTooltip(doc: Document): Overlay {
+    const element = doc.createElement('div');
+    element.className = 'swmap-tooltip';
+    element.setAttribute('role', 'tooltip');
+    const overlay = new Overlay({
+      element,
+      positioning: 'bottom-center',
+      offset: [0, -44],
+      stopEvent: false,
+    });
+    const map = this.requireMap();
+    map.addOverlay(overlay);
+    map.on('pointermove', (event) => {
+      if (event.dragging) return;
+      const hit = map.forEachFeatureAtPixel(event.pixel, (f) => f as Feature, { hitTolerance: 6 });
+      const members = hit?.get('features') as Feature[] | undefined;
+      const id = members
+        ? members.length === 1
+          ? (members[0]?.get(FEATURE_ID) as number | undefined)
+          : undefined
+        : (hit?.get(FEATURE_ID) as number | undefined);
+      const title =
+        id === undefined || id === this.popupFor ? '' : this.metas.get(id)?.properties.title;
+      const target = map.getTargetElement();
+      if (target) target.style.cursor = hit ? 'pointer' : '';
+      if (!title) {
+        overlay.setPosition(undefined);
+        return;
+      }
+      element.textContent = title;
+      overlay.setPosition(event.coordinate);
+    });
+    return overlay;
+  }
+
   private openPopup(id: number): void {
     const meta = this.metas.get(id);
     const feature = this.source.getFeatures().find((f) => f.get(FEATURE_ID) === id);
@@ -417,6 +571,66 @@ export class OpenLayersRenderer implements MapRenderer {
     });
   }
 
+  /** Lists the members of a cluster that cannot be separated by zooming; choosing one opens its popup. */
+  private openChooser(members: Feature[], position: Coordinate): void {
+    const element = this.overlay?.getElement();
+    if (!element || !this.data) return;
+    const doc = element.ownerDocument;
+    const root = doc.createElement('div');
+    root.className = 'swmap-popup swmap-chooser';
+    root.setAttribute('role', 'dialog');
+    const close = doc.createElement('button');
+    close.type = 'button';
+    close.className = 'swmap-popup__close';
+    close.setAttribute('aria-label', this.data.strings.closePopup);
+    close.textContent = '×';
+    close.addEventListener('click', (event) => {
+      event.stopPropagation();
+      this.selectFeature(null);
+    });
+    const list = doc.createElement('ul');
+    list.className = 'swmap-chooser__list';
+    for (const member of members) {
+      const id = member.get(FEATURE_ID) as number;
+      const item = doc.createElement('li');
+      const button = doc.createElement('button');
+      button.type = 'button';
+      button.textContent = this.metas.get(id)?.properties.title || '—';
+      button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        this.selectFeature(id);
+      });
+      item.append(button);
+      list.append(item);
+    }
+    root.append(close, list);
+    element.replaceChildren(root);
+    this.overlay?.setPosition(position);
+    this.popupFor = null;
+  }
+
+  /** A click on a group zooms to its members; when that cannot separate them, a chooser lists the members. */
+  private expandCluster(members: Feature[]): void {
+    const extent = createEmpty();
+    for (const member of members) {
+      const geometry = member.getGeometry();
+      if (geometry) extend(extent, geometry.getExtent());
+    }
+    const view = this.requireMap().getView();
+    const coincident = getWidth(extent) === 0 && getHeight(extent) === 0;
+    const atLimit = (view.getZoom() ?? 0) >= view.getMaxZoom() - 0.01;
+    if ((coincident || atLimit) && this.overlay) {
+      // Zooming cannot separate them: offer the members as a list (works without the page's location list).
+      this.openChooser(members, getCenter(extent));
+      return;
+    }
+    view.fit(extent, {
+      padding: [64, 64, 64, 64],
+      maxZoom: view.getMaxZoom(),
+      duration: this.duration(),
+    });
+  }
+
   private fitToFeaturesIfAuto(): void {
     const data = this.data;
     if (!data?.viewport.autoBounds) return;
@@ -442,11 +656,23 @@ export class OpenLayersRenderer implements MapRenderer {
     const data = this.data;
     if (!data) return;
     const wanted = new Map<number, { meta: FeatureMeta; signature: string; geometry: unknown }>();
-    for (const layer of data.layers) {
+    const categories = new Map((data.categories ?? []).map((c) => [c.id, c.style]));
+    for (const [order, layer] of data.layers.entries()) {
       for (const f of layer.features) {
+        const categoryStyle = {
+          ...(categories.get(f.categories?.[0] ?? -1) ?? {}),
+          ...ruleStyle(layer.style, f.categories ?? []),
+        };
         wanted.set(f.id, {
-          meta: { id: f.id, layer, properties: f.properties, style: f.style },
-          signature: JSON.stringify([f.geometry, f.properties, f.style, layer.style]),
+          meta: { id: f.id, layer, order, properties: f.properties, style: f.style, categoryStyle },
+          signature: JSON.stringify([
+            f.geometry,
+            f.properties,
+            f.style,
+            layer.style,
+            categoryStyle,
+            order,
+          ]),
           geometry: f.geometry,
         });
       }
@@ -466,9 +692,10 @@ export class OpenLayersRenderer implements MapRenderer {
       if (!geometry) continue;
       const feature = new Feature({ geometry });
       feature.set(FEATURE_ID, id);
-      this.source.addFeature(feature);
+      // Metadata first: adding the feature refreshes the cluster source, which reads it (layer zoom limits).
       this.signatures.set(id, item.signature);
       this.metas.set(id, item.meta);
+      this.source.addFeature(feature);
     }
     for (const [id, item] of wanted) {
       if (this.metas.has(id)) this.metas.set(id, item.meta);
@@ -476,5 +703,6 @@ export class OpenLayersRenderer implements MapRenderer {
     if (this.selectedId !== null && !this.metas.has(this.selectedId)) this.selectFeature(null);
     else if (this.popupFor !== null) this.openPopup(this.popupFor);
     this.vectorLayer?.changed();
+    this.clusterLayer?.changed();
   }
 }

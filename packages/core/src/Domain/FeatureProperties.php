@@ -17,14 +17,19 @@ final class FeatureProperties
     public const MAX_DESCRIPTION = 2000;
     public const MAX_ADDRESS = 300;
     public const MAX_LINK = 2000;
+    public const MAX_FIELDS = 10;
+    public const MAX_FIELD_LABEL = 60;
+    public const MAX_FIELD_VALUE = 300;
 
+    /** @param list<array{label: string, value: string}> $fields structured additional fields (label/value pairs) */
     public function __construct(
         public readonly string $title,
         public readonly string $description,
         public readonly string $address,
         public readonly ?int $imageId,
         public readonly ?string $link,
-        public readonly string $icon
+        public readonly string $icon,
+        public readonly array $fields = []
     ) {
     }
 
@@ -84,11 +89,51 @@ final class FeatureProperties
                 $errors['properties.icon'] = 'Unknown icon.';
             }
         }
+        $fields = $base->fields;
+        if (array_key_exists('fields', $data)) {
+            $fields = self::fields($data['fields'], $errors);
+        }
         if ($errors !== []) {
             throw new ValidationException($errors);
         }
 
-        return new self($title, $description, $address, $imageId, $link, $icon);
+        return new self($title, $description, $address, $imageId, $link, $icon, $fields);
+    }
+
+    /**
+     * Label/value pairs; plain text only. Entries with an empty label and value are dropped.
+     *
+     * @param array<string, string> $errors
+     * @return list<array{label: string, value: string}>
+     */
+    private static function fields(mixed $input, array &$errors): array
+    {
+        if (!is_array($input) || !array_is_list($input) || count($input) > self::MAX_FIELDS) {
+            $errors['properties.fields'] = sprintf('Must be a list of at most %d label/value pairs.', self::MAX_FIELDS);
+
+            return [];
+        }
+        $out = [];
+        foreach ($input as $entry) {
+            if (!is_array($entry) || !is_string($entry['label'] ?? null) || !is_string($entry['value'] ?? null)) {
+                $errors['properties.fields'] = 'Each field needs a text label and value.';
+
+                return [];
+            }
+            $label = self::plain($entry['label'], false);
+            $value = self::plain($entry['value'], false);
+            if ($label === '' && $value === '') {
+                continue;
+            }
+            if ($label === '' || mb_strlen($label) > self::MAX_FIELD_LABEL || mb_strlen($value) > self::MAX_FIELD_VALUE) {
+                $errors['properties.fields'] = sprintf('Labels are required (max %d characters), values may have %d characters.', self::MAX_FIELD_LABEL, self::MAX_FIELD_VALUE);
+
+                return [];
+            }
+            $out[] = ['label' => $label, 'value' => $value];
+        }
+
+        return $out;
     }
 
     /**
@@ -156,6 +201,7 @@ final class FeatureProperties
             'image_id' => $this->imageId,
             'link' => $this->link,
             'icon' => $this->icon,
+            'fields' => $this->fields,
         ];
     }
 }

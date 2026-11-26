@@ -30,8 +30,26 @@ Authentifizierung: Cookie + REST-Nonce (`X-WP-Nonce`). Alle Endpunkte haben eine
 | GET | `/providers` | `swmap_edit_maps` (Karteneditoren erhalten nur `id, type, name, public_config, enabled`; mit `swmap_manage_system` zusätzlich `secret_constant`, `secret_defined`, `external_requests`) | Liste `Provider` |
 | POST | `/providers`, GET/PATCH/DELETE `/providers/{id}` | `swmap_manage_system` | `Provider` |
 | POST | `/providers/{id}/test` | `swmap_manage_system` | `{ ok, status, message }` |
+| GET/POST | `/categories` | lesen: `swmap_edit_maps`; anlegen: `swmap_manage_layers` | Liste/`Category` (201) |
+| PATCH/DELETE | `/categories/{id}` | `swmap_manage_layers` | `Category` / 204 |
 | GET/PATCH | `/settings` | `swmap_manage_system` | `Settings` |
 | GET | `/status` | `swmap_manage_system` | Systemstatus |
+
+Standorte enthalten `length_m` (Länge von Linien in Metern, Haversine; 0 sonst; nur lesend).
+
+Kategorien sind seitenweit (`id`, `slug`, `title`, `style` mit `color` und `icon`); Standorte tragen `categories` (Liste von IDs, beim Schreiben ersetzend; ohne Schlüssel unverändert). Löschen einer Kategorie entfernt die Zuordnungen. Das öffentliche Payload enthält nur Kategorien, die auf der Karte verwendet werden. Der Viewer zeigt sie als Filter-Legende mit Symbol und Farbe (nicht nur Farbe).
+
+Öffentlich (ohne Anmeldung, nur veröffentlichte Karten mit aktivierter Einstellung `ajax`, sonst 404): `GET /public/maps/{id}/features?bbox=minLon,minLat,maxLon,maxLat&zoom=&categories=1,2&page=&per_page=` (Standard 200, maximal 500 je Seite) (`minLon` > `maxLon` steht für einen Ausschnitt über die Datumsgrenze) liefert `{ layers: [{ id, features }], total, page, total_pages }` nur für sichtbare, veröffentlichte Layer. Der Viewer fragt entprellt (250 ms) und bricht die vorherige Anfrage ab; Linien und Flächen werden passend zum Zoom vereinfacht (Feld `simplified`). Im AJAX-Modus enthält das Inline-Payload keine Standorte (`ajaxUrl` stattdessen) und die Standortliste entfällt; Entwurfsvorschauen bleiben inline.
+
+Anbieter: `type` ist `xyz` oder `pmtiles` (bei `pmtiles` enthält `public_config.urlTemplate` die URL der `.pmtiles`-Datei; Kachelgröße, Schlüssel und Secret entfallen; der Typ ist nach dem Anlegen unveränderlich).
+
+## Import (M2)
+`POST /imports` (`swmap_manage_imports` plus Bearbeitungsrecht an der Karte `map_id`). Body: `map_id`, `format` (`geojson`|`gpx`|`csv`), `content` (Dateitext), `mode` (`new_layer` Standard, `append`, `upsert`, `replace`), `layer_id` (außer `new_layer`), `layer_title?`, `mapping?` (Ziel → Quellspalte; Ziele `title`, `description`, `address`, `link`, `external_id`), `options?` (CSV: `delimiter`, `decimal`, `lon_column`, `lat_column`), `dry_run?`, `skip_invalid?`, `confirm_replace?`.
+- `dry_run` validiert und liefert den Bericht (Vorschau, Spalten, Vorschlag der Feldzuordnung, Fehler- und Warnliste) ohne zu schreiben.
+- Ausführen schreibt in einer Transaktion. Ungültige Einträge lehnen den Import ab, außer `skip_invalid` ist gesetzt; `replace` verlangt `confirm_replace`. Der Upsert überschreibt nur Felder, die die Datei liefert (Bild und Symbol bleiben).
+- Dateiweite Ablehnung (Größe, Anzahl Features/Koordinaten, Verschachtelung, DOCTYPE/Entities, kaputtes Format): HTTP 422, Code `swmap_import_rejected`, `data.reason` (`too_large`, `too_many_features`, `too_many_coordinates`, `too_deep`, `malformed`, `forbidden`, `unsupported`, `invalid_option`). Vor der Ablehnung wird nichts geschrieben.
+- Bericht: `mode`, `layer_id`, `total`, `created`, `updated`, `skipped`, `error_count`, `errors[]`, `warnings[]` (je `index`, `code`, `message`, `params`; der Client übersetzt `code`), `columns`, `mapping`, `media_relink_hint`, `imported`, `preview[]`. Medien (Bilder, Symbole) werden nicht importiert und müssen neu verknüpft werden.
+- Parser: GeoJSON (GeometryCollections werden zerlegt), GPX 1.0/1.1 (Wegpunkte, Routen, Tracks mit Segmenten als MultiLineString), CSV mit Kopfzeile. XML ohne Entities, DTD und Netzwerkzugriff. Limits: 5 MiB, `max_features_per_layer` Features, 200 000 Koordinaten, Tiefe 32.
 
 ## Schemas
 `Map`: `id, slug, title, description, status, viewport{center[lon,lat], zoom, minZoom, maxZoom, bounds?, autoBounds}, settings{height, aspectRatio?, scrollZoom, touch, drag, fullscreen, scale, provider_id}, layer_count, feature_count, created_at, updated_at`.

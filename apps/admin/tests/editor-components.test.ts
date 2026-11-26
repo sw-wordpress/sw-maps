@@ -4,7 +4,7 @@ import EditorToolbar from '@/features/editor/EditorToolbar.vue';
 import LayerPanel from '@/features/editor/LayerPanel.vue';
 import FeatureForm from '@/features/editor/FeatureForm.vue';
 import MapSettingsForm from '@/features/editor/MapSettingsForm.vue';
-import { configure, makeFeature, makeLayer, makeMap, makeProvider } from './helpers';
+import { configure, makeCategory, makeFeature, makeLayer, makeMap, makeProvider } from './helpers';
 
 vi.mock('@/utils/media', () => ({
   pickImage: vi.fn(async () => ({
@@ -133,6 +133,93 @@ describe('LayerPanel', () => {
     expect(w.emitted('rename-layer')).toEqual([[10, 'Renamed']]);
   });
 
+  it('moves layers up and down but not past the ends', async () => {
+    const w = mount(LayerPanel, { props });
+    expect(w.findAll('[data-test=move-up]')[0]!.attributes('disabled')).toBeDefined();
+    expect(w.findAll('[data-test=move-down]')[1]!.attributes('disabled')).toBeDefined();
+    await w.findAll('[data-test=move-down]')[0]!.trigger('click');
+    await w.findAll('[data-test=move-up]')[1]!.trigger('click');
+    expect(w.emitted('move-layer')).toEqual([
+      [10, 1],
+      [11, -1],
+    ]);
+  });
+
+  it('edits the layer style: zoom range, width, opacity, pattern and colour', async () => {
+    const withStyle = {
+      ...props,
+      layers: [
+        makeLayer({ style: { minZoom: 5, color: '#112233' } }),
+        makeLayer({ id: 11, title: 'Second' }),
+      ],
+    };
+    const w = mount(LayerPanel, { props: withStyle });
+    expect(w.find('[data-test=layer-form]').exists()).toBe(false);
+    await w.findAll('[data-test=layer-settings]')[0]!.trigger('click');
+    expect(w.find<HTMLInputElement>('input[data-test=layer-min-zoom]').element.value).toBe('5');
+    expect(w.find<HTMLInputElement>('input[data-test=layer-color]').element.value).toBe('#112233');
+    await blur(w, 'input[data-test=layer-min-zoom]', '5');
+    expect(w.emitted('style-layer')).toBeUndefined();
+    await blur(w, 'input[data-test=layer-max-zoom]', '99');
+    await blur(w, 'input[data-test=layer-weight]', '4');
+    await blur(w, 'input[data-test=layer-opacity]', '0.5');
+    await blur(w, 'input[data-test=layer-min-zoom]', '');
+    const dash = w
+      .findAllComponents({ name: 'QSelect' })
+      .find((c) => c.vm.$attrs['data-test'] === 'layer-dash')!;
+    dash.vm.$emit('update:modelValue', 'dotted');
+    const color = w.find<HTMLInputElement>('input[data-test=layer-color]');
+    color.element.value = '#abcdef';
+    await color.trigger('change');
+    expect(w.emitted('style-layer')).toEqual([
+      [10, { minZoom: 5, color: '#112233', maxZoom: 24 }],
+      [10, { minZoom: 5, color: '#112233', weight: 4 }],
+      [10, { minZoom: 5, color: '#112233', opacity: 0.5 }],
+      [10, { color: '#112233' }],
+      [10, { minZoom: 5, color: '#112233', dash: 'dotted' }],
+      [10, { minZoom: 5, color: '#abcdef' }],
+    ]);
+    await w.findAll('[data-test=layer-settings]')[0]!.trigger('click');
+    expect(w.find('[data-test=layer-form]').exists()).toBe(false);
+  });
+
+  it('edits style rules per category', async () => {
+    const categories = [makeCategory(), makeCategory({ id: 22, title: 'Lakes' })];
+    const layer = makeLayer({
+      style: { rules: [{ categoryId: 20, style: { color: '#112233' } }] },
+    });
+    const w = mount(LayerPanel, { props: { ...props, layers: [layer], categories } });
+    await w.find('[data-test=layer-settings]').trigger('click');
+    expect(w.findAll('[data-test=rule]')).toHaveLength(1);
+    const color = w.find<HTMLInputElement>('input[data-test=rule-color]');
+    expect(color.element.value).toBe('#112233');
+    color.element.value = '#445566';
+    await color.trigger('change');
+    const select = w
+      .findAllComponents({ name: 'QSelect' })
+      .find((c) => c.vm.$attrs['data-test'] === 'rule-category')!;
+    select.vm.$emit('update:modelValue', 22);
+    await w.find('[data-test=rule-add]').trigger('click');
+    await w.find('[data-test=rule-remove]').trigger('click');
+    expect(w.emitted('style-layer')).toEqual([
+      [10, { rules: [{ categoryId: 20, style: { color: '#445566' } }] }],
+      [10, { rules: [{ categoryId: 22, style: { color: '#112233' } }] }],
+      [
+        10,
+        {
+          rules: [
+            { categoryId: 20, style: { color: '#112233' } },
+            { categoryId: 22, style: { color: '#2563eb' } },
+          ],
+        },
+      ],
+      [10, {}],
+    ]);
+    const none = mount(LayerPanel, { props: { ...props, layers: [layer] } });
+    await none.find('[data-test=layer-settings]').trigger('click');
+    expect(none.find('[data-test=rules]').exists()).toBe(false);
+  });
+
   it('asks before deleting a layer', async () => {
     const w = mount(LayerPanel, { props, attachTo: document.body });
     await w.findAll('[data-test=delete-layer]')[1]?.trigger('click');
@@ -151,6 +238,162 @@ describe('FeatureForm', () => {
       properties: { ...makeFeature().properties, title: 'Rathaus', link: 'https://example.org' },
       style: { color: '#336699' },
     });
+
+  it('edits additional fields: add, complete rows only, remove', async () => {
+    const f = makeFeature({
+      properties: { ...makeFeature().properties, fields: [{ label: 'Hours', value: '9-17' }] },
+    });
+    const w = mount(FeatureForm, { props: { feature: f } });
+    expect(w.findAll('[data-test=field-row]')).toHaveLength(1);
+    expect(w.find<HTMLInputElement>('input[data-test=field-label]').element.value).toBe('Hours');
+    await w.find('[data-test=field-add]').trigger('click');
+    expect(w.findAll('[data-test=field-row]')).toHaveLength(2);
+    await blur(w, 'input[data-test=field-value]', '9-17');
+    expect(w.emitted('patch')).toBeUndefined();
+    const labels = w.findAll<HTMLInputElement>('input[data-test=field-label]');
+    await labels[1]!.trigger('focus');
+    await labels[1]!.trigger('focusin');
+    await labels[1]!.setValue(' Phone ');
+    await labels[1]!.trigger('blur');
+    await labels[1]!.trigger('focusout');
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    expect(w.emitted('patch')?.at(-1)).toEqual([
+      {
+        properties: {
+          fields: [
+            { label: 'Hours', value: '9-17' },
+            { label: 'Phone', value: '' },
+          ],
+        },
+      },
+    ]);
+    await w.findAll('[data-test=field-remove]')[0]!.trigger('click');
+    expect(w.emitted('patch')?.at(-1)).toEqual([
+      { properties: { fields: [{ label: 'Phone', value: '' }] } },
+    ]);
+  });
+
+  it('asks to draw another part', async () => {
+    const w = mount(FeatureForm, { props: { feature: feature() } });
+    await w.find('[data-test=add-part]').trigger('click');
+    expect(w.emitted('addPart')).toHaveLength(1);
+  });
+
+  it('hides the add button at the field limit', () => {
+    const fields = Array.from({ length: 10 }, (_, i) => ({ label: `L${i}`, value: 'v' }));
+    const w = mount(FeatureForm, {
+      props: { feature: makeFeature({ properties: { ...makeFeature().properties, fields } }) },
+    });
+    expect(w.find('[data-test=field-add]').exists()).toBe(false);
+  });
+
+  it('shows the length of lines in metres or kilometres and nothing for other shapes', () => {
+    const long = mount(FeatureForm, {
+      props: {
+        feature: makeFeature({
+          geometry: {
+            type: 'LineString',
+            coordinates: [
+              [0, 0],
+              [0, 1],
+            ],
+          },
+        }),
+      },
+    });
+    expect(long.find('[data-test=length]').text()).toBe('111.20 km');
+    const short = mount(FeatureForm, {
+      props: {
+        feature: makeFeature({
+          geometry: {
+            type: 'LineString',
+            coordinates: [
+              [0, 0],
+              [0, 0.003],
+            ],
+          },
+        }),
+      },
+    });
+    expect(short.find('[data-test=length]').text()).toBe('334 m');
+    expect(
+      mount(FeatureForm, { props: { feature: feature() } })
+        .find('[data-test=length]')
+        .exists(),
+    ).toBe(false);
+  });
+
+  it('assigns categories and opens the management dialog', async () => {
+    const w = mount(FeatureForm, {
+      props: {
+        feature: { ...feature(), categories: [20] },
+        categories: [makeCategory(), makeCategory({ id: 22, title: 'Lakes' })],
+        canManageCategories: true,
+      },
+      attachTo: document.body,
+    });
+    const select = w
+      .findAllComponents({ name: 'QSelect' })
+      .find((c) => c.vm.$attrs['data-test'] === 'categories')!;
+    select.vm.$emit('update:modelValue', [20, 22]);
+    expect(w.emitted('patch')).toEqual([[{ categories: [20, 22] }]]);
+    await w.find('[data-test=manage-categories]').trigger('click');
+    expect(w.emitted('manageCategories')).toHaveLength(1);
+    const plain = mount(FeatureForm, { props: { feature: feature() } });
+    expect(plain.find('[data-test=categories]').exists()).toBe(false);
+  });
+
+  it('edits width, pattern and opacity of lines and the fill of areas only', async () => {
+    const line = makeFeature({
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [8, 49],
+          [8.1, 49.1],
+        ],
+      },
+      style: { weight: 6 },
+    });
+    const w = mount(FeatureForm, { props: { feature: line } });
+    expect(w.find('input[data-test=weight]').exists()).toBe(true);
+    expect(w.find('[data-test=fill-opacity]').exists()).toBe(false);
+    expect(w.find('[data-test=lon]').exists()).toBe(false);
+    expect(w.find<HTMLInputElement>('input[data-test=weight]').element.value).toBe('6');
+    await blur(w, 'input[data-test=weight]', '99');
+    await blur(w, 'input[data-test=opacity]', '0.4');
+    w.findAllComponents({ name: 'QSelect' })
+      .find((c) => c.vm.$attrs['data-test'] === 'dash')!
+      .vm.$emit('update:modelValue', 'dashed');
+    expect(w.emitted('patch')).toEqual([
+      [{ style: { weight: 20 } }],
+      [{ style: { weight: 6, opacity: 0.4 } }],
+      [{ style: { weight: 6, dash: 'dashed' } }],
+    ]);
+    const area = mount(FeatureForm, {
+      props: {
+        feature: makeFeature({
+          geometry: {
+            type: 'Polygon',
+            coordinates: [
+              [
+                [8, 49],
+                [8.1, 49],
+                [8.1, 49.1],
+                [8, 49],
+              ],
+            ],
+          },
+        }),
+      },
+    });
+    expect(area.find<HTMLInputElement>('input[data-test=fill-opacity]').element.value).toBe('0.25');
+    await blur(area, 'input[data-test=fill-opacity]', '0.6');
+    expect(area.emitted('patch')).toEqual([[{ style: { fillOpacity: 0.6 } }]]);
+    const points = mount(FeatureForm, {
+      props: { feature: makeFeature({ geometry: { type: 'MultiPoint', coordinates: [[8, 49]] } }) },
+    });
+    expect(points.find('input[data-test=weight]').exists()).toBe(false);
+  });
 
   it('shows the current values and the coordinates of a point', () => {
     const w = mount(FeatureForm, { props: { feature: feature() } });

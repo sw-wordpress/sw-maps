@@ -6,6 +6,10 @@ import { api } from '@/api';
 import { useProvidersStore } from '@/stores/providers';
 import { useNotify } from '@/composables/useNotify';
 import { errorMessage } from '@/utils/errors';
+import DataState from '@/components/ui/DataState.vue';
+import PageHeader from '@/components/ui/PageHeader.vue';
+import StatTile from '@/components/ui/StatTile.vue';
+import SwmapCard from '@/components/ui/SwmapCard.vue';
 
 const { t } = useI18n();
 const providers = useProvidersStore();
@@ -32,7 +36,7 @@ async function loadStats(): Promise<void> {
   stats.value = next;
 }
 
-onMounted(async () => {
+async function load(): Promise<void> {
   try {
     await Promise.all([loadStats(), canManage ? providers.load() : Promise.resolve()]);
   } catch (error) {
@@ -40,54 +44,86 @@ onMounted(async () => {
   } finally {
     ready.value = true;
   }
-});
+}
+
+function reload(): void {
+  ready.value = false;
+  void load();
+}
+
+onMounted(load);
 </script>
 
 <template>
-  <div v-if="ready">
-    <div class="swmap-grid">
-      <div class="swmap-stat">
-        <div class="swmap-stat__value" data-test="stat-maps">{{ stats.total }}</div>
-        <div class="swmap-stat__label">{{ t('dashboard.maps') }}</div>
+  <div>
+    <PageHeader :title="t('nav.dashboard')">
+      <q-btn
+        flat
+        no-caps
+        icon="r_refresh"
+        :label="t('common.reload')"
+        :loading="!ready"
+        data-test="refresh"
+        @click="reload"
+      />
+    </PageHeader>
+    <div v-if="ready">
+      <div class="swmap-grid">
+        <StatTile
+          data-test="stat-maps"
+          icon="r_map"
+          :label="t('dashboard.maps')"
+          :value="String(stats.total)"
+        />
+        <StatTile
+          data-test="stat-published"
+          icon="r_public"
+          tone="success"
+          :label="t('dashboard.published')"
+          :value="String(stats.published)"
+        />
+        <StatTile
+          data-test="stat-drafts"
+          icon="r_edit_note"
+          :label="t('dashboard.drafts')"
+          :value="String(stats.drafts)"
+        />
+        <StatTile
+          data-test="stat-features"
+          icon="r_place"
+          :label="t('dashboard.features')"
+          :value="String(stats.features)"
+        />
       </div>
-      <div class="swmap-stat">
-        <div class="swmap-stat__value" data-test="stat-published">{{ stats.published }}</div>
-        <div class="swmap-stat__label">{{ t('dashboard.published') }}</div>
-      </div>
-      <div class="swmap-stat">
-        <div class="swmap-stat__value" data-test="stat-drafts">
-          {{ stats.drafts }}
-        </div>
-        <div class="swmap-stat__label">{{ t('dashboard.drafts') }}</div>
-      </div>
-      <div class="swmap-stat">
-        <div class="swmap-stat__value" data-test="stat-features">{{ stats.features }}</div>
-        <div class="swmap-stat__label">{{ t('dashboard.features') }}</div>
-      </div>
+      <SwmapCard
+        v-if="canManage"
+        class="q-mt-md"
+        icon="r_layers"
+        :title="t('dashboard.provider')"
+        data-test="provider-card"
+      >
+        <p v-if="providers.enabled.length === 0" class="swmap-muted">
+          {{ t('dashboard.noProvider') }}
+        </p>
+        <ul v-else class="swmap-stack">
+          <li v-for="p in providers.enabled" :key="p.id">
+            <strong>{{ p.name }}</strong>
+            <span class="swmap-muted">
+              – {{ t('dashboard.externalRequests') }}
+              {{ (p.external_requests ?? []).join(', ') }}</span
+            >
+          </li>
+        </ul>
+      </SwmapCard>
+      <q-btn
+        class="q-mt-md"
+        color="primary"
+        no-caps
+        icon="r_add"
+        :label="t('dashboard.newMap')"
+        to="/maps"
+      />
     </div>
-    <div v-if="canManage" class="swmap-card q-mt-md" data-test="provider-card">
-      <div class="text-subtitle1">{{ t('dashboard.provider') }}</div>
-      <p v-if="providers.enabled.length === 0" class="swmap-muted">
-        {{ t('dashboard.noProvider') }}
-      </p>
-      <ul v-else>
-        <li v-for="p in providers.enabled" :key="p.id">
-          {{ p.name }}
-          <span class="swmap-muted"
-            >– {{ t('dashboard.externalRequests') }}
-            {{ (p.external_requests ?? []).join(', ') }}</span
-          >
-        </li>
-      </ul>
-    </div>
-    <q-btn
-      class="q-mt-md"
-      color="primary"
-      no-caps
-      icon="r_add"
-      :label="t('dashboard.newMap')"
-      to="/maps"
-    />
+    <DataState v-else :loading="true" :empty="true" :error="null" variant="cards" />
   </div>
-  <q-spinner v-else color="primary" size="2em" />
 </template>

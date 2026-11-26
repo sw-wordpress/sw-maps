@@ -86,4 +86,12 @@ final class ViewportSettingsTest extends TestCase
             }
         }
     }
+
+    public function testClusterFlagDefaultsOnAndIsValidated(): void
+    {
+        self::assertTrue(MapSettings::default()->cluster);
+        self::assertFalse(MapSettings::fromArray(['cluster' => false])->cluster);
+        $this->expectException(ValidationException::class);
+        MapSettings::fromArray(['cluster' => 'yes']);
+    }
 }

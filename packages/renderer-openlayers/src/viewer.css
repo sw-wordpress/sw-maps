@@ -172,6 +172,30 @@
   margin: 0 0 0.4em;
   font-style: italic;
 }
+.swmap-chooser__list {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.swmap-chooser__list button {
+  min-height: 2.5rem;
+  padding: 0.25em 0.5em;
+  font: inherit;
+  color: #0b4a8f;
+  text-align: left;
+  cursor: pointer;
+  background: none;
+  border: 0;
+}
+.swmap-popup__fields {
+  margin: 0 0 0.4em;
+}
+.swmap-popup__fields dt {
+  font-weight: 600;
+}
+.swmap-popup__fields dd {
+  margin: 0 0 0.25em;
+}
 .swmap-popup__link {
   color: #0b4a8f;
 }
@@ -204,6 +228,54 @@
   background: none;
   border: 1px solid currentcolor;
   border-radius: 4px;
+}
+.swmap-tooltip {
+  max-width: 16rem;
+  padding: 0.2em 0.6em;
+  font-size: 0.9em;
+  color: #fff;
+  pointer-events: none;
+  background: #1d2327;
+  border-radius: 4px;
+}
+.swmap__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  align-items: center;
+  margin: 0 0 0.5em;
+}
+.swmap__search {
+  min-height: 2.5rem;
+  padding: 0.25em 0.75em;
+  font: inherit;
+  border: 1px solid #8c8f94;
+  border-radius: 4px;
+}
+.swmap__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em;
+}
+.swmap__chip {
+  display: inline-flex;
+  gap: 0.4em;
+  align-items: center;
+  min-height: 2.5rem;
+  padding: 0.25em 0.75em;
+  font: inherit;
+  cursor: pointer;
+  background: #fff;
+  border: 1px solid #8c8f94;
+  border-radius: 999px;
+}
+.swmap__chip[aria-pressed='true'] {
+  font-weight: 600;
+  background: #eef4fb;
+  border: 2px solid #0b4a8f;
+}
+.swmap__empty {
+  margin: 0.5em 0;
 }
 @media (prefers-reduced-motion: reduce) {
   .swmap * {

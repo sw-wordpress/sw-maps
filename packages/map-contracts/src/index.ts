@@ -20,7 +20,14 @@ export interface PointGeometry extends Geometry {
   coordinates: Position;
 }
 
-export type StyleValue = string | number | boolean | null;
+export type ScalarStyle = string | number | boolean | null;
+export interface StyleRule {
+  categoryId: number;
+  style: Record<string, ScalarStyle>;
+}
+
+/** Layer styles may carry `rules` (category based overrides); every other value is a scalar. */
+export type StyleValue = ScalarStyle | StyleRule[];
 export type StyleMap = Record<string, StyleValue>;
 
 export interface FeatureProperties {
@@ -31,9 +38,19 @@ export interface FeatureProperties {
   link: string | null;
   /** `builtin:<name>` or `media:<attachment id>` */
   icon: string;
+  /** Structured additional fields (label/value pairs, plain text). */
+  fields?: { label: string; value: string }[];
   /** Public output only: resolved media URLs (local files). */
   image_url?: string | null;
   icon_url?: string | null;
+}
+
+export interface CategoryData {
+  id: number;
+  slug: string;
+  title: string;
+  /** `color` (hex) and `icon` (`builtin:<name>`) are the defaults for the locations of the category. */
+  style: StyleMap;
 }
 
 export interface FeatureData {
@@ -43,6 +60,9 @@ export interface FeatureData {
   geometry: Geometry;
   properties: FeatureProperties;
   style: StyleMap;
+  categories?: number[];
+  /** Length in metres of lines (Haversine), 0 for other shapes; read only. */
+  length_m?: number;
   updated_at: string;
 }
 
@@ -81,6 +101,10 @@ export interface MapSettingsData {
   scale: boolean;
   showList: boolean;
   clickToLoad: boolean;
+  /** Viewer only: group nearby markers into clickable clusters. */
+  cluster: boolean;
+  /** Features are loaded for the visible area instead of being embedded (large maps). */
+  ajax: boolean;
   providerId: number | null;
 }
 
@@ -100,7 +124,7 @@ export interface MapData {
 
 export interface ProviderData {
   id: number;
-  type: 'xyz';
+  type: 'xyz' | 'pmtiles';
   name: string;
   public_config: {
     urlTemplate: string;
@@ -118,7 +142,7 @@ export interface ProviderData {
 
 /** Provider as delivered to visitors: the key is already resolved, no secrets. */
 export interface PublicProvider {
-  type: 'xyz';
+  type: 'xyz' | 'pmtiles';
   urlTemplate: string;
   attribution: string;
   minZoom: number;
@@ -139,12 +163,24 @@ export interface ViewerStrings {
   attributionLabel: string;
   openLink: string;
   closePopup: string;
+  search: string;
+  filterByCategory: string;
+  noResults: string;
 }
 
 export interface PublicFeature {
   id: number;
   geometry: Geometry;
   properties: FeatureProperties;
+  style: StyleMap;
+  categories?: number[];
+  /** Display variant: the geometry was simplified for output (the stored geometry is unchanged). */
+  simplified?: boolean;
+}
+
+export interface PublicCategory {
+  id: number;
+  title: string;
   style: StyleMap;
 }
 
@@ -163,6 +199,9 @@ export interface MapRenderData {
   settings: MapSettingsData;
   provider: PublicProvider | null;
   layers: PublicLayer[];
+  categories?: PublicCategory[];
+  /** Public features endpoint when the map loads its features on demand (AJAX mode); null/absent = inline. */
+  ajaxUrl?: string | null;
   /** WP Consent API category that must be granted before tiles are requested; null = no gating. */
   consentCategory: string | null;
   strings: ViewerStrings;

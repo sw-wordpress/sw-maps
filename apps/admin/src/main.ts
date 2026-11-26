@@ -5,6 +5,8 @@ import iconSet from 'quasar/icon-set/material-icons-round';
 import 'quasar/dist/quasar.prod.css';
 import '@quasar/extras/material-icons-round/material-icons-round.css';
 import '../../../packages/renderer-openlayers/src/viewer.css';
+import './styles/fonts.css';
+import './styles/ui.css';
 import './styles/app.css';
 
 import App from './App.vue';
@@ -37,7 +39,8 @@ export function bootstrap(): void {
     showFatal(el, 'SW Maps: configuration missing (window.swmapsConfig).');
     return;
   }
-  el.classList.add('swmap-root');
+  el.classList.add('swmap-root', 'swmap-fullbleed');
+  document.body.classList.add('swmap-admin-page');
   const app = createApp(App);
   app.use(createPinia());
   app.use(createAppRouter());

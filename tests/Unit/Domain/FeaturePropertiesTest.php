@@ -105,4 +105,43 @@ final class FeaturePropertiesTest extends TestCase
         self::assertNull($p->imageId);
         self::assertSame('', $p->description);
     }
+
+    public function testStructuredFieldsAreSanitisedAndBounded(): void
+    {
+        $p = FeatureProperties::fromArray(['fields' => [
+            ['label' => ' Opening <b>hours</b> ', 'value' => "Mon–Fri\n9–17"],
+            ['label' => '', 'value' => ''],
+            ['label' => 'Phone', 'value' => '+49 <script>x</script>'],
+        ]]);
+        self::assertSame([['label' => 'Opening hours', 'value' => 'Mon–Fri 9–17'], ['label' => 'Phone', 'value' => '+49 x']], $p->fields);
+        self::assertSame($p->fields, $p->toArray()['fields']);
+        self::assertSame($p->fields, FeatureProperties::fromArray(['title' => 'T'], $p)->fields, 'absent key keeps the fields');
+        self::assertSame([], FeatureProperties::fromArray(['fields' => []], $p)->fields);
+        self::assertSame([], FeatureProperties::empty()->fields);
+        self::assertSame($p->fields, FeatureProperties::lenient(['fields' => $p->fields, 'icon' => 'bogus'])->fields);
+    }
+
+    /** @return iterable<string, array{mixed}> */
+    public static function invalidFields(): iterable
+    {
+        yield 'not a list' => ['x'];
+        yield 'object' => [['label' => 'a', 'value' => 'b']];
+        yield 'too many' => [array_fill(0, 11, ['label' => 'a', 'value' => 'b'])];
+        yield 'not an entry' => [['text']];
+        yield 'label type' => [[['label' => 1, 'value' => 'b']]];
+        yield 'missing label' => [[['label' => '', 'value' => 'b']]];
+        yield 'label too long' => [[['label' => str_repeat('a', 61), 'value' => 'b']]];
+        yield 'value too long' => [[['label' => 'a', 'value' => str_repeat('b', 301)]]];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('invalidFields')]
+    public function testInvalidFieldsAreRejected(mixed $fields): void
+    {
+        try {
+            FeatureProperties::fromArray(['fields' => $fields]);
+            self::fail('expected ValidationException');
+        } catch (\SWMaps\Core\Exception\ValidationException $e) {
+            self::assertArrayHasKey('properties.fields', $e->errors());
+        }
+    }
 }

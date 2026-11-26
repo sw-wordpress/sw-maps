@@ -33,10 +33,10 @@ describe('DashboardView', () => {
       totalPages: 1,
     } as never);
     const w = await mountView(DashboardView);
-    expect(w.find('[data-test=stat-maps]').text()).toBe('2');
-    expect(w.find('[data-test=stat-published]').text()).toBe('1');
-    expect(w.find('[data-test=stat-drafts]').text()).toBe('1');
-    expect(w.find('[data-test=stat-features]').text()).toBe('7');
+    expect(w.find('[data-test=stat-maps]').text()).toContain('2');
+    expect(w.find('[data-test=stat-published]').text()).toContain('1');
+    expect(w.find('[data-test=stat-drafts]').text()).toContain('1');
+    expect(w.find('[data-test=stat-features]').text()).toContain('7');
     expect(w.find('[data-test=provider-card]').text()).toContain('tile.openstreetmap.org');
   });
 
@@ -60,10 +60,10 @@ describe('DashboardView', () => {
     expect(api.maps.list).toHaveBeenLastCalledWith(
       expect.objectContaining({ page: 2, per_page: 100 }),
     );
-    expect(w.find('[data-test=stat-maps]').text()).toBe('3');
-    expect(w.find('[data-test=stat-published]').text()).toBe('2');
-    expect(w.find('[data-test=stat-drafts]').text()).toBe('1');
-    expect(w.find('[data-test=stat-features]').text()).toBe('8');
+    expect(w.find('[data-test=stat-maps]').text()).toContain('3');
+    expect(w.find('[data-test=stat-published]').text()).toContain('2');
+    expect(w.find('[data-test=stat-drafts]').text()).toContain('1');
+    expect(w.find('[data-test=stat-features]').text()).toContain('8');
   });
 
   it('shows a hint without enabled provider and hides the card without permission', async () => {
@@ -133,10 +133,11 @@ describe('StatusView', () => {
     expect(w.find('[data-test=plugin]').text()).toBe('0.1.0');
     expect(w.find('[data-test=schema]').text()).toBe('1 / 1');
     expect(w.find('[data-test=consent]').text()).toBe('Not active');
-    expect(w.findAll('[data-test=table]').map((t) => t.text())).toEqual([
-      'wp_swmap_maps: OK',
-      'wp_swmap_layers: Missing',
-    ]);
+    const tables = w.findAll('[data-test=table]').map((t) => t.text());
+    expect(tables[0]).toContain('wp_swmap_maps');
+    expect(tables[0]).toContain('OK');
+    expect(tables[1]).toContain('wp_swmap_layers');
+    expect(tables[1]).toContain('Missing');
   });
 
   it('reports a loading failure', async () => {

@@ -23,6 +23,41 @@ export function retryImport<T>(
   };
 }
 
+export interface NavItem {
+  name: string;
+  to: string;
+  icon: string;
+  labelKey: 'nav.dashboard' | 'nav.maps' | 'nav.providers' | 'nav.settings' | 'nav.status';
+  /** UX only: hide the entry without this capability (the REST API enforces it). */
+  cap?: string;
+}
+
+export const NAV_ITEMS: NavItem[] = [
+  { name: 'dashboard', to: '/', icon: 'r_space_dashboard', labelKey: 'nav.dashboard' },
+  { name: 'maps', to: '/maps', icon: 'r_map', labelKey: 'nav.maps' },
+  {
+    name: 'providers',
+    to: '/providers',
+    icon: 'r_layers',
+    labelKey: 'nav.providers',
+    cap: 'swmap_manage_system',
+  },
+  {
+    name: 'settings',
+    to: '/settings',
+    icon: 'r_tune',
+    labelKey: 'nav.settings',
+    cap: 'swmap_manage_system',
+  },
+  {
+    name: 'status',
+    to: '/status',
+    icon: 'r_monitor_heart',
+    labelKey: 'nav.status',
+    cap: 'swmap_manage_system',
+  },
+];
+
 export const routes = [
   {
     path: '/',

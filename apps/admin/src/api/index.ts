@@ -1,4 +1,10 @@
-import type { FeatureData, LayerData, MapData, ProviderData } from '@sw-maps/map-contracts';
+import type {
+  CategoryData,
+  FeatureData,
+  LayerData,
+  MapData,
+  ProviderData,
+} from '@sw-maps/map-contracts';
 import { getConfig } from '@/config';
 import type { Paged, RequestOptions } from './client';
 import { ApiClient } from './client';
@@ -29,6 +35,31 @@ export interface ConnectionTest {
   ok: boolean;
   status: number;
   message: string;
+}
+
+export interface ImportIssue {
+  index: number;
+  /** Stable code; the client shows the translated text and falls back to `message`. */
+  code: string;
+  message: string;
+  params: Record<string, string>;
+}
+
+export interface ImportReport {
+  mode: string;
+  layer_id: number | null;
+  total: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  error_count: number;
+  errors: ImportIssue[];
+  warnings: ImportIssue[];
+  columns: string[];
+  mapping: Record<string, string>;
+  media_relink_hint: boolean;
+  imported: boolean;
+  preview: { title: string; type: string; external_id: string | null }[];
 }
 
 export type Body = Record<string, unknown>;
@@ -65,6 +96,13 @@ export function createApi(client: ApiClient) {
         client.request<FeatureData>('PATCH', `features/${id}`, { body }),
       remove: (id: number) => client.request<void>('DELETE', `features/${id}`),
     },
+    categories: {
+      list: () => client.request<CategoryData[]>('GET', 'categories'),
+      create: (body: Body) => client.request<CategoryData>('POST', 'categories', { body }),
+      update: (id: number, body: Body) =>
+        client.request<CategoryData>('PATCH', `categories/${id}`, { body }),
+      remove: (id: number) => client.request<void>('DELETE', `categories/${id}`),
+    },
     providers: {
       list: () => client.request<ProviderData[]>('GET', 'providers'),
       create: (body: Body) => client.request<ProviderData>('POST', 'providers', { body }),
@@ -80,6 +118,9 @@ export function createApi(client: ApiClient) {
     },
     status: {
       get: () => client.request<StatusData>('GET', 'status'),
+    },
+    imports: {
+      run: (body: Body) => client.request<ImportReport>('POST', 'imports', { body }),
     },
   };
 }

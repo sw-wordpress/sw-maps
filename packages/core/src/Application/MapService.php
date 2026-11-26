@@ -148,7 +148,7 @@ final class MapService
             foreach ($this->layers->forMap($source->id) as $layer) {
                 $newLayer = $this->layers->save(new Layer(0, $copy->id, $layer->title, $layer->type, $layer->status, $layer->sortOrder, $layer->visible, $layer->style, $now, $now));
                 foreach ($this->features->forLayers([$layer->id]) as $feature) {
-                    $this->features->save(new Feature(0, $newLayer->id, $feature->externalId, $feature->geometry, $feature->properties, $feature->style, $now));
+                    $this->features->save(new Feature(0, $newLayer->id, $feature->externalId, $feature->geometry, $feature->properties, $feature->style, $now, $feature->categoryIds));
                 }
             }
 

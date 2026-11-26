@@ -85,7 +85,7 @@ final class Input
      * Style objects: shallow map of short keys to scalars (colour, opacity, width ...), bounded in size.
      *
      * @param array<string, mixed> $data
-     * @return array<string, scalar|null>|null
+     * @return array<string, mixed>|null
      */
     public static function style(array $data, string $key): ?array
     {
@@ -98,18 +98,44 @@ final class Input
         }
         $out = [];
         foreach ($style as $k => $v) {
+            if ($k === 'rules') {
+                $out['rules'] = self::rules($v, $key);
+                continue;
+            }
             if (preg_match('/^[a-zA-Z][a-zA-Z0-9]{0,31}$/', $k) !== 1) {
                 throw ValidationException::field($key, 'Invalid style key.');
             }
             if (!is_scalar($v) && $v !== null) {
                 throw ValidationException::field($key, 'Style values must be scalars.');
             }
-            if (is_string($v) && (strlen($v) > 64 || preg_match('/^[#a-zA-Z0-9 .,()%_-]*$/', $v) !== 1)) {
+            if (is_string($v) && (strlen($v) > 64 || preg_match('/^[#a-zA-Z0-9 .,()%_:-]*$/', $v) !== 1)) {
                 throw ValidationException::field($key, 'Invalid style value.');
             }
             $out[$k] = $v;
         }
 
         return $out;
+    }
+
+    /**
+     * Layer style rules: "locations in category N look like this". At most 10 rules; each style is a flat style map.
+     *
+     * @return list<array{categoryId: int, style: array<string, mixed>}>
+     */
+    private static function rules(mixed $value, string $key): array
+    {
+        if (!is_array($value) || !array_is_list($value) || count($value) > 10) {
+            throw ValidationException::field($key, 'Rules must be a list of at most 10 entries.');
+        }
+        $rules = [];
+        foreach ($value as $rule) {
+            $id = is_array($rule) ? ($rule['categoryId'] ?? null) : null;
+            if (!is_int($id) || $id < 1 || !is_array($rule['style'] ?? null) || isset($rule['style']['rules'])) {
+                throw ValidationException::field($key, 'Each rule needs a categoryId and a style.');
+            }
+            $rules[] = ['categoryId' => $id, 'style' => self::style(['style' => $rule['style']], 'style') ?? []];
+        }
+
+        return $rules;
     }
 }

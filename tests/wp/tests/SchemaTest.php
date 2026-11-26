@@ -43,14 +43,29 @@ final class SchemaTest extends SwMapsTestCase {
 
 	public function test_unique_indexes(): void {
 		global $wpdb;
-		$map_id = $this->create_map();
+		$map_id   = $this->create_map();
 		$services = \SWMaps\WordPress\Services::instance();
-		$layer = $services->layers()->create( $map_id, array( 'title' => 'L' ) );
-		$geo   = array( 'type' => 'Point', 'coordinates' => array( 1, 1 ) );
-		$services->features()->create( $layer->id, array( 'geometry' => $geo, 'external_id' => 'a' ) );
+		$layer    = $services->layers()->create( $map_id, array( 'title' => 'L' ) );
+		$geo      = array(
+			'type'        => 'Point',
+			'coordinates' => array( 1, 1 ),
+		);
+		$services->features()->create(
+			$layer->id,
+			array(
+				'geometry'    => $geo,
+				'external_id' => 'a',
+			)
+		);
 		$wpdb->suppress_errors( true );
 		try {
-			$services->features()->create( $layer->id, array( 'geometry' => $geo, 'external_id' => 'a' ) );
+			$services->features()->create(
+				$layer->id,
+				array(
+					'geometry'    => $geo,
+					'external_id' => 'a',
+				)
+			);
 			$this->fail( 'duplicate external id accepted' );
 		} catch ( \RuntimeException $e ) {
 			$this->assertStringContainsString( 'feature', $e->getMessage() );

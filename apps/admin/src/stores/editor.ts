@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
-import { computed, ref, shallowRef } from 'vue';
+import { computed, ref, shallowRef, watch } from 'vue';
 import type {
+  CategoryData,
   EditTool,
   FeatureData,
   FeatureProperties,
@@ -24,6 +25,9 @@ import {
   docEquals,
   nextTempId,
   remapIds,
+  appendPart,
+  moveLayer,
+  partTool,
   removeFeature,
   removeLayer,
   runOps,
@@ -56,6 +60,19 @@ export const useEditorStore = defineStore('editor', () => {
   const selectedFeatureId = ref<number | null>(null);
   const activeLayerId = ref<number | null>(null);
   const tool = ref<EditTool>('select');
+  /** Feature that receives the next drawn geometry as an additional part (multi geometries). */
+  const appendTo = ref<number | null>(null);
+  // Leaving the drawing mode that was started for the part (any tool change) cancels the pending append.
+  watch(
+    tool,
+    (next) => {
+      if (appendTo.value === null) return;
+      const type = doc.value?.features.find((f) => f.id === appendTo.value)?.geometry.type;
+      if (type === undefined || next !== partTool(type)) appendTo.value = null;
+    },
+    { flush: 'sync' },
+  );
+
   const loading = ref(false);
   const saving = ref(false);
   const saveError = ref<unknown>(null);
@@ -75,6 +92,7 @@ export const useEditorStore = defineStore('editor', () => {
   const activeLayer = computed(
     () => doc.value?.layers.find((l) => l.id === activeLayerId.value) ?? null,
   );
+  const categories = ref<CategoryData[]>([]);
   const provider = computed(() => {
     const id = doc.value?.map.settings.providerId;
     return (
@@ -85,7 +103,7 @@ export const useEditorStore = defineStore('editor', () => {
   });
 
   function renderData(strings: ViewerStrings): MapRenderData | null {
-    return doc.value ? buildRenderData(doc.value, provider.value, strings) : null;
+    return doc.value ? buildRenderData(doc.value, provider.value, strings, categories.value) : null;
   }
 
   async function fetchDoc(mapId: number): Promise<EditorDoc> {
@@ -104,14 +122,18 @@ export const useEditorStore = defineStore('editor', () => {
       original.value = null;
     }
     try {
-      const [fetched, provs] = await Promise.all([
+      const [fetched, provs, cats] = await Promise.all([
         fetchDoc(mapId),
         api()
           .providers.list()
           .catch(() => [] as ProviderData[]),
+        api()
+          .categories.list()
+          .catch(() => [] as CategoryData[]),
       ]);
       if (token !== loadToken) return; // a newer load() superseded this one
       providers.value = provs;
+      categories.value = cats;
       original.value = fetched;
       doc.value = cloneDoc(fetched);
       history.clear();
@@ -119,6 +141,7 @@ export const useEditorStore = defineStore('editor', () => {
       selectedFeatureId.value = null;
       activeLayerId.value = fetched.layers[0]?.id ?? null;
       tool.value = 'select';
+      appendTo.value = null;
     } finally {
       loading.value = false;
     }
@@ -152,6 +175,11 @@ export const useEditorStore = defineStore('editor', () => {
     commit(updateLayer(current(), id, patch));
   }
 
+  function reorderLayer(id: number, direction: -1 | 1): void {
+    const next = moveLayer(current(), id, direction);
+    if (next !== doc.value) commit(next);
+  }
+
   function deleteLayer(id: number): void {
     commit(removeLayer(current(), id));
     if (selectedFeature.value === null) selectedFeatureId.value = null;
@@ -165,6 +193,27 @@ export const useEditorStore = defineStore('editor', () => {
     commit(addFeature(current(), id, activeLayerId.value as number, geometry, properties));
     selectedFeatureId.value = id;
     return id;
+  }
+
+  /** Starts drawing another part for a feature; the next drawn geometry is merged into it. */
+  function startAddPart(id: number): void {
+    const feature = current().features.find((f) => f.id === id);
+    if (!feature) return;
+    appendTo.value = id;
+    tool.value = partTool(feature.geometry.type);
+  }
+
+  /** Handles a drawn geometry: merged into the pending feature or added as a new feature. */
+  function drawn(geometry: Geometry): void {
+    const target = appendTo.value;
+    appendTo.value = null;
+    if (target === null) {
+      addGeometry(geometry);
+    } else {
+      const next = appendPart(current(), target, geometry);
+      if (next !== doc.value) commit(next);
+    }
+    tool.value = 'select';
   }
 
   function moveFeature(id: number, geometry: Geometry): void {
@@ -181,9 +230,33 @@ export const useEditorStore = defineStore('editor', () => {
 
   function patchFeature(
     id: number,
-    patch: { properties?: Partial<FeatureProperties>; style?: StyleMap },
+    patch: { properties?: Partial<FeatureProperties>; style?: StyleMap; categories?: number[] },
   ): void {
     commit(updateFeature(current(), id, patch));
+  }
+
+  /** Categories are site wide and saved immediately (not part of the map's working copy). */
+  async function saveCategory(id: number | null, body: Record<string, unknown>): Promise<void> {
+    const saved =
+      id === null ? await api().categories.create(body) : await api().categories.update(id, body);
+    categories.value = [...categories.value.filter((c) => c.id !== saved.id), saved].sort((a, b) =>
+      a.title.localeCompare(b.title),
+    );
+  }
+
+  async function removeCategory(id: number): Promise<void> {
+    await api().categories.remove(id);
+    categories.value = categories.value.filter((c) => c.id !== id);
+    // The server removed the assignments: forget them locally too, without marking the map as changed.
+    const forget = (target: EditorDoc | null): void => {
+      for (const f of target?.features ?? []) {
+        if (f.categories) f.categories = f.categories.filter((c) => c !== id);
+      }
+    };
+    forget(doc.value);
+    forget(original.value);
+    // Undo/redo must not bring the deleted category back.
+    history.mapSnapshots(forget);
   }
 
   function deleteFeature(id: number): void {
@@ -299,11 +372,18 @@ export const useEditorStore = defineStore('editor', () => {
     patchMap,
     createLayer,
     patchLayer,
+    reorderLayer,
     deleteLayer,
     addGeometry,
     moveFeature,
+    appendTo,
+    startAddPart,
+    drawn,
     setPointCoordinates,
     patchFeature,
+    categories,
+    saveCategory,
+    removeCategory,
     deleteFeature,
     select,
     undo,

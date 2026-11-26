@@ -74,13 +74,13 @@ async function test(provider: ProviderData): Promise<void> {
     notify.error(errorMessage(error, t('providers.testFailed')));
   }
 }
+import PageHeader from '@/components/ui/PageHeader.vue';
+import SwmapCard from '@/components/ui/SwmapCard.vue';
 </script>
 
 <template>
   <div>
-    <div class="swmap-toolbar">
-      <h2 class="text-h6 q-my-none">{{ t('providers.title') }}</h2>
-      <q-space />
+    <PageHeader :title="t('providers.title')">
       <q-btn
         color="primary"
         no-caps
@@ -89,14 +89,14 @@ async function test(provider: ProviderData): Promise<void> {
         data-test="add"
         @click="openDialog(null)"
       />
-    </div>
+    </PageHeader>
     <q-banner class="q-mb-md" rounded dense data-test="osm-notice">{{
       t('providers.osmNotice')
     }}</q-banner>
     <p v-if="store.items.length === 0 && !store.loading" class="swmap-muted">
       {{ t('providers.empty') }}
     </p>
-    <div v-for="p in store.items" :key="p.id" class="swmap-card q-mb-md" data-test="provider">
+    <SwmapCard v-for="p in store.items" :key="p.id" class="q-mb-md" data-test="provider">
       <div class="row items-center q-gutter-sm">
         <div class="text-subtitle1">{{ p.name }}</div>
         <q-toggle
@@ -154,7 +154,7 @@ async function test(provider: ProviderData): Promise<void> {
       >
         {{ store.tests[p.id]?.message }}
       </div>
-    </div>
+    </SwmapCard>
 
     <ProviderDialog
       v-model="dialogOpen"

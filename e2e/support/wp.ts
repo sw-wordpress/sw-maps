@@ -88,6 +88,11 @@ export class WpApi {
     return this.call('GET', `/sw-maps/v1/maps/${mapId}/layers`);
   }
 
+  /** Generic POST for resources without a dedicated helper (categories, ...). */
+  async post<T>(path: string, data: unknown): Promise<T> {
+    return this.call<T>('POST', path, data);
+  }
+
   async createPage(title: string, content: string): Promise<string> {
     const page = await this.call<{ link: string }>('POST', '/wp/v2/pages', {
       title,

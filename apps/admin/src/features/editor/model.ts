@@ -1,4 +1,5 @@
 import type {
+  CategoryData,
   FeatureData,
   FeatureProperties,
   Geometry,
@@ -27,6 +28,7 @@ export const EMPTY_PROPERTIES: FeatureProperties = {
   image_id: null,
   link: null,
   icon: 'builtin:pin',
+  fields: [],
 };
 
 export function cloneDoc(doc: EditorDoc): EditorDoc {
@@ -39,7 +41,14 @@ function comparable(doc: EditorDoc): unknown {
   return [
     { title, description, status, slug, viewport, settings },
     doc.layers.map((l) => [l.id, l.title, l.status, l.sort_order, l.visible, l.style]),
-    doc.features.map((f) => [f.id, f.layer_id, f.geometry, f.properties, f.style]),
+    doc.features.map((f) => [
+      f.id,
+      f.layer_id,
+      f.geometry,
+      f.properties,
+      f.style,
+      f.categories ?? [],
+    ]),
   ];
 }
 
@@ -97,6 +106,23 @@ export function updateLayer(
   return next;
 }
 
+/** Moves a layer one position up (-1) or down (+1) in the draw order; ties are resolved by id first. */
+export function moveLayer(doc: EditorDoc, id: number, direction: -1 | 1): EditorDoc {
+  const ordered = [...doc.layers].sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
+  const from = ordered.findIndex((l) => l.id === id);
+  const to = from + direction;
+  if (from < 0 || to < 0 || to >= ordered.length) return doc;
+  const next = cloneDoc(doc);
+  const moved = ordered.map((l) => l.id);
+  [moved[from], moved[to]] = [moved[to] as number, moved[from] as number];
+  moved.forEach((layerId, position) => {
+    const layer = next.layers.find((l) => l.id === layerId);
+    if (layer) layer.sort_order = position;
+  });
+  next.layers.sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
+  return next;
+}
+
 export function removeLayer(doc: EditorDoc, id: number): EditorDoc {
   const next = cloneDoc(doc);
   next.layers = next.layers.filter((l) => l.id !== id);
@@ -119,6 +145,7 @@ export function addFeature(
     geometry,
     properties: { ...EMPTY_PROPERTIES, ...properties },
     style: {},
+    categories: [],
     updated_at: '',
   });
   return next;
@@ -134,15 +161,54 @@ export function setFeatureGeometry(doc: EditorDoc, id: number, geometry: Geometr
 export function updateFeature(
   doc: EditorDoc,
   id: number,
-  patch: { properties?: Partial<FeatureProperties>; style?: StyleMap },
+  patch: { properties?: Partial<FeatureProperties>; style?: StyleMap; categories?: number[] },
 ): EditorDoc {
   const next = cloneDoc(doc);
   const feature = next.features.find((f) => f.id === id);
   if (feature) {
     if (patch.properties) Object.assign(feature.properties, patch.properties);
     if (patch.style) feature.style = { ...patch.style };
+    // Canonical order (as stored): the lowest category id supplies the default colour and icon.
+    if (patch.categories) feature.categories = [...patch.categories].sort((a, b) => a - b);
   }
   return next;
+}
+
+const MULTI_OF = {
+  Point: 'MultiPoint',
+  LineString: 'MultiLineString',
+  Polygon: 'MultiPolygon',
+} as const;
+const SINGLE_OF = {
+  MultiPoint: 'Point',
+  MultiLineString: 'LineString',
+  MultiPolygon: 'Polygon',
+} as const;
+
+/** Tool that draws the kind of part a feature can receive (Point/MultiPoint -> point, ...). */
+export function partTool(type: Geometry['type']): 'point' | 'line' | 'polygon' {
+  const single = type in SINGLE_OF ? SINGLE_OF[type as keyof typeof SINGLE_OF] : type;
+  return single === 'Point' ? 'point' : single === 'LineString' ? 'line' : 'polygon';
+}
+
+/**
+ * Adds a drawn geometry as another part of a feature (Point -> MultiPoint, ...). Parts of another kind are ignored
+ * (the doc is returned unchanged).
+ */
+export function appendPart(doc: EditorDoc, id: number, part: Geometry): EditorDoc {
+  const feature = doc.features.find((f) => f.id === id);
+  if (!feature || !(part.type in MULTI_OF)) return doc;
+  const target = MULTI_OF[part.type as keyof typeof MULTI_OF];
+  const type = feature.geometry.type;
+  const parts = Array.isArray(feature.geometry.coordinates) ? feature.geometry.coordinates : [];
+  if (type === part.type)
+    return setFeatureGeometry(doc, id, {
+      type: target,
+      coordinates: [feature.geometry.coordinates, part.coordinates],
+    });
+  if (type === target)
+    return setFeatureGeometry(doc, id, { type: target, coordinates: [...parts, part.coordinates] });
+  return doc;
 }
 
 export function removeFeature(doc: EditorDoc, id: number): EditorDoc {
@@ -187,6 +253,11 @@ export class History {
     if (!next) return null;
     this.past.push(cloneDoc(current));
     return next;
+  }
+
+  /** Applies a change to every stored snapshot (e.g. removing a category that no longer exists). */
+  mapSnapshots(change: (doc: EditorDoc) => void): void {
+    for (const doc of [...this.past, ...this.future]) change(doc);
   }
 
   clear(): void {
@@ -257,7 +328,12 @@ export function diff(original: EditorDoc, working: EditorDoc): Op[] {
       ops.push({ kind: 'feature-delete', id: f.id });
   }
   for (const f of working.features) {
-    const body = { geometry: f.geometry, properties: f.properties, style: f.style };
+    const body = {
+      geometry: f.geometry,
+      properties: f.properties,
+      style: f.style,
+      categories: f.categories ?? [],
+    };
     if (isNew(f.id)) {
       ops.push({
         kind: 'feature-create',
@@ -270,7 +346,10 @@ export function diff(original: EditorDoc, working: EditorDoc): Op[] {
     const before = original.features.find((o) => o.id === f.id);
     if (
       before &&
-      !same([before.geometry, before.properties, before.style], [f.geometry, f.properties, f.style])
+      !same(
+        [before.geometry, before.properties, before.style, before.categories ?? []],
+        [f.geometry, f.properties, f.style, f.categories ?? []],
+      )
     ) {
       ops.push({ kind: 'feature-update', id: f.id, patch: body });
     }
@@ -387,8 +466,11 @@ export function toPublicProvider(provider: ProviderData | null): PublicProvider 
   if (!provider) return null;
   const c = provider.public_config;
   return {
-    type: 'xyz',
-    urlTemplate: c.urlTemplate.replace('{key}', encodeURIComponent(c.publicKey)),
+    type: provider.type,
+    urlTemplate:
+      provider.type === 'pmtiles'
+        ? c.urlTemplate
+        : c.urlTemplate.replace('{key}', encodeURIComponent(c.publicKey)),
     attribution: c.attribution,
     minZoom: c.minZoom,
     maxZoom: c.maxZoom,
@@ -401,6 +483,7 @@ export function buildRenderData(
   doc: EditorDoc,
   provider: ProviderData | null,
   strings: ViewerStrings,
+  categories: CategoryData[] = [],
 ): MapRenderData {
   const layers = doc.layers
     .filter((l) => l.visible)
@@ -410,7 +493,13 @@ export function buildRenderData(
       style: l.style,
       features: doc.features
         .filter((f) => f.layer_id === l.id)
-        .map((f) => ({ id: f.id, geometry: f.geometry, properties: f.properties, style: f.style })),
+        .map((f) => ({
+          id: f.id,
+          geometry: f.geometry,
+          properties: f.properties,
+          style: f.style,
+          categories: f.categories ?? [],
+        })),
     }));
   return {
     id: doc.map.id,
@@ -424,9 +513,12 @@ export function buildRenderData(
       zoomControls: true,
       fullscreen: false,
       clickToLoad: false,
+      cluster: false,
+      ajax: false,
     },
     provider: toPublicProvider(provider),
     layers,
+    categories: categories.map((c) => ({ id: c.id, title: c.title, style: c.style })),
     consentCategory: null,
     strings,
   };

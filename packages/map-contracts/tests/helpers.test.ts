@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  EARTH_RADIUS_M,
   boundsOf,
+  distanceMeters,
   flattenPositions,
   isValidPosition,
+  lineLengthMeters,
   parseAttribution,
   safeColor,
   safeLink,
@@ -101,5 +104,54 @@ describe('safeLink / safeColor', () => {
     expect(safeColor('#aabbcc', '#000')).toBe('#aabbcc');
     expect(safeColor('red; background:url(x)', '#000')).toBe('#000');
     expect(safeColor(5, '#111')).toBe('#111');
+  });
+
+  it('measures great-circle distances like the PHP calculator', () => {
+    expect(distanceMeters([8, 49], [8, 49])).toBe(0);
+    expect(distanceMeters([0, 0], [0, 1])).toBeCloseTo(111195, -2);
+    expect(distanceMeters([13.405, 52.52], [2.3522, 48.8566])).toBeCloseTo(878000, -4);
+    expect(distanceMeters([0, 60], [1, 60]) / distanceMeters([0, 0], [1, 0])).toBeCloseTo(0.5, 2);
+    expect(distanceMeters([0, 0], [180, 0])).toBeCloseTo(Math.PI * EARTH_RADIUS_M, 0);
+  });
+
+  it('sums the length of lines and ignores everything else', () => {
+    const line = {
+      type: 'LineString',
+      coordinates: [
+        [0, 0],
+        [0, 1],
+        [0, 2],
+      ],
+    };
+    expect(lineLengthMeters(line)).toBeCloseTo(222390, -3);
+    const multi = {
+      type: 'MultiLineString',
+      coordinates: [
+        [
+          [0, 0],
+          [0, 1],
+        ],
+        [
+          [10, 0],
+          [10, 1],
+        ],
+      ],
+    };
+    expect(lineLengthMeters(multi)).toBeCloseTo(222390, -3);
+    expect(lineLengthMeters({ type: 'Point', coordinates: [1, 1] })).toBe(0);
+    expect(
+      lineLengthMeters({
+        type: 'Polygon',
+        coordinates: [
+          [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, 0],
+          ],
+        ],
+      }),
+    ).toBe(0);
+    expect(lineLengthMeters({ type: 'MultiLineString', coordinates: 'x' })).toBe(0);
   });
 });

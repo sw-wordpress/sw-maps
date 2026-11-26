@@ -36,8 +36,15 @@ final class RenderingTest extends SwMapsTestCase {
 		Services::instance()->features()->create(
 			$layer->id,
 			array(
-				'geometry'   => array( 'type' => 'Point', 'coordinates' => array( 8.4, 49.0 ) ),
-				'properties' => $feature_props + array( 'title' => 'Rathaus', 'address' => 'Markt 1', 'link' => 'https://example.org/a?b=1&c=2' ),
+				'geometry'   => array(
+					'type'        => 'Point',
+					'coordinates' => array( 8.4, 49.0 ),
+				),
+				'properties' => $feature_props + array(
+					'title'   => 'Rathaus',
+					'address' => 'Markt 1',
+					'link'    => 'https://example.org/a?b=1&c=2',
+				),
 			)
 		);
 		Services::instance()->maps()->update( $map->id, array( 'status' => 'published' ) );
@@ -79,7 +86,21 @@ final class RenderingTest extends SwMapsTestCase {
 		list( $id ) = $this->published_map( 'T', array( 'title' => 'x' ) );
 		global $wpdb;
 		// Importers may store raw text; simulate worst case directly in the database, bypassing the sanitising service.
-		$wpdb->update( SWMaps\WordPress\Persistence\Schema::table( 'features' ), array( 'properties_json' => wp_json_encode( array( 'title' => self::XSS, 'description' => self::XSS, 'address' => self::XSS, 'link' => 'javascript:alert(1)', 'icon' => 'builtin:pin' ) ) ), array( 'layer_id' => Services::instance()->layer_repository()->forMap( $id )[0]->id ) );
+		$wpdb->update(
+			SWMaps\WordPress\Persistence\Schema::table( 'features' ),
+			array(
+				'properties_json' => wp_json_encode(
+					array(
+						'title'       => self::XSS,
+						'description' => self::XSS,
+						'address'     => self::XSS,
+						'link'        => 'javascript:alert(1)',
+						'icon'        => 'builtin:pin',
+					)
+				),
+			),
+			array( 'layer_id' => Services::instance()->layer_repository()->forMap( $id )[0]->id )
+		);
 		$wpdb->update( SWMaps\WordPress\Persistence\Schema::table( 'maps' ), array( 'title' => self::XSS ), array( 'id' => $id ) );
 		$html = swmap_render_map( $id );
 		$this->assertStringNotContainsString( '</script><img', $html );
@@ -114,10 +135,40 @@ final class RenderingTest extends SwMapsTestCase {
 	public function test_unpublished_layers_and_features_are_not_in_public_output(): void {
 		list( $id, $layer_id ) = $this->published_map();
 		$this->as_role( 'administrator' );
-		$hidden = Services::instance()->layers()->create( $id, array( 'title' => 'Hidden', 'status' => 'draft' ) );
-		Services::instance()->features()->create( $hidden->id, array( 'geometry' => array( 'type' => 'Point', 'coordinates' => array( 1, 1 ) ), 'properties' => array( 'title' => 'Private place' ) ) );
-		$invisible = Services::instance()->layers()->create( $id, array( 'title' => 'Invisible', 'visible' => false ) );
-		Services::instance()->features()->create( $invisible->id, array( 'geometry' => array( 'type' => 'Point', 'coordinates' => array( 2, 2 ) ), 'properties' => array( 'title' => 'Invisible place' ) ) );
+		$hidden = Services::instance()->layers()->create(
+			$id,
+			array(
+				'title'  => 'Hidden',
+				'status' => 'draft',
+			)
+		);
+		Services::instance()->features()->create(
+			$hidden->id,
+			array(
+				'geometry'   => array(
+					'type'        => 'Point',
+					'coordinates' => array( 1, 1 ),
+				),
+				'properties' => array( 'title' => 'Private place' ),
+			)
+		);
+		$invisible = Services::instance()->layers()->create(
+			$id,
+			array(
+				'title'   => 'Invisible',
+				'visible' => false,
+			)
+		);
+		Services::instance()->features()->create(
+			$invisible->id,
+			array(
+				'geometry'   => array(
+					'type'        => 'Point',
+					'coordinates' => array( 2, 2 ),
+				),
+				'properties' => array( 'title' => 'Invisible place' ),
+			)
+		);
 		wp_set_current_user( 0 );
 		$html = swmap_render_map( $id );
 		$this->assertStringNotContainsString( 'Private place', $html );
@@ -157,14 +208,29 @@ final class RenderingTest extends SwMapsTestCase {
 
 	public function test_options_and_overrides_are_validated(): void {
 		list( $id ) = $this->published_map();
-		$html       = swmap_render_map( $id, array( 'height' => '60vh', 'aspect_ratio' => '16:9', 'lazy' => false, 'click_to_load' => true, 'list' => false ) );
+		$html       = swmap_render_map(
+			$id,
+			array(
+				'height'        => '60vh',
+				'aspect_ratio'  => '16:9',
+				'lazy'          => false,
+				'click_to_load' => true,
+				'list'          => false,
+			)
+		);
 		$this->assertStringContainsString( '--swmap-height:60vh;', $html );
 		$this->assertStringContainsString( '--swmap-aspect:16 / 9;', $html );
 		$this->assertStringContainsString( 'data-lazy="0"', $html );
 		$this->assertStringNotContainsString( 'swmap__list', $html );
 		$data = $this->inline_json( $html );
 		$this->assertTrue( $data['settings']['clickToLoad'] );
-		$bad = swmap_render_map( $id, array( 'height' => 'calc(1px);background:url(x)', 'aspect_ratio' => '1;2' ) );
+		$bad = swmap_render_map(
+			$id,
+			array(
+				'height'       => 'calc(1px);background:url(x)',
+				'aspect_ratio' => '1;2',
+			)
+		);
 		$this->assertStringContainsString( '--swmap-height:400px;', $bad );
 		$this->assertStringNotContainsString( 'url(x)', $bad );
 		$this->assertStringNotContainsString( 'data-aspect', $bad );
@@ -182,7 +248,7 @@ final class RenderingTest extends SwMapsTestCase {
 	public function test_block_renders_same_output_as_shortcode(): void {
 		list( $id ) = $this->published_map();
 		$this->assertTrue( WP_Block_Type_Registry::get_instance()->is_registered( Block::NAME ) );
-		$block  = do_blocks( '<!-- wp:sw-maps/map {"mapId":' . $id . ',"height":"300px","showList":false,"clickToLoad":true} /-->' );
+		$block = do_blocks( '<!-- wp:sw-maps/map {"mapId":' . $id . ',"height":"300px","showList":false,"clickToLoad":true} /-->' );
 		$this->assertStringContainsString( 'data-swmap="' . $id . '"', $block );
 		$this->assertStringContainsString( '--swmap-height:300px;', $block );
 		$this->assertStringNotContainsString( 'swmap__list', $block );
@@ -254,11 +320,34 @@ final class RenderingTest extends SwMapsTestCase {
 
 	public function test_media_images_must_be_local_raster_attachments(): void {
 		$this->as_role( 'administrator' );
-		$png = self::factory()->attachment->create_upload_object( DIR_TESTDATA . '/images/canola.jpg' );
-		$svg = self::factory()->attachment->create( array( 'post_mime_type' => 'image/svg+xml', 'post_title' => 'x' ) );
-		list( $id, $layer_id ) = $this->published_map( 'Media', array( 'image_id' => $png, 'icon' => 'media:' . $png ) );
+		$png                   = self::factory()->attachment->create_upload_object( DIR_TESTDATA . '/images/canola.jpg' );
+		$svg                   = self::factory()->attachment->create(
+			array(
+				'post_mime_type' => 'image/svg+xml',
+				'post_title'     => 'x',
+			)
+		);
+		list( $id, $layer_id ) = $this->published_map(
+			'Media',
+			array(
+				'image_id' => $png,
+				'icon'     => 'media:' . $png,
+			)
+		);
 		$this->as_role( 'administrator' );
-		Services::instance()->features()->create( $layer_id, array( 'geometry' => array( 'type' => 'Point', 'coordinates' => array( 1, 1 ) ), 'properties' => array( 'image_id' => $svg, 'icon' => 'media:' . $svg ) ) );
+		Services::instance()->features()->create(
+			$layer_id,
+			array(
+				'geometry'   => array(
+					'type'        => 'Point',
+					'coordinates' => array( 1, 1 ),
+				),
+				'properties' => array(
+					'image_id' => $svg,
+					'icon'     => 'media:' . $svg,
+				),
+			)
+		);
 		wp_set_current_user( 0 );
 		$features = $this->inline_json( swmap_render_map( $id ) )['layers'][0]['features'];
 		$this->assertStringContainsString( 'canola', (string) $features[0]['properties']['image_url'] );
@@ -284,10 +373,26 @@ final class RenderingTest extends SwMapsTestCase {
 		global $wpdb;
 		list( $id, $layer_id ) = $this->published_map();
 		$this->as_role( 'administrator' );
-		Services::instance()->features()->create( $layer_id, array( 'geometry' => array( 'type' => 'Point', 'coordinates' => array( 2, 2 ) ), 'properties' => array( 'title' => 'Second' ) ) );
+		Services::instance()->features()->create(
+			$layer_id,
+			array(
+				'geometry'   => array(
+					'type'        => 'Point',
+					'coordinates' => array( 2, 2 ),
+				),
+				'properties' => array( 'title' => 'Second' ),
+			)
+		);
 		$features = SWMaps\WordPress\Persistence\Schema::table( 'features' );
 		$wpdb->query( "UPDATE {$features} SET geometry_json = '{\"type\":\"Point\",\"coordinates\":[999,0]}' WHERE layer_id = " . (int) $layer_id . ' ORDER BY id ASC LIMIT 1' ); // phpcs:ignore
-		$wpdb->update( SWMaps\WordPress\Persistence\Schema::table( 'maps' ), array( 'viewport_json' => '{"zoom":99}', 'settings_json' => 'not json' ), array( 'id' => $id ) );
+		$wpdb->update(
+			SWMaps\WordPress\Persistence\Schema::table( 'maps' ),
+			array(
+				'viewport_json' => '{"zoom":99}',
+				'settings_json' => 'not json',
+			),
+			array( 'id' => $id )
+		);
 		wp_set_current_user( 0 );
 		$previous = ini_set( 'error_log', '/dev/null' );
 		$html     = swmap_render_map( $id );

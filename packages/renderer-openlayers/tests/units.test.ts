@@ -31,6 +31,20 @@ describe('popup (XSS safety)', () => {
     expect(el.querySelectorAll('[onerror]')).toHaveLength(0);
   });
 
+  it('renders additional fields as plain text in a definition list', () => {
+    const el = buildPopup(
+      { ...props, fields: [{ label: '<b>Hours</b>', value: '<img src=x onerror=alert(1)>' }] },
+      strings,
+      () => undefined,
+    );
+    expect(el.querySelector('dt')?.textContent).toBe('<b>Hours</b>');
+    expect(el.querySelector('dd')?.textContent).toBe('<img src=x onerror=alert(1)>');
+    expect(el.querySelectorAll('dl img, dl b')).toHaveLength(0);
+    expect(
+      buildPopup({ ...props, fields: [] }, strings, () => undefined).querySelector('dl'),
+    ).toBeNull();
+  });
+
   it('renders safe links and images', () => {
     const el = buildPopup(
       {

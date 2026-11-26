@@ -1,0 +1,525 @@
+/*
+ * sw-backupit admin styles. Everything is namespaced with `swmap-` / `.swmap-root` so nothing
+ * leaks into wp-admin. Quasar's own CSS is scoped to `.swmap-root` at build time
+ * (tools/postcssScope.ts).
+ */
+
+/* ---------- design tokens ---------- */
+.swmap-root {
+  --swmap-primary: #4f46e5;
+  --swmap-primary-strong: #4338ca;
+  --swmap-primary-soft: #eef2ff;
+  --swmap-accent: #0d9488;
+  --swmap-accent-bright: #14b8a6;
+  --swmap-success: #16a34a;
+  --swmap-warning: #f59e0b;
+  --swmap-danger: #dc2626;
+  --swmap-info: #0284c7;
+
+  --swmap-success-text: #166534;
+  --swmap-warning-text: #92400e;
+  --swmap-danger-text: #b91c1c;
+  --swmap-info-text: #075985;
+  --swmap-neutral-text: #334155;
+  --swmap-success-bg: #dcfce7;
+  --swmap-warning-bg: #fef3c7;
+  --swmap-danger-bg: #fee2e2;
+  --swmap-info-bg: #e0f2fe;
+  --swmap-neutral-bg: #eef1f6;
+  --swmap-primary-text: #3730a3;
+  --swmap-primary-bg: #e0e7ff;
+
+  --swmap-bg: #f3f4fa;
+  --swmap-surface: #ffffff;
+  --swmap-surface-2: #f8f9fc;
+  --swmap-surface-3: #eef0f7;
+  --swmap-border: #e1e5ee;
+  --swmap-text: #0f172a;
+  --swmap-muted: #475569;
+  --swmap-rail-bg: #ffffff;
+  --swmap-focus: #4f46e5;
+  --swmap-overlay: rgba(15, 23, 42, 0.45);
+
+  --swmap-gradient: linear-gradient(135deg, #4f46e5 0%, #0d9488 100%);
+  --swmap-gradient-soft: linear-gradient(
+    135deg,
+    rgba(79, 70, 229, 0.1) 0%,
+    rgba(20, 184, 166, 0.1) 100%
+  );
+
+  --swmap-radius: 16px;
+  --swmap-radius-sm: 10px;
+  --swmap-shadow-1: 0 1px 2px rgba(15, 23, 42, 0.05), 0 2px 6px rgba(15, 23, 42, 0.04);
+  --swmap-shadow-2:
+    0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 16px rgba(15, 23, 42, 0.06),
+    0 18px 40px rgba(15, 23, 42, 0.05);
+  --swmap-font: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --swmap-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* map to Quasar brand variables (set here instead of Quasar's runtime brand plugin) */
+  --q-primary: var(--swmap-primary);
+  --q-secondary: var(--swmap-accent);
+  --q-accent: var(--swmap-accent-bright);
+  --q-positive: var(--swmap-success);
+  --q-negative: var(--swmap-danger);
+  --q-info: var(--swmap-info);
+  --q-warning: var(--swmap-warning);
+  --q-dark: var(--swmap-surface);
+  --q-dark-page: var(--swmap-bg);
+
+  color-scheme: light;
+  font-family: var(--swmap-font);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--swmap-text);
+  font-feature-settings: 'cv11', 'ss03';
+  -webkit-font-smoothing: antialiased;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.swmap-root.swmap-dark {
+  --swmap-primary: #818cf8;
+  --swmap-primary-strong: #a5b4fc;
+  --swmap-primary-soft: rgba(129, 140, 248, 0.14);
+  --swmap-accent: #2dd4bf;
+  --swmap-accent-bright: #2dd4bf;
+  --swmap-success: #4ade80;
+  --swmap-warning: #fbbf24;
+  --swmap-danger: #f87171;
+  --swmap-info: #38bdf8;
+
+  --swmap-success-text: #86efac;
+  --swmap-warning-text: #fcd34d;
+  --swmap-danger-text: #fca5a5;
+  --swmap-info-text: #7dd3fc;
+  --swmap-neutral-text: #cbd5e1;
+  --swmap-primary-text: #c7d2fe;
+  --swmap-success-bg: rgba(74, 222, 128, 0.14);
+  --swmap-warning-bg: rgba(251, 191, 36, 0.14);
+  --swmap-danger-bg: rgba(248, 113, 113, 0.16);
+  --swmap-info-bg: rgba(56, 189, 248, 0.14);
+  --swmap-neutral-bg: rgba(148, 163, 184, 0.16);
+  --swmap-primary-bg: rgba(129, 140, 248, 0.2);
+
+  --swmap-bg: #0a0f1f;
+  --swmap-surface: #131a2e;
+  --swmap-surface-2: #182038;
+  --swmap-surface-3: #1f2946;
+  --swmap-border: #263250;
+  --swmap-text: #e8ecf8;
+  --swmap-muted: #a3aecb;
+  --swmap-rail-bg: #0e1427;
+  --swmap-focus: #a5b4fc;
+  --swmap-overlay: rgba(2, 6, 20, 0.65);
+
+  --swmap-gradient: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%);
+  --swmap-gradient-soft: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.18) 0%,
+    rgba(20, 184, 166, 0.14) 100%
+  );
+  --swmap-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --swmap-shadow-2: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.35);
+  color-scheme: dark;
+}
+
+/* ---------- isolation reset (wp-admin styles bleeding in) ---------- */
+.swmap-root *,
+.swmap-root *::before,
+.swmap-root *::after {
+  box-sizing: border-box;
+}
+.swmap-root h1,
+.swmap-root h2,
+.swmap-root h3,
+.swmap-root h4,
+.swmap-root h5,
+.swmap-root h6,
+.swmap-root p,
+.swmap-root ul,
+.swmap-root ol,
+.swmap-root dl,
+.swmap-root dd,
+.swmap-root figure {
+  margin: 0;
+  padding: 0;
+  color: inherit;
+  font-family: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+  line-height: 1.35;
+}
+.swmap-root ul,
+.swmap-root ol {
+  list-style: none;
+}
+.swmap-root a {
+  color: var(--swmap-primary);
+  text-decoration: none;
+}
+.swmap-root a:hover {
+  text-decoration: underline;
+}
+.swmap-root button,
+.swmap-root input,
+.swmap-root select,
+.swmap-root textarea {
+  font-family: inherit;
+}
+.swmap-root table {
+  border-collapse: collapse;
+  border-spacing: 0;
+  margin: 0;
+  width: 100%;
+  background: transparent;
+  border: 0;
+}
+.swmap-root th,
+.swmap-root td {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  vertical-align: middle;
+}
+.swmap-root code {
+  font-family: var(--swmap-mono);
+  font-size: 0.9em;
+  background: var(--swmap-surface-3);
+  padding: 0.1em 0.4em;
+  border-radius: 6px;
+}
+.swmap-root label {
+  display: inline;
+  margin: 0;
+  font-weight: inherit;
+}
+
+/* Standalone pseudo-roots created by Quasar for dialogs/menus/notifications */
+.swmap-root.q-portal--dialog,
+.swmap-root.q-portal--menu {
+  font-size: 15px;
+}
+
+/* ---------- WordPress integration ---------- */
+.swmap-fullbleed {
+  margin: 0 0 0 -20px;
+}
+@media screen and (max-width: 782px) {
+  .swmap-fullbleed {
+    margin-left: -10px;
+  }
+}
+body.swmap-admin-page #wpfooter {
+  display: none;
+}
+body.swmap-admin-page #wpbody-content {
+  padding-bottom: 0;
+}
+/* Quasar locks scroll with a class on body when a dialog is open */
+body.q-body--prevent-scroll {
+  overflow: hidden;
+}
+/* Dialogs/menus/notifications must sit above the WP admin bar (99999) and admin menu */
+.swmap-root.q-portal--dialog .q-dialog,
+.swmap-root.q-portal--menu .q-menu,
+.swmap-root.q-portal--dialog .q-dialog__backdrop {
+  z-index: 100100;
+}
+.swmap-root .q-notifications__list {
+  z-index: 100200;
+}
+.swmap-root .q-menu,
+.swmap-root.q-portal--menu .q-menu {
+  z-index: 100150;
+}
+.swmap-root.q-portal--tooltip .q-tooltip,
+.swmap-root .q-tooltip {
+  z-index: 100300;
+}
+
+/* ---------- utilities ---------- */
+.swmap-sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.swmap-num {
+  font-variant-numeric: tabular-nums;
+}
+.swmap-muted {
+  color: var(--swmap-muted);
+}
+.swmap-mono {
+  font-family: var(--swmap-mono);
+  font-size: 0.88em;
+}
+.swmap-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.swmap-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.swmap-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.swmap-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+}
+.swmap-grid--wide {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+}
+.swmap-eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--swmap-muted);
+}
+
+/* ---------- focus ---------- */
+.swmap-root :focus-visible {
+  outline: 3px solid var(--swmap-focus);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+.swmap-root .q-btn:focus-visible,
+.swmap-root .q-field:focus-within .q-field__control {
+  outline: 3px solid var(--swmap-focus);
+  outline-offset: 1px;
+}
+.swmap-root .q-field__native:focus-visible,
+.swmap-root .q-field__input:focus-visible {
+  outline: none;
+}
+
+/* ---------- Quasar tuning ---------- */
+.swmap-root .q-btn {
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  border-radius: 10px;
+}
+.swmap-root .q-btn--standard.bg-primary,
+.swmap-root .q-btn.swmap-btn-gradient {
+  background: var(--swmap-gradient) !important;
+}
+.swmap-root .q-btn.bg-primary {
+  color: #fff !important;
+}
+.swmap-root .q-field--outlined .q-field__control {
+  border-radius: 10px;
+}
+.swmap-root .q-field--outlined .q-field__control:before {
+  border-color: var(--swmap-border);
+}
+.swmap-root .q-field--outlined:not(.q-field--readonly) .q-field__control:hover:before {
+  border-color: var(--swmap-muted);
+}
+.swmap-root .q-field__label,
+.swmap-root .q-field__bottom {
+  color: var(--swmap-muted);
+}
+.swmap-root .q-field--dark .q-field__native,
+.swmap-root .q-field--dark .q-field__prefix,
+.swmap-root .q-field--dark .q-field__suffix,
+.swmap-root .q-field--dark .q-field__input {
+  color: var(--swmap-text);
+}
+.swmap-root .q-card {
+  background: var(--swmap-surface);
+  color: var(--swmap-text);
+  box-shadow: var(--swmap-shadow-2);
+  border-radius: var(--swmap-radius);
+}
+.swmap-root .q-menu {
+  background: var(--swmap-surface);
+  color: var(--swmap-text);
+  border: 1px solid var(--swmap-border);
+  border-radius: 12px;
+  box-shadow: var(--swmap-shadow-2);
+}
+.swmap-root .q-item--active,
+.swmap-root .q-item.q-router-link--active {
+  color: var(--swmap-primary);
+}
+.swmap-root .q-tooltip {
+  background: var(--swmap-text);
+  color: var(--swmap-surface);
+  font-size: 13px;
+  border-radius: 8px;
+}
+.swmap-root .q-tab {
+  text-transform: none;
+  font-weight: 600;
+}
+.swmap-root .q-tabs {
+  color: var(--swmap-muted);
+}
+.swmap-root .q-tab--active {
+  color: var(--swmap-primary);
+}
+.swmap-root .q-skeleton {
+  background: var(--swmap-surface-3);
+}
+.swmap-root .q-skeleton--type-text,
+.swmap-root .q-skeleton--type-rect {
+  border-radius: 8px;
+}
+.swmap-root .q-notification {
+  border-radius: 12px;
+  box-shadow: var(--swmap-shadow-2);
+  font-size: 14px;
+}
+.swmap-root .q-linear-progress {
+  border-radius: 999px;
+}
+.swmap-root .q-toggle__label,
+.swmap-root .q-checkbox__label {
+  font-size: 14px;
+}
+.swmap-root .q-dialog__backdrop {
+  background: var(--swmap-overlay);
+}
+.swmap-root .q-drawer {
+  background: var(--swmap-surface);
+}
+.swmap-root .q-separator {
+  background: var(--swmap-border);
+}
+
+/* ---------- native tables that stack on small screens ---------- */
+.swmap-table {
+  font-variant-numeric: tabular-nums;
+}
+.swmap-table th {
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--swmap-muted);
+  border-bottom: 1px solid var(--swmap-border);
+  white-space: nowrap;
+}
+.swmap-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--swmap-border);
+  font-size: 14px;
+}
+.swmap-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+.swmap-table tbody tr:hover {
+  background: var(--swmap-surface-2);
+}
+.swmap-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+@media (max-width: 760px) {
+  .swmap-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+  .swmap-table,
+  .swmap-table tbody,
+  .swmap-table tr,
+  .swmap-table td {
+    display: block;
+  }
+  .swmap-table tr {
+    padding: 10px 6px;
+    border-bottom: 1px solid var(--swmap-border);
+  }
+  .swmap-table tbody tr:last-child {
+    border-bottom: 0;
+  }
+  .swmap-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 8px;
+    border: 0;
+    text-align: right;
+  }
+  .swmap-table td::before {
+    content: attr(data-label);
+    flex: none;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--swmap-muted);
+    text-align: left;
+  }
+  .swmap-table td[data-label=''] {
+    justify-content: flex-end;
+  }
+  .swmap-table td[data-label='']::before {
+    display: none;
+  }
+}
+
+/* ---------- motion ---------- */
+@keyframes swmap-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes swmap-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+@keyframes swmap-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.swmap-fade-enter-active,
+.swmap-fade-leave-active {
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+.swmap-fade-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.swmap-fade-leave-to {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .swmap-root *,
+  .swmap-root *::before,
+  .swmap-root *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

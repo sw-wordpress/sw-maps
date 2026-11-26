@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { ProviderData } from '@sw-maps/map-contracts';
 import { isApiError } from '@/api/client';
@@ -17,6 +17,7 @@ const emit = defineEmits<{
 const { t } = useI18n();
 
 const form = reactive({
+  type: 'xyz' as 'xyz' | 'pmtiles',
   name: '',
   urlTemplate: '',
   attribution: '',
@@ -27,6 +28,10 @@ const form = reactive({
   secretConstant: '',
 });
 const fieldErrors = ref<Record<string, string>>({});
+const typeOptions = computed(() => [
+  { value: 'xyz', label: t('providers.typeXyz') },
+  { value: 'pmtiles', label: t('providers.typePmtiles') },
+]);
 
 watch(
   () => [props.modelValue, props.provider] as const,
@@ -34,6 +39,7 @@ watch(
     if (!open) return;
     const c = provider?.public_config;
     Object.assign(form, {
+      type: provider?.type ?? 'xyz',
       name: provider?.name ?? '',
       urlTemplate: c?.urlTemplate ?? '',
       attribution: c?.attribution ?? '',
@@ -60,16 +66,19 @@ watch(
 const err = (field: string): string | undefined => fieldErrors.value[field];
 
 function submit(): void {
+  const archive = form.type === 'pmtiles';
   emit('save', {
+    ...(props.provider ? {} : { type: form.type }),
     name: form.name,
-    secret_constant: form.secretConstant === '' ? null : form.secretConstant,
+    ...(archive
+      ? {}
+      : { secret_constant: form.secretConstant === '' ? null : form.secretConstant }),
     public_config: {
       urlTemplate: form.urlTemplate,
       attribution: form.attribution,
       minZoom: form.minZoom,
       maxZoom: form.maxZoom,
-      tileSize: form.tileSize,
-      publicKey: form.publicKey,
+      ...(archive ? {} : { tileSize: form.tileSize, publicKey: form.publicKey }),
     },
   });
 }
@@ -83,6 +92,18 @@ function submit(): void {
           <div class="text-h6">{{ provider ? t('providers.edit') : t('providers.add') }}</div>
         </q-card-section>
         <q-card-section>
+          <q-select
+            v-if="!provider"
+            v-model="form.type"
+            :options="typeOptions"
+            emit-value
+            map-options
+            outlined
+            dense
+            :label="t('providers.type')"
+            class="swmap-field"
+            data-test="type"
+          />
           <q-input
             v-model="form.name"
             outlined
@@ -97,8 +118,10 @@ function submit(): void {
             v-model="form.urlTemplate"
             outlined
             dense
-            :label="t('providers.urlTemplate')"
-            :hint="t('providers.urlHint')"
+            :label="
+              form.type === 'pmtiles' ? t('providers.archiveUrl') : t('providers.urlTemplate')
+            "
+            :hint="form.type === 'pmtiles' ? t('providers.archiveHint') : t('providers.urlHint')"
             class="swmap-field"
             :error="!!err('public_config.urlTemplate')"
             :error-message="err('public_config.urlTemplate')"
@@ -133,6 +156,7 @@ function submit(): void {
               class="col"
             />
             <q-select
+              v-if="form.type === 'xyz'"
               v-model="form.tileSize"
               :options="[256, 512]"
               outlined
@@ -142,6 +166,7 @@ function submit(): void {
             />
           </div>
           <q-input
+            v-if="form.type === 'xyz'"
             v-model="form.publicKey"
             outlined
             dense
@@ -149,6 +174,7 @@ function submit(): void {
             class="swmap-field"
           />
           <q-input
+            v-if="form.type === 'xyz'"
             v-model="form.secretConstant"
             outlined
             dense

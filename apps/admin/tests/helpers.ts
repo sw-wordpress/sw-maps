@@ -2,7 +2,13 @@ import { mount, flushPromises } from '@vue/test-utils';
 import type { VueWrapper } from '@vue/test-utils';
 import type { Component } from 'vue';
 import { createPinia, setActivePinia } from 'pinia';
-import type { FeatureData, LayerData, MapData, ProviderData } from '@sw-maps/map-contracts';
+import type {
+  CategoryData,
+  FeatureData,
+  LayerData,
+  MapData,
+  ProviderData,
+} from '@sw-maps/map-contracts';
 import { vi } from 'vitest';
 import type { Mock } from 'vitest';
 import type { Api } from '@/api';
@@ -14,6 +20,7 @@ export function configure(
     'swmap_edit_maps',
     'swmap_publish_maps',
     'swmap_manage_layers',
+    'swmap_manage_imports',
     'swmap_manage_system',
   ],
 ): void {
@@ -55,6 +62,8 @@ export function makeMap(overrides: Partial<MapData> = {}): MapData {
       scale: true,
       showList: true,
       clickToLoad: false,
+      cluster: true,
+      ajax: false,
       providerId: null,
     },
     layer_count: 1,
@@ -97,6 +106,16 @@ export function makeFeature(overrides: Partial<FeatureData> = {}): FeatureData {
     },
     style: {},
     updated_at: '',
+    ...overrides,
+  };
+}
+
+export function makeCategory(overrides: Partial<CategoryData> = {}): CategoryData {
+  return {
+    id: 20,
+    slug: 'huts',
+    title: 'Huts',
+    style: { color: '#00aa00', icon: 'builtin:home' },
     ...overrides,
   };
 }
@@ -152,6 +171,16 @@ export function fakeApi(): FakeApi {
       update: vi.fn(async () => makeFeature()),
       remove: vi.fn(async () => undefined),
     },
+    categories: {
+      list: vi.fn(async () => [makeCategory()]),
+      create: vi.fn(async (b: Record<string, unknown>) =>
+        makeCategory({ id: 21, title: String(b['title']) }),
+      ),
+      update: vi.fn(async (id: number, b: Record<string, unknown>) =>
+        makeCategory({ id, title: String(b['title'] ?? 'Huts') }),
+      ),
+      remove: vi.fn(async () => undefined),
+    },
     providers: {
       list: vi.fn(async () => [makeProvider()]),
       create: vi.fn(async () => makeProvider({ id: 2 })),
@@ -174,6 +203,24 @@ export function fakeApi(): FakeApi {
         max_features_per_layer: 5000,
         click_to_load: false,
         ...b,
+      })),
+    },
+    imports: {
+      run: vi.fn(async () => ({
+        mode: 'new_layer',
+        layer_id: 12,
+        total: 2,
+        created: 2,
+        updated: 0,
+        skipped: 0,
+        error_count: 0,
+        errors: [],
+        warnings: [],
+        columns: ['name'],
+        mapping: { title: 'name' },
+        media_relink_hint: false,
+        imported: false,
+        preview: [{ title: 'A', type: 'Point', external_id: null }],
       })),
     },
     status: {

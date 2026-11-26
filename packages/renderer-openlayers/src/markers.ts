@@ -41,6 +41,7 @@ export function resolveIcon(
   properties: FeatureProperties,
   style: StyleMap,
   layerStyle: StyleMap,
+  categoryStyle: StyleMap = {},
 ): IconSpec {
   if (
     properties.icon.startsWith('media:') &&
@@ -49,7 +50,16 @@ export function resolveIcon(
   ) {
     return { src: properties.icon_url, custom: true };
   }
-  const color = safeColor(style['color'] ?? layerStyle['color'], DEFAULT_COLOR);
-  const name = properties.icon.startsWith('builtin:') ? properties.icon.slice(8) : 'pin';
+  const color = safeColor(
+    style['color'] ?? categoryStyle['color'] ?? layerStyle['color'],
+    DEFAULT_COLOR,
+  );
+  // The default icon is no explicit choice: the category's icon applies (so categories differ by shape, not only colour).
+  const categoryIcon = categoryStyle['icon'];
+  const chosen =
+    properties.icon === 'builtin:pin' && typeof categoryIcon === 'string' && categoryIcon !== ''
+      ? categoryIcon
+      : properties.icon;
+  const name = chosen.startsWith('builtin:') ? chosen.slice(8) : 'pin';
   return { src: markerSvg(name, color), custom: false };
 }
