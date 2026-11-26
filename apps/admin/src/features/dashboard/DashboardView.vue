@@ -124,6 +124,6 @@ onMounted(load);
         to="/maps"
       />
     </div>
-    <DataState v-else :loading="true" :error="null" variant="cards" />
+    <DataState v-else :loading="true" :empty="true" :error="null" variant="cards" />
   </div>
 </template>

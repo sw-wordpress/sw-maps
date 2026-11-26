@@ -124,6 +124,6 @@ import DataState from '@/components/ui/DataState.vue';
         </tbody>
       </q-markup-table>
     </SwmapCard>
-    <DataState v-else :loading="true" :error="null" variant="block" />
+    <DataState v-else :loading="true" :empty="true" :error="null" variant="block" />
   </div>
 </template>

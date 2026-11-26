@@ -10,7 +10,16 @@ const tool = (page: Page, name: string) => page.locator(`[data-test="tool-${name
 
 async function openEditorFor(page: Page, title: string): Promise<number> {
   await page.goto(`${PLUGIN_PAGE}#/maps`);
-  await page.locator('input[data-test="new-title"]').fill(title);
+  // On a cold stack the very first admin page can stay blank (the app chunk is still being served): reload once.
+  const field = page.locator('input[data-test="new-title"]');
+  const shown = await field.waitFor({ state: 'visible', timeout: 10_000 }).then(
+    () => true,
+    () => false,
+  );
+  if (!shown) {
+    await page.reload();
+  }
+  await field.fill(title);
   await page.locator('[data-test="create"]').click();
   await expect(page.locator('.swmap-editor__canvas .ol-viewport')).toBeVisible();
   return Number(/maps\/(\d+)/.exec(page.url())?.[1]);
@@ -42,6 +51,9 @@ test('create a map, place, move and publish a marker', async ({ page, baseURL })
   expect(saved).toHaveLength(1);
   expect(saved[0]!.properties['title']).toBe('Mein Marker');
   const before = saved[0]!.geometry.coordinates;
+
+  // The save reloads the map and rebuilds the canvas data: let that finish before dragging.
+  await page.waitForLoadState('networkidle');
 
   // Drag the marker with the select tool.
   await tool(page, 'select').click();

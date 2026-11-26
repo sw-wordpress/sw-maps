@@ -205,5 +205,5 @@ import DataState from '@/components/ui/DataState.vue';
     {{ t('editor.loadFailed') }}
     <q-btn flat no-caps :label="t('common.reload')" @click="load" />
   </SwmapCard>
-  <DataState v-else :loading="true" :error="null" variant="block" />
+  <DataState v-else :loading="true" :empty="true" :error="null" variant="block" />
 </template>

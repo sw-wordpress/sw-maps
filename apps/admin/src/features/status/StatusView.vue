@@ -79,6 +79,6 @@ import DataState from '@/components/ui/DataState.vue';
         </li>
       </ul>
     </SwmapCard>
-    <DataState v-else :loading="true" :error="null" variant="block" />
+    <DataState v-else :loading="true" :empty="true" :error="null" variant="block" />
   </div>
 </template>
