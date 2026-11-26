@@ -272,6 +272,29 @@ describe('layer style rules', () => {
   });
 });
 
+describe('cluster refresh while features are added', () => {
+  it('knows the layer of a feature before the cluster source sees it', () => {
+    document.body.innerHTML = '<div class="swmap__stage"></div>';
+    const data = dataWithCategories();
+    data.settings = { ...data.settings, cluster: true };
+    const r = new OpenLayersRenderer({ popups: true });
+    r.mount(document.querySelector<HTMLElement>('.swmap__stage')!, { data });
+    const inner = r as unknown as {
+      metas: Map<number, unknown>;
+      source: { on(e: string, f: (ev: { feature: Feature }) => void): void };
+    };
+    const seen: boolean[] = [];
+    inner.source.on('addfeature', (event) =>
+      seen.push(inner.metas.has(event.feature.get('swmapId') as number)),
+    );
+    const next = dataWithCategories();
+    next.settings = { ...next.settings, cluster: true };
+    next.layers[0]!.features.push({ ...feature(77, 8.41, 49.01), categories: [] });
+    r.update(next);
+    expect(seen).toEqual([true]);
+  });
+});
+
 describe('tooltip', () => {
   it('shows the title of a hovered marker, hides it elsewhere and for open popups', () => {
     document.body.innerHTML = '<div class="swmap__stage"></div>';

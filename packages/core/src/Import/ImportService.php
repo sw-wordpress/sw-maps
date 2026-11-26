@@ -70,10 +70,10 @@ final class ImportService
         [$rows, $rowErrors, $rowWarnings] = $this->prepare($parsed, $mapping, $extra);
         if ($mode === ImportMode::Append && $layer !== null) {
             // The (layer, external id) pair is unique: appending an id that exists would abort the whole import.
-            $taken = $this->features->byExternalIds($layer->id, $this->externalIds($rows));
+            $taken = $this->keyed($this->features->byExternalIds($layer->id, $this->externalIds($rows)));
             $free = [];
             foreach ($rows as $row) {
-                if ($row['external_id'] !== null && isset($taken[$row['external_id']])) {
+                if ($row['external_id'] !== null && isset($taken[self::idKey($row['external_id'])])) {
                     $rowErrors[] = ['index' => $row['index'], 'code' => 'external_id_exists', 'message' => 'External ID already exists in the layer.', 'params' => []];
                 } else {
                     $free[] = $row;
@@ -85,11 +85,11 @@ final class ImportService
         $errors = array_slice(array_merge(array_map(static fn (ParseIssue $i): array => $i->toArray(), $parsed->errors), $rowErrors), 0, $this->limits->maxErrors);
         $warnings = array_slice(array_merge(array_map(static fn (ParseIssue $i): array => $i->toArray(), $parsed->warnings), $rowWarnings), 0, $this->limits->maxErrors);
 
-        $existing = $layer !== null && $mode === ImportMode::Upsert ? $this->features->byExternalIds($layer->id, $this->externalIds($rows)) : [];
+        $existing = $layer !== null && $mode === ImportMode::Upsert ? $this->keyed($this->features->byExternalIds($layer->id, $this->externalIds($rows))) : [];
         $creates = 0;
         $updates = 0;
         foreach ($rows as $row) {
-            if ($mode === ImportMode::Upsert && $row['external_id'] !== null && isset($existing[$row['external_id']])) {
+            if ($mode === ImportMode::Upsert && $row['external_id'] !== null && isset($existing[self::idKey($row['external_id'])])) {
                 ++$updates;
             } else {
                 ++$creates;
@@ -135,7 +135,7 @@ final class ImportService
             }
             $now = $this->clock->now();
             foreach ($rows as $row) {
-                $current = $mode === ImportMode::Upsert && $row['external_id'] !== null ? ($existing[$row['external_id']] ?? null) : null;
+                $current = $mode === ImportMode::Upsert && $row['external_id'] !== null ? ($existing[self::idKey($row['external_id'])] ?? null) : null;
                 if ($current !== null) {
                     $this->features->save($current->with($row['geometry'], FeatureProperties::fromArray($this->patch($row['properties']), $current->properties), null, $now));
                 } else {
@@ -170,6 +170,28 @@ final class ImportService
         }
 
         return $patch;
+    }
+
+    /**
+     * External ids are compared like the database does (case-insensitive collations): one normalised key per id.
+     */
+    private static function idKey(string $id): string
+    {
+        return mb_strtolower(trim($id));
+    }
+
+    /**
+     * @param array<string, Feature> $features keyed by the stored spelling
+     * @return array<string, Feature> keyed by the normalised id
+     */
+    private function keyed(array $features): array
+    {
+        $out = [];
+        foreach ($features as $id => $feature) {
+            $out[self::idKey((string) $id)] = $feature;
+        }
+
+        return $out;
     }
 
     private function importer(string $format): ImporterInterface
@@ -249,8 +271,8 @@ final class ImportService
             if ($external !== null && $feature->part > 0) {
                 $external .= '#' . ($feature->part + 1);
             }
-            if ($external !== null && (mb_strlen($external) > 190 || isset($seen[$external]))) {
-                $duplicate = isset($seen[$external]);
+            if ($external !== null && (mb_strlen($external) > 190 || isset($seen[self::idKey($external)]))) {
+                $duplicate = isset($seen[self::idKey($external)]);
                 $errors[] = [
                     'index' => $feature->index,
                     'code' => $duplicate ? 'duplicate_external_id' : 'external_id_too_long',
@@ -261,7 +283,7 @@ final class ImportService
             }
             $properties = $this->properties($fields + ['fields' => $this->extraFields($feature->attributes, $extra)], $feature->index, $warnings);
             if ($external !== null) {
-                $seen[$external] = true;
+                $seen[self::idKey($external)] = true;
             }
             $rows[] = ['geometry' => $feature->geometry, 'properties' => $properties, 'external_id' => $external, 'index' => $feature->index];
         }

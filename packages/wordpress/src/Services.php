@@ -14,6 +14,7 @@ use SWMaps\Core\Application\FeatureService;
 use SWMaps\Core\Application\LayerService;
 use SWMaps\Core\Application\MapService;
 use SWMaps\Core\Application\ProviderService;
+use SWMaps\Core\Application\PublicFeatureService;
 use SWMaps\Core\Contracts\CategoryRepositoryInterface;
 use SWMaps\Core\Contracts\FeatureRepositoryInterface;
 use SWMaps\Core\Contracts\LayerRepositoryInterface;
@@ -86,6 +87,10 @@ final class Services {
 
 	public function category_repository(): CategoryRepositoryInterface {
 		return $this->category_repo;
+	}
+
+	public function public_features(): PublicFeatureService {
+		return new PublicFeatureService( $this->map_repo, $this->layer_repo, $this->feature_repo );
 	}
 
 	public function providers(): ProviderService {

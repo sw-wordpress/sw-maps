@@ -646,9 +646,10 @@ export class OpenLayersRenderer implements MapRenderer {
       if (!geometry) continue;
       const feature = new Feature({ geometry });
       feature.set(FEATURE_ID, id);
-      this.source.addFeature(feature);
+      // Metadata first: adding the feature refreshes the cluster source, which reads it (layer zoom limits).
       this.signatures.set(id, item.signature);
       this.metas.set(id, item.meta);
+      this.source.addFeature(feature);
     }
     for (const [id, item] of wanted) {
       if (this.metas.has(id)) this.metas.set(id, item.meta);

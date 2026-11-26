@@ -9,7 +9,6 @@ declare(strict_types=1);
 
 namespace SWMaps\WordPress\Api;
 
-use SWMaps\Core\Domain\MapStatus;
 use SWMaps\WordPress\Integration\MapPayload;
 
 final class PublicController extends BaseController {
@@ -45,11 +44,6 @@ final class PublicController extends BaseController {
 	public function features( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
 		return $this->run(
 			function () use ( $request ) {
-				$services = $this->services();
-				$map      = $services->map_repository()->find( $this->id( $request ) );
-				if ( null === $map || MapStatus::Published !== $map->status || ! $map->settings->ajax ) {
-					return new \WP_Error( 'swmap_not_found', __( 'Not found.', 'sw-maps' ), array( 'status' => 404 ) );
-				}
 				$bounds = $this->bounds( (string) $request->get_param( 'bbox' ) );
 				if ( null === $bounds ) {
 					return new \WP_Error( 'swmap_invalid_param', __( 'Invalid input.', 'sw-maps' ), array( 'status' => 400 ) );
@@ -61,26 +55,17 @@ final class PublicController extends BaseController {
 						$categories[] = (int) $part;
 					}
 				}
-				$categories = array_slice( array_values( array_unique( $categories ) ), 0, 50 );
-				$per_page   = min( self::MAX_PER_PAGE, max( 1, (int) $request->get_param( 'per_page' ) ) );
-				$page       = max( 1, (int) $request->get_param( 'page' ) );
-
-				$layer_titles = array();
-				foreach ( $services->layer_repository()->forMap( $map->id ) as $layer ) {
-					if ( $layer->visible && $layer->isPublished() ) {
-						$layer_titles[ $layer->id ] = true;
-					}
-				}
-				$result = $services->feature_repository()->inBounds( array_keys( $layer_titles ), $bounds, $categories, $page, $per_page );
-				$layers = array();
-				foreach ( $result['items'] as $feature ) {
-					$layers[ $feature->layerId ][] = MapPayload::feature( $feature, $zoom );
+				$per_page = min( self::MAX_PER_PAGE, max( 1, (int) $request->get_param( 'per_page' ) ) );
+				$page     = max( 1, (int) $request->get_param( 'page' ) );
+				$result   = $this->services()->public_features()->featuresInArea( $this->id( $request ), $bounds, array_values( array_unique( $categories ) ), $page, $per_page );
+				if ( null === $result ) {
+					return new \WP_Error( 'swmap_not_found', __( 'Not found.', 'sw-maps' ), array( 'status' => 404 ) );
 				}
 				$out = array();
-				foreach ( $layers as $layer_id => $items ) {
+				foreach ( $result['layers'] as $layer_id => $features ) {
 					$out[] = array(
 						'id'       => $layer_id,
-						'features' => $items,
+						'features' => array_map( static fn ( $f ): array => MapPayload::feature( $f, $zoom ), $features ),
 					);
 				}
 				$response = new \WP_REST_Response(

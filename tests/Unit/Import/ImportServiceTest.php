@@ -131,6 +131,20 @@ final class ImportServiceTest extends TestCase
         self::assertCount(2, $this->f->features->items);
     }
 
+    public function testExternalIdsAreComparedCaseInsensitivelyLikeTheDatabase(): void
+    {
+        $dup = self::geojson([['props' => ['id' => 'ABC', 'name' => 'a']], ['props' => ['id' => 'abc ', 'name' => 'b']]]);
+        $dry = $this->service()->run($this->mapId, ['format' => 'geojson', 'content' => $dup, 'dry_run' => true]);
+        self::assertSame(['duplicate_external_id'], array_column($dry['errors'], 'code'));
+        $layer = $this->f->layerService->create($this->mapId, ['title' => 'L']);
+        $this->f->featureService->create($layer->id, ['geometry' => ['type' => 'Point', 'coordinates' => [1, 1]], 'external_id' => 'Hut-1', 'properties' => ['title' => 'Old']]);
+        $one = self::geojson([['props' => ['id' => 'hut-1', 'name' => 'New']]]);
+        $append = $this->service()->run($this->mapId, ['format' => 'geojson', 'content' => $one, 'mode' => 'append', 'layer_id' => $layer->id, 'dry_run' => true]);
+        self::assertSame(['external_id_exists'], array_column($append['errors'], 'code'));
+        $upsert = $this->service()->run($this->mapId, ['format' => 'geojson', 'content' => $one, 'mode' => 'upsert', 'layer_id' => $layer->id]);
+        self::assertSame([1, 0], [$upsert['updated'], $upsert['created']], 'the differently spelled id is the same location');
+    }
+
     public function testAppendKeepsExistingFeatures(): void
     {
         $layer = $this->f->layerService->create($this->mapId, ['title' => 'L']);

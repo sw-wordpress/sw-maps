@@ -27,10 +27,7 @@ final class MapPayload {
 		$ajax     = $map->settings->ajax && ! $include_drafts;
 		$layers   = array();
 		$layer_by = array();
-		foreach ( $services->layer_repository()->forMap( $map->id ) as $layer ) {
-			if ( ! $layer->visible || ( ! $layer->isPublished() && ! $include_drafts ) ) {
-				continue;
-			}
+		foreach ( $services->public_features()->visibleLayers( $map->id, $include_drafts ) as $layer ) {
 			$layer_by[ $layer->id ] = count( $layers );
 			$layers[]               = array(
 				'id'       => $layer->id,

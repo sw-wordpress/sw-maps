@@ -36,7 +36,8 @@ final class InMemoryFeatures implements FeatureRepositoryInterface
     {
         $out = [];
         foreach ($this->forLayers([$layerId]) as $f) {
-            if ($f->externalId !== null && in_array($f->externalId, $externalIds, true)) {
+            // Like the default (case-insensitive) database collation.
+            if ($f->externalId !== null && in_array(mb_strtolower($f->externalId), array_map('mb_strtolower', $externalIds), true)) {
                 $out[$f->externalId] = $f;
             }
         }
