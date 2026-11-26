@@ -16,6 +16,11 @@ export interface SettingsData {
   default_scroll_zoom: boolean;
   max_features_per_layer: number;
   click_to_load: boolean;
+  allowed_hosts: string[];
+  geocoder_url: string;
+  geocoder_contact: string;
+  /** Read only: whether the key constant SWMAP_GEOCODER_KEY exists on the server. */
+  geocoder_key_defined?: boolean;
 }
 
 export interface StatusData {
@@ -68,6 +73,12 @@ export interface PackageReport {
   categories_created: number;
   categories_matched: number;
   media_relink_hint: boolean;
+}
+
+export interface GeocodeHit {
+  label: string;
+  lon: number;
+  lat: number;
 }
 
 export type Body = Record<string, unknown>;
@@ -131,6 +142,14 @@ export function createApi(client: ApiClient) {
       run: (body: Body) => client.request<ImportReport>('POST', 'imports', { body }),
       package: (content: string) =>
         client.request<PackageReport>('POST', 'imports/package', { body: { content } }),
+    },
+    geocoding: {
+      search: (query: string) =>
+        client.request<{ results: GeocodeHit[] }>('POST', 'geocoding/search', { body: { query } }),
+      reverse: (lon: number, lat: number) =>
+        client.request<{ result: GeocodeHit | null }>('POST', 'geocoding/reverse', {
+          body: { lon, lat },
+        }),
     },
     exports: {
       map: (id: number, format: 'geojson' | 'csv' | 'json') =>

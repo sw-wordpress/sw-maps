@@ -195,6 +195,9 @@ export function fakeApi(): FakeApi {
         default_scroll_zoom: false,
         max_features_per_layer: 5000,
         click_to_load: false,
+        allowed_hosts: [],
+        geocoder_url: 'https://nominatim.openstreetmap.org',
+        geocoder_contact: '',
       })),
       update: vi.fn(async (b: Record<string, unknown>) => ({
         delete_data_on_uninstall: false,
@@ -202,8 +205,20 @@ export function fakeApi(): FakeApi {
         default_scroll_zoom: false,
         max_features_per_layer: 5000,
         click_to_load: false,
+        allowed_hosts: [],
+        geocoder_url: '',
+        geocoder_contact: '',
         ...b,
       })),
+    },
+    geocoding: {
+      search: vi.fn(async () => ({
+        results: [
+          { label: 'Karlsruhe Schloss', lon: 8.4037, lat: 49.0069 },
+          { label: 'Karlsruhe Hbf', lon: 8.4, lat: 49.0 },
+        ],
+      })),
+      reverse: vi.fn(async () => ({ result: { label: 'Kaiserstraße 1', lon: 8.4, lat: 49 } })),
     },
     exports: {
       map: vi.fn(async (_id: number, format: string) => ({
@@ -262,6 +277,9 @@ export function fakeApi(): FakeApi {
           default_scroll_zoom: false,
           max_features_per_layer: 5000,
           click_to_load: false,
+          allowed_hosts: [],
+          geocoder_url: '',
+          geocoder_contact: '',
         },
       })),
     },

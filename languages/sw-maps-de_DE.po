@@ -52,34 +52,38 @@ msgstr "Die SW-Maps-Oberfläche wurde nicht gebaut. Release-Paket installieren o
 msgid "SW Maps requires JavaScript."
 msgstr "SW Maps benötigt JavaScript."
 
-#: packages/wordpress/src/Api/BaseController.php:43
+#: packages/wordpress/src/Api/BaseController.php:44
 msgid "You are not allowed to do this."
 msgstr "Sie dürfen das nicht tun."
 
-#: packages/wordpress/src/Api/BaseController.php:66
+#: packages/wordpress/src/Api/BaseController.php:67
 msgid "The geometry is invalid."
 msgstr "Die Geometrie ist ungültig."
 
-#: packages/wordpress/src/Api/BaseController.php:76
+#: packages/wordpress/src/Api/BaseController.php:77
 #: packages/wordpress/src/Api/PublicController.php:49
-#: packages/wordpress/src/Api/SettingsController.php:53
+#: packages/wordpress/src/Api/SettingsController.php:63
 msgid "Invalid input."
 msgstr "Ungültige Eingabe."
 
-#: packages/wordpress/src/Api/BaseController.php:86
+#: packages/wordpress/src/Api/BaseController.php:93
+msgid "The address search failed."
+msgstr "Die Adresssuche ist fehlgeschlagen."
+
+#: packages/wordpress/src/Api/BaseController.php:103
 msgid "The file cannot be imported."
 msgstr "Die Datei kann nicht importiert werden."
 
-#: packages/wordpress/src/Api/BaseController.php:94
+#: packages/wordpress/src/Api/BaseController.php:111
 #: packages/wordpress/src/Api/PublicController.php:62
 msgid "Not found."
 msgstr "Nicht gefunden."
 
-#: packages/wordpress/src/Api/BaseController.php:97
+#: packages/wordpress/src/Api/BaseController.php:114
 msgid "This value is already in use."
 msgstr "Dieser Wert wird bereits verwendet."
 
-#: packages/wordpress/src/Api/BaseController.php:100
+#: packages/wordpress/src/Api/BaseController.php:117
 msgid "Unexpected error."
 msgstr "Unerwarteter Fehler."
 

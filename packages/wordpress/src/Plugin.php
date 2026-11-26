@@ -64,6 +64,7 @@ final class Plugin {
 			new Api\ImportsController(),
 			new Api\CategoriesController(),
 			new Api\ExportController(),
+			new Api\GeocodingController(),
 			new Api\PublicController(),
 			new Api\FeaturesController(),
 			new Api\ProvidersController(),

@@ -43,6 +43,9 @@ Kategorien sind seitenweit (`id`, `slug`, `title`, `style` mit `color` und `icon
 
 Anbieter: `type` ist `xyz` oder `pmtiles` (bei `pmtiles` enthält `public_config.urlTemplate` die URL der `.pmtiles`-Datei; Kachelgröße, Schlüssel und Secret entfallen; der Typ ist nach dem Anlegen unveränderlich).
 
+## Geocoding (M3)
+`POST /geocoding/search` (`{ query }`, 3 bis 200 Zeichen) und `POST /geocoding/reverse` (`{ lon, lat }`) für Nutzer mit `swmap_edit_maps`; Antwort `{ results: [{ label, lon, lat }] }` bzw. `{ result }`. Fehler: `swmap_geocoding_failed` mit `data.reason` (`not_configured` 422, `invalid_query` 400, `rate_limited` 429, `unavailable` 502, `not_allowed` 422). Nur per Aktion (kein Autocomplete); das Ergebnis wird erst nach Bestätigung im Editor übernommen. Einstellungen (`/settings`): `geocoder_url` (Standard der öffentliche Nominatim-Server, auch selbst gehostet), `geocoder_contact` (für den öffentlichen Server erforderlich, steht im User-Agent), `allowed_hosts`; ein optionaler Schlüssel kommt ausschließlich aus der Konstante `SWMAP_GEOCODER_KEY` in `wp-config.php` (`geocoder_key_defined` zeigt nur, ob sie existiert). Der öffentliche Server wird auf eine Anfrage pro Sekunde begrenzt (seine Nutzungsrichtlinie).
+
 ## Export (M3)
 - `GET /maps/{id}/export?format=json|geojson|csv&layer_id=` (`swmap_manage_imports` plus Bearbeitungsrecht): Antwort `{ filename, mime_type, content }`; der Client bietet den Text als Download an. `geojson` und `csv` (nur Punkte, Formelzeichen am Zellenanfang mit `'` entschärft) sind Austauschformate; `json` ist die **Plugin-Datei**.
 - `GET /export` (`swmap_manage_system`): Plugin-Datei aller Karten.

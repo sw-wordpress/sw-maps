@@ -1064,4 +1064,67 @@ final class RestApiTest extends SwMapsTestCase {
 		$this->assertSame( array( 'a.lan', 'b.lan' ), $this->rest( 'PATCH', '/settings', array( 'allowed_hosts' => array( 'A.lan', 'b.lan', 'a.lan' ) ) )->get_data()['allowed_hosts'] );
 		delete_option( \SWMaps\WordPress\Settings::OPTION );
 	}
+
+	public function test_geocoding_is_admin_triggered_identified_rate_limited_and_protected(): void {
+		$this->as_role( 'administrator' );
+		$this->rest( 'PATCH', '/settings', array( 'geocoder_url' => 'https://nominatim.openstreetmap.org', 'geocoder_contact' => 'maps@example.org' ) );
+		$sent = array();
+		$mock = static function ( $pre, $args, $url ) use ( &$sent ) {
+			$sent[] = array( $url, $args );
+			return array(
+				'headers'  => array( 'content-type' => 'application/json' ),
+				'body'     => wp_json_encode( array( array( 'lat' => '49.0069', 'lon' => '8.4037', 'display_name' => 'Karlsruhe' ) ) ),
+				'response' => array( 'code' => 200, 'message' => 'OK' ),
+			);
+		};
+		add_filter( 'pre_http_request', $mock, 10, 3 );
+		delete_transient( 'swmap_rl_' . substr( md5( 'geocoder' ), 0, 12 ) );
+		$found = $this->rest( 'POST', '/geocoding/search', array( 'query' => 'Karlsruhe Schloss' ) );
+		$this->assertSame( 200, $found->get_status() );
+		$this->assertSame( array( array( 'label' => 'Karlsruhe', 'lon' => 8.4037, 'lat' => 49.0069 ) ), $found->get_data()['results'] );
+		$this->assertStringContainsString( 'maps@example.org', $sent[0][1]['user-agent'] );
+		$this->assertStringContainsString( 'q=Karlsruhe%20Schloss', $sent[0][0] );
+		// The public instance allows one request per second: the second one is answered with 429 without a request.
+		$again = $this->rest( 'POST', '/geocoding/search', array( 'query' => 'Karlsruhe Schloss' ) );
+		$this->assertSame( 429, $again->get_status() );
+		$this->assertSame( 'rate_limited', $again->as_error()->get_error_data()['reason'] );
+		$this->assertCount( 1, $sent );
+		delete_transient( 'swmap_rl_' . substr( md5( 'geocoder' ), 0, 12 ) );
+		$reverse = $this->rest( 'POST', '/geocoding/reverse', array( 'lon' => 8.4, 'lat' => 49.0 ) );
+		$this->assertSame( 200, $reverse->get_status() );
+		$this->assertArrayHasKey( 'result', $reverse->get_data() );
+		remove_filter( 'pre_http_request', $mock, 10 );
+
+		$this->assertSame( 400, $this->rest( 'POST', '/geocoding/search', array( 'query' => 'ab' ) )->get_status() );
+		$this->assertSame( 400, $this->rest( 'POST', '/geocoding/search', array() )->get_status() );
+		$this->assertSame( 400, $this->rest( 'POST', '/geocoding/reverse', array( 'lon' => 'x', 'lat' => 1 ) )->get_status() );
+		$this->assertSame( 400, $this->rest( 'POST', '/geocoding/reverse', array( 'lon' => 999, 'lat' => 1 ) )->get_status() );
+
+		// Without contact the public server is refused; a private self hosted server needs the allowlist.
+		$this->rest( 'PATCH', '/settings', array( 'geocoder_contact' => '' ) );
+		delete_transient( 'swmap_rl_' . substr( md5( 'geocoder' ), 0, 12 ) );
+		$this->assertSame( 422, $this->rest( 'POST', '/geocoding/search', array( 'query' => 'Berlin' ) )->get_status() );
+		$this->rest( 'PATCH', '/settings', array( 'geocoder_url' => 'http://geo.lan:8080' ) );
+		add_filter( 'swmap_resolve_host', static fn ( $a, $host ) => 'geo.lan' === $host ? array( '10.0.0.8' ) : $a, 20, 2 );
+		$blocked = $this->rest( 'POST', '/geocoding/search', array( 'query' => 'Berlin' ) );
+		$this->assertSame( 'not_allowed', $blocked->as_error()->get_error_data()['reason'] );
+		$this->rest( 'PATCH', '/settings', array( 'allowed_hosts' => array( 'geo.lan' ) ) );
+		add_filter( 'pre_http_request', $mock, 10, 3 );
+		$this->assertSame( 200, $this->rest( 'POST', '/geocoding/search', array( 'query' => 'Berlin' ) )->get_status() );
+		remove_filter( 'pre_http_request', $mock, 10 );
+		$this->assertSame( 400, $this->rest( 'PATCH', '/settings', array( 'geocoder_url' => 'ftp://x' ) )->get_status() );
+		$this->assertSame( 400, $this->rest( 'PATCH', '/settings', array( 'geocoder_contact' => "a\nb" ) )->get_status() );
+		$settings = $this->rest( 'GET', '/settings' )->get_data();
+		$this->assertFalse( $settings['geocoder_key_defined'] );
+		$this->assertArrayNotHasKey( 'geocoder_key', $settings );
+		delete_option( \SWMaps\WordPress\Settings::OPTION );
+
+		// Capability: editors may search, subscribers and visitors may not.
+		$this->as_role( 'editor' );
+		$this->assertNotSame( 403, $this->rest( 'POST', '/geocoding/search', array( 'query' => 'Berlin' ) )->get_status() );
+		$this->as_role( 'subscriber' );
+		$this->assertSame( 403, $this->rest( 'POST', '/geocoding/search', array( 'query' => 'Berlin' ) )->get_status() );
+		wp_set_current_user( 0 );
+		$this->assertSame( 401, $this->rest( 'POST', '/geocoding/reverse', array( 'lon' => 1, 'lat' => 1 ) )->get_status() );
+	}
 }

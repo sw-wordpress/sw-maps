@@ -23,7 +23,7 @@ final class SettingsController extends BaseController {
 			array(
 				array(
 					'methods'             => \WP_REST_Server::READABLE,
-					'callback'            => static fn () => new \WP_REST_Response( Settings::get() ),
+					'callback'            => fn () => new \WP_REST_Response( $this->present() ),
 					'permission_callback' => $cap,
 				),
 				array(
@@ -44,9 +44,19 @@ final class SettingsController extends BaseController {
 		);
 	}
 
+	/**
+	 * The settings plus whether the (secret) geocoder key constant exists; the key itself is never sent.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function present(): array {
+		return Settings::get() + array( 'geocoder_key_defined' => defined( 'SWMAP_GEOCODER_KEY' ) );
+	}
+
 	public function update( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
 		try {
-			return new \WP_REST_Response( Settings::update( $this->body( $request ) ) );
+			Settings::update( $this->body( $request ) );
+			return new \WP_REST_Response( $this->present() );
 		} catch ( \InvalidArgumentException $e ) {
 			return new \WP_Error(
 				'swmap_invalid_param',

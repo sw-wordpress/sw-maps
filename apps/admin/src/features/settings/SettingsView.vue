@@ -17,7 +17,12 @@ const form = reactive<SettingsData>({
   default_scroll_zoom: false,
   max_features_per_layer: 5000,
   click_to_load: false,
+  allowed_hosts: [],
+  geocoder_url: '',
+  geocoder_contact: '',
 });
+/** One host name per line (the API stores a list). */
+const allowedHostsText = ref('');
 const saving = ref(false);
 const loaded = ref(false);
 
@@ -33,6 +38,7 @@ onMounted(async () => {
   try {
     await store.load();
     if (store.settings) Object.assign(form, store.settings);
+    allowedHostsText.value = form.allowed_hosts.join('\n');
     loaded.value = true;
   } catch (error) {
     notify.error(errorMessage(error, t('app.loadFailed')));
@@ -51,7 +57,11 @@ async function exportAll(): Promise<void> {
 async function save(): Promise<void> {
   saving.value = true;
   try {
-    await store.save({ ...form });
+    const hosts = allowedHostsText.value
+      .split(/\s*[\n,]\s*/)
+      .map((h) => h.trim())
+      .filter((h) => h !== '');
+    await store.save({ ...form, allowed_hosts: hosts });
     notify.success(t('settings.saved'));
   } catch (error) {
     notify.error(errorMessage(error, t('app.saveFailed')));
@@ -94,6 +104,33 @@ import DataState from '@/components/ui/DataState.vue';
           :label="t('settings.maxFeatures')"
           class="swmap-field"
           data-test="max-features"
+        />
+        <h3 class="text-subtitle1 q-mt-md">{{ t('settings.geocoding') }}</h3>
+        <q-input
+          v-model="form.geocoder_url"
+          outlined
+          dense
+          :label="t('settings.geocoderUrl')"
+          class="swmap-field"
+          data-test="geocoder-url"
+        />
+        <q-input
+          v-model="form.geocoder_contact"
+          outlined
+          dense
+          :label="t('settings.geocoderContact')"
+          class="swmap-field"
+          data-test="geocoder-contact"
+        />
+        <q-input
+          v-model="allowedHostsText"
+          type="textarea"
+          autogrow
+          outlined
+          dense
+          :label="t('settings.allowedHosts')"
+          class="swmap-field"
+          data-test="allowed-hosts"
         />
         <h3 class="text-subtitle1 q-mt-md">{{ t('settings.uninstall') }}</h3>
         <q-btn

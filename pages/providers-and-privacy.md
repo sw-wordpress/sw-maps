@@ -9,6 +9,9 @@ Die öffentlichen OpenStreetMap-Kachelserver sind keine unbegrenzte Hosting-Infr
 
 PMTiles: Typ *PMTiles-Archiv (Raster)* liest eine `.pmtiles`-Datei per Range-Request von einem eigenen Server (Range und CORS müssen erlaubt sein); Vektor-Archive werden nicht dargestellt ([ADR 0005](../docs/adr/0005-pmtiles-raster.md)). Der Host wird vor der Aktivierung als externer Request angezeigt.
 
+## Geocoding
+Im Standortformular suchen *Koordinaten finden* und *Adresse finden* über Nominatim. Es gibt keine Autovervollständigung: Eine Anfrage entsteht nur nach Klick, und das Ergebnis wird erst nach Bestätigung übernommen. Der Text bzw. die Position verlässt dabei den Server in Richtung Geocoding-Dienst (Einstellungen → Geocoding; der öffentliche Server verlangt einen Kontakt, der im User-Agent steht, und erlaubt eine Anfrage pro Sekunde). Ein eigener Server in einem privaten Netz muss unter „Erlaubte Hosts“ eingetragen werden (SSRF-Schutz). Ein Schlüssel gehört in `wp-config.php` (`define( 'SWMAP_GEOCODER_KEY', '…' );`), nie in die Einstellungen.
+
 ## Einwilligung
 - Ist das Plugin **WP Consent API** aktiv, lädt die Karte Kacheln erst nach Einwilligung in der Kategorie `marketing` (Filter `swmap_consent_category`). Ohne Einwilligung zeigt die Karte einen Hinweis; die Standortliste bleibt nutzbar. Fehlt das Consent-Skript, wird nichts geladen.
 - **Click-to-load** (Einstellung pro Karte, Standard in *Einstellungen*): Platzhalter ohne externe Anfrage, bis der Besucher „Karte laden“ wählt. Click-to-load ersetzt keine fehlende Einwilligung.

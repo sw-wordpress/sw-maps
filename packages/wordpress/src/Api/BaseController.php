@@ -13,6 +13,7 @@ use SWMaps\Core\Exception\ConflictException;
 use SWMaps\Core\Exception\InvalidGeometryException;
 use SWMaps\Core\Exception\NotFoundException;
 use SWMaps\Core\Exception\ValidationException;
+use SWMaps\Core\Geocoding\GeocodingException;
 use SWMaps\Core\Import\ImportException;
 use SWMaps\WordPress\Services;
 
@@ -77,6 +78,22 @@ abstract class BaseController {
 				array(
 					'status'  => 400,
 					'details' => $this->details( $e ),
+				)
+			);
+		}
+		if ( $e instanceof GeocodingException ) {
+			$status = match ( $e->reason ) {
+				GeocodingException::RATE_LIMITED => 429,
+				GeocodingException::INVALID_QUERY => 400,
+				GeocodingException::UNAVAILABLE => 502,
+				default => 422,
+			};
+			return new \WP_Error(
+				'swmap_geocoding_failed',
+				__( 'The address search failed.', 'sw-maps' ),
+				array(
+					'status' => $status,
+					'reason' => $e->reason,
 				)
 			);
 		}

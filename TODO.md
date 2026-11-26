@@ -10,8 +10,6 @@ Task-IDs sind stabil. Jede Aufgabe liefert Tests, i18n (de/en), Dokumentation un
 ## M3 – Betrieb (P§16 Phase 3)
 
 - [ ] M3-03: WP-CLI: `status`, `maps list`, `import`, `export`; Bestätigung/`--yes` bei destruktiven Befehlen, Exit-Codes, maschinenlesbare Ausgabe
-- [ ] M3-04: Geocoding (nur Admin): Geocoder-Interface, Nominatim (nur per Aktion, kein Autocomplete, Identifikation, Rate-Begrenzung), selbst gehostete Instanz, Reverse-Geocoding, Bestätigung vor Übernahme
-- [ ] M3-05: `POST /geocoding/search` capability-geschützt; Schlüssel nur aus `wp-config`, nie im Browser
 - [ ] M3-07: Benchmarks 100 / 1.000 / 10.000 Punkte und große Tracks; Payload, Laufzeit, Speicher, Browser-Interaktion dokumentieren
 - [ ] M3-08: Diagnose im Systemstatus (Provider-Erreichbarkeit, Limits, Schema)
 - [ ] M3-09: Accessibility-Tests: axe über Admin-Routen und Frontend-Karte inkl. Standortliste (hell/dunkel), Tastaturbedienung
