@@ -91,21 +91,26 @@ msgstr "Das Standortlimit dieses Layers ist erreicht."
 msgid "You are not allowed to publish maps."
 msgstr "Sie dürfen Karten nicht veröffentlichen."
 
-#: packages/wordpress/src/Api/ProvidersController.php:124
-#: packages/wordpress/src/Api/ProvidersController.php:163
+#: packages/wordpress/src/Api/ProvidersController.php:119
+#: packages/wordpress/src/Api/ProvidersController.php:150
+msgid "The address is not allowed for server requests."
+msgstr "Die Adresse ist für Serveranfragen nicht erlaubt."
+
+#: packages/wordpress/src/Api/ProvidersController.php:119
+#: packages/wordpress/src/Api/ProvidersController.php:150
 msgid "The tile server is not reachable."
 msgstr "Der Kachelserver ist nicht erreichbar."
 
-#: packages/wordpress/src/Api/ProvidersController.php:135
-#: packages/wordpress/src/Api/ProvidersController.php:174
+#: packages/wordpress/src/Api/ProvidersController.php:130
+#: packages/wordpress/src/Api/ProvidersController.php:161
 msgid "Connection successful."
 msgstr "Verbindung erfolgreich."
 
-#: packages/wordpress/src/Api/ProvidersController.php:135
+#: packages/wordpress/src/Api/ProvidersController.php:130
 msgid "The tile server did not return a tile."
 msgstr "Der Kachelserver hat keine Kachel geliefert."
 
-#: packages/wordpress/src/Api/ProvidersController.php:174
+#: packages/wordpress/src/Api/ProvidersController.php:161
 msgid "The file is not a PMTiles archive (version 3)."
 msgstr "Die Datei ist kein PMTiles-Archiv (Version 3)."
 

@@ -1002,4 +1002,66 @@ final class RestApiTest extends SwMapsTestCase {
 		$this->assertSame( 403, $this->rest( 'GET', "/maps/{$map_id}/export" )->get_status() );
 		$this->assertSame( 403, $this->rest( 'POST', '/imports/package', array( 'content' => '{}' ) )->get_status() );
 	}
+
+	public function test_server_side_requests_refuse_private_targets_unless_the_host_is_allowlisted(): void {
+		$this->as_role( 'administrator' );
+		$calls = 0;
+		$mock  = static function () use ( &$calls ) {
+			++$calls;
+			return array(
+				'headers'  => array( 'content-type' => 'image/png' ),
+				'body'     => 'x',
+				'response' => array( 'code' => 200, 'message' => 'OK' ),
+			);
+		};
+		add_filter( 'pre_http_request', $mock );
+		$private = array(
+			'http://127.0.0.1/{z}/{x}/{y}.png',
+			'http://169.254.169.254/{z}/{x}/{y}.png',
+			'http://[::1]/{z}/{x}/{y}.png',
+			'http://10.0.0.7/{z}/{x}/{y}.png',
+			'http://2130706433/{z}/{x}/{y}.png',
+		);
+		foreach ( $private as $url ) {
+			$created = $this->rest( 'POST', '/providers', array( 'name' => 'P', 'public_config' => array( 'urlTemplate' => $url, 'attribution' => 'x' ) ) );
+			$result  = $this->rest( 'POST', "/providers/{$created->get_data()['id']}/test" )->get_data();
+			$this->assertFalse( $result['ok'], $url );
+			$this->assertSame( 'The address is not allowed for server requests.', $result['message'], $url );
+		}
+		$this->assertSame( 0, $calls, 'no request left the server' );
+
+		// A redirect to the metadata service is refused before it is requested.
+		remove_filter( 'pre_http_request', $mock );
+		$hops   = array();
+		$redir  = static function ( $pre, $args, $url ) use ( &$hops ) {
+			$hops[] = $url;
+			return array(
+				'headers'  => array( 'location' => 'http://169.254.169.254/latest/meta-data/' ),
+				'body'     => '',
+				'response' => array( 'code' => 302, 'message' => 'Found' ),
+			);
+		};
+		add_filter( 'pre_http_request', $redir, 10, 3 );
+		$public = $this->rest( 'POST', '/providers', array( 'name' => 'Pub', 'public_config' => array( 'urlTemplate' => 'https://tiles.example.org/{z}/{x}/{y}.png', 'attribution' => 'x' ) ) )->get_data();
+		$this->assertSame( 'The address is not allowed for server requests.', $this->rest( 'POST', "/providers/{$public['id']}/test" )->get_data()['message'] );
+		$this->assertCount( 1, $hops );
+		remove_filter( 'pre_http_request', $redir, 10 );
+
+		// The administrator allowlist lets one private host through.
+		$this->rest( 'PATCH', '/settings', array( 'allowed_hosts' => array( 'tiles.lan' ) ) );
+		add_filter( 'swmap_resolve_host', static fn ( $a, $host ) => 'tiles.lan' === $host ? array( '10.0.0.9' ) : $a, 20, 2 );
+		add_filter( 'pre_http_request', $mock );
+		$lan = $this->rest( 'POST', '/providers', array( 'name' => 'Lan', 'public_config' => array( 'urlTemplate' => 'http://tiles.lan/{z}/{x}/{y}.png', 'attribution' => 'x' ) ) )->get_data();
+		$this->assertTrue( $this->rest( 'POST', "/providers/{$lan['id']}/test" )->get_data()['ok'] );
+		$other = $this->rest( 'POST', '/providers', array( 'name' => 'Other', 'public_config' => array( 'urlTemplate' => 'http://10.0.0.7/{z}/{x}/{y}.png', 'attribution' => 'x' ) ) )->get_data();
+		$this->assertFalse( $this->rest( 'POST', "/providers/{$other['id']}/test" )->get_data()['ok'] );
+		remove_filter( 'pre_http_request', $mock );
+
+		// Allowlist validation.
+		foreach ( array( array( 'http://x/' ), array( 'a b' ), 'x', array_fill( 0, 21, 'h.lan' ), array( 5 ) ) as $bad ) {
+			$this->assertSame( 400, $this->rest( 'PATCH', '/settings', array( 'allowed_hosts' => $bad ) )->get_status() );
+		}
+		$this->assertSame( array( 'a.lan', 'b.lan' ), $this->rest( 'PATCH', '/settings', array( 'allowed_hosts' => array( 'A.lan', 'b.lan', 'a.lan' ) ) )->get_data()['allowed_hosts'] );
+		delete_option( \SWMaps\WordPress\Settings::OPTION );
+	}
 }

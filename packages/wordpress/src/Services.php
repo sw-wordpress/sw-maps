@@ -17,6 +17,10 @@ use SWMaps\Core\Application\ProviderService;
 use SWMaps\Core\Application\PublicFeatureService;
 use SWMaps\Core\Contracts\CategoryRepositoryInterface;
 use SWMaps\Core\Export\MapExporter;
+use SWMaps\Core\Network\GuardedHttpClient;
+use SWMaps\Core\Network\UrlGuard;
+use SWMaps\WordPress\Network\PhpHostResolver;
+use SWMaps\WordPress\Network\WpHttpTransport;
 use SWMaps\Core\Export\PackageImporter;
 use SWMaps\Core\Contracts\FeatureRepositoryInterface;
 use SWMaps\Core\Contracts\LayerRepositoryInterface;
@@ -89,6 +93,12 @@ final class Services {
 
 	public function category_repository(): CategoryRepositoryInterface {
 		return $this->category_repo;
+	}
+
+	/** Server side requests (provider tests, geocoding): http(s) only, public networks only unless the host is allowlisted. */
+	public function http_client(): GuardedHttpClient {
+		$guard = new UrlGuard( new PhpHostResolver(), Settings::get()['allowed_hosts'] );
+		return new GuardedHttpClient( new WpHttpTransport(), $guard, 5, 1048576 );
 	}
 
 	public function exporter(): MapExporter {

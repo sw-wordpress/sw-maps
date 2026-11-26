@@ -11,6 +11,7 @@ namespace SWMaps\WordPress\Api;
 
 use SWMaps\Core\Domain\Provider;
 use SWMaps\Core\Domain\ProviderType;
+use SWMaps\Core\Network\UnsafeUrlException;
 use SWMaps\WordPress\Capabilities;
 
 final class ProvidersController extends BaseController {
@@ -108,25 +109,19 @@ final class ProvidersController extends BaseController {
 				if ( null !== $secret ) {
 					$url = str_replace( '{secret}', rawurlencode( $secret ), $url );
 				}
-				$response = wp_safe_remote_get(
-					$url,
-					array(
-						'timeout'     => 5,
-						'redirection' => 2,
-						'user-agent'  => 'SW-Maps/' . SWMAPS_VERSION . '; ' . home_url(),
-					)
-				);
-				if ( is_wp_error( $response ) ) {
+				try {
+					$response = $this->services()->http_client()->get( $url, array(), 65536 );
+				} catch ( \Throwable $e ) {
 					return new \WP_REST_Response(
 						array(
 							'ok'      => false,
 							'status'  => 0,
-							'message' => __( 'The tile server is not reachable.', 'sw-maps' ),
+							'message' => $e instanceof UnsafeUrlException ? __( 'The address is not allowed for server requests.', 'sw-maps' ) : __( 'The tile server is not reachable.', 'sw-maps' ),
 						)
 					);
 				}
-				$status = (int) wp_remote_retrieve_response_code( $response );
-				$type   = wp_remote_retrieve_header( $response, 'content-type' );
+				$status = $response->status;
+				$type   = $response->header( 'content-type' );
 				$ok     = 200 === $status && is_string( $type ) && str_starts_with( strtolower( $type ), 'image/' );
 				return new \WP_REST_Response(
 					array(
@@ -145,27 +140,19 @@ final class ProvidersController extends BaseController {
 	 * @param Provider $provider PMTiles provider.
 	 */
 	private function test_pmtiles( Provider $provider ): \WP_REST_Response {
-		$response = wp_safe_remote_get(
-			$provider->urlTemplate,
-			array(
-				'timeout'             => 5,
-				'redirection'         => 2,
-				'limit_response_size' => 64, // A host that ignores Range must not stream the whole archive.
-				'headers'             => array( 'Range' => 'bytes=0-7' ),
-				'user-agent'          => 'SW-Maps/' . SWMAPS_VERSION . '; ' . home_url(),
-			)
-		);
-		if ( is_wp_error( $response ) ) {
+		try {
+			$response = $this->services()->http_client()->get( $provider->urlTemplate, array( 'Range' => 'bytes=0-7' ), 64 ); // A host that ignores Range must not stream the whole archive.
+		} catch ( \Throwable $e ) {
 			return new \WP_REST_Response(
 				array(
 					'ok'      => false,
 					'status'  => 0,
-					'message' => __( 'The tile server is not reachable.', 'sw-maps' ),
+					'message' => $e instanceof UnsafeUrlException ? __( 'The address is not allowed for server requests.', 'sw-maps' ) : __( 'The tile server is not reachable.', 'sw-maps' ),
 				)
 			);
 		}
-		$status = (int) wp_remote_retrieve_response_code( $response );
-		$body   = wp_remote_retrieve_body( $response );
+		$status = $response->status;
+		$body   = $response->body;
 		$ok     = in_array( $status, array( 200, 206 ), true ) && str_starts_with( $body, 'PMTiles' ) && 3 === ord( $body[7] ?? "\0" );
 		return new \WP_REST_Response(
 			array(

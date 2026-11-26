@@ -98,21 +98,26 @@ msgstr ""
 msgid "You are not allowed to publish maps."
 msgstr ""
 
-#: packages/wordpress/src/Api/ProvidersController.php:124
-#: packages/wordpress/src/Api/ProvidersController.php:163
+#: packages/wordpress/src/Api/ProvidersController.php:119
+#: packages/wordpress/src/Api/ProvidersController.php:150
+msgid "The address is not allowed for server requests."
+msgstr ""
+
+#: packages/wordpress/src/Api/ProvidersController.php:119
+#: packages/wordpress/src/Api/ProvidersController.php:150
 msgid "The tile server is not reachable."
 msgstr ""
 
-#: packages/wordpress/src/Api/ProvidersController.php:135
-#: packages/wordpress/src/Api/ProvidersController.php:174
+#: packages/wordpress/src/Api/ProvidersController.php:130
+#: packages/wordpress/src/Api/ProvidersController.php:161
 msgid "Connection successful."
 msgstr ""
 
-#: packages/wordpress/src/Api/ProvidersController.php:135
+#: packages/wordpress/src/Api/ProvidersController.php:130
 msgid "The tile server did not return a tile."
 msgstr ""
 
-#: packages/wordpress/src/Api/ProvidersController.php:174
+#: packages/wordpress/src/Api/ProvidersController.php:161
 msgid "The file is not a PMTiles archive (version 3)."
 msgstr ""
 

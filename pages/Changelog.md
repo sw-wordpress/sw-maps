@@ -24,6 +24,7 @@
 - Stilregeln pro Layer (nach Kategorie), Multi-Geometrien per „Teil hinzufügen“, Hover-Tooltip im Viewer.
 - Gruppen, die sich nicht durch Zoomen trennen lassen, öffnen eine Auswahlliste der Standorte; REST liefert `length_m` für Linien.
 - Export: GeoJSON, CSV (Punkte) und versionierte Plugin-Datei (ohne Zugangsdaten und Medien) je Karte oder für alle Karten; Plugin-Datei importieren (neue Entwurfskarten, Kategorien per Slug).
+- SSRF-Schutz für serverseitige Anfragen (Verbindungstests): nur http(s), private und reservierte Netze gesperrt (auch per Redirect), Admin-Allowlist `allowed_hosts` in den Einstellungen (REST).
 
 ### Bugs
 
