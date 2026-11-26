@@ -55,12 +55,18 @@ final class Command {
 		}
 		$rows = array();
 		foreach ( $report as $key => $value ) {
-			if ( 'tables' === $key || 'settings' === $key ) {
+			if ( 'tables' === $key || 'settings' === $key || 'limits' === $key ) {
 				continue;
 			}
 			$rows[] = array(
 				'key'   => $key,
 				'value' => is_bool( $value ) ? ( $value ? 'yes' : 'no' ) : (string) $value,
+			);
+		}
+		foreach ( $report['limits'] as $name => $limit ) {
+			$rows[] = array(
+				'key'   => 'limit ' . $name,
+				'value' => (string) $limit,
 			);
 		}
 		foreach ( $report['tables'] as $table ) {

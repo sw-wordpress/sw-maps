@@ -62,7 +62,7 @@ msgstr "Die Geometrie ist ungültig."
 
 #: packages/wordpress/src/Api/BaseController.php:77
 #: packages/wordpress/src/Api/PublicController.php:49
-#: packages/wordpress/src/Api/SettingsController.php:63
+#: packages/wordpress/src/Api/SettingsController.php:73
 msgid "Invalid input."
 msgstr "Ungültige Eingabe."
 
@@ -94,29 +94,6 @@ msgstr "Das Standortlimit dieses Layers ist erreicht."
 #: packages/wordpress/src/Api/MapsController.php:133
 msgid "You are not allowed to publish maps."
 msgstr "Sie dürfen Karten nicht veröffentlichen."
-
-#: packages/wordpress/src/Api/ProvidersController.php:119
-#: packages/wordpress/src/Api/ProvidersController.php:150
-msgid "The address is not allowed for server requests."
-msgstr "Die Adresse ist für Serveranfragen nicht erlaubt."
-
-#: packages/wordpress/src/Api/ProvidersController.php:119
-#: packages/wordpress/src/Api/ProvidersController.php:150
-msgid "The tile server is not reachable."
-msgstr "Der Kachelserver ist nicht erreichbar."
-
-#: packages/wordpress/src/Api/ProvidersController.php:130
-#: packages/wordpress/src/Api/ProvidersController.php:161
-msgid "Connection successful."
-msgstr "Verbindung erfolgreich."
-
-#: packages/wordpress/src/Api/ProvidersController.php:130
-msgid "The tile server did not return a tile."
-msgstr "Der Kachelserver hat keine Kachel geliefert."
-
-#: packages/wordpress/src/Api/ProvidersController.php:161
-msgid "The file is not a PMTiles archive (version 3)."
-msgstr "Die Datei ist kein PMTiles-Archiv (Version 3)."
 
 #: packages/wordpress/src/Integration/Block.php:27
 msgid "SW Map"
@@ -220,6 +197,27 @@ msgstr "Auf der Karte zeigen"
 #: packages/wordpress/src/Integration/Renderer.php:138
 msgid "Locations"
 msgstr "Standorte"
+
+#: packages/wordpress/src/Providers/ProviderDiagnostics.php:72
+#: packages/wordpress/src/Providers/ProviderDiagnostics.php:93
+msgid "Connection successful."
+msgstr "Verbindung erfolgreich."
+
+#: packages/wordpress/src/Providers/ProviderDiagnostics.php:72
+msgid "The tile server did not return a tile."
+msgstr "Der Kachelserver hat keine Kachel geliefert."
+
+#: packages/wordpress/src/Providers/ProviderDiagnostics.php:93
+msgid "The file is not a PMTiles archive (version 3)."
+msgstr "Die Datei ist kein PMTiles-Archiv (Version 3)."
+
+#: packages/wordpress/src/Providers/ProviderDiagnostics.php:105
+msgid "The address is not allowed for server requests."
+msgstr "Die Adresse ist für Serveranfragen nicht erlaubt."
+
+#: packages/wordpress/src/Providers/ProviderDiagnostics.php:105
+msgid "The tile server is not reachable."
+msgstr "Der Kachelserver ist nicht erreichbar."
 
 #. translators: 1: required PHP version, 2: current PHP version
 #: sw-maps.php:36

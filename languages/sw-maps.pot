@@ -69,7 +69,7 @@ msgstr ""
 
 #: packages/wordpress/src/Api/BaseController.php:77
 #: packages/wordpress/src/Api/PublicController.php:49
-#: packages/wordpress/src/Api/SettingsController.php:63
+#: packages/wordpress/src/Api/SettingsController.php:73
 msgid "Invalid input."
 msgstr ""
 
@@ -100,29 +100,6 @@ msgstr ""
 
 #: packages/wordpress/src/Api/MapsController.php:133
 msgid "You are not allowed to publish maps."
-msgstr ""
-
-#: packages/wordpress/src/Api/ProvidersController.php:119
-#: packages/wordpress/src/Api/ProvidersController.php:150
-msgid "The address is not allowed for server requests."
-msgstr ""
-
-#: packages/wordpress/src/Api/ProvidersController.php:119
-#: packages/wordpress/src/Api/ProvidersController.php:150
-msgid "The tile server is not reachable."
-msgstr ""
-
-#: packages/wordpress/src/Api/ProvidersController.php:130
-#: packages/wordpress/src/Api/ProvidersController.php:161
-msgid "Connection successful."
-msgstr ""
-
-#: packages/wordpress/src/Api/ProvidersController.php:130
-msgid "The tile server did not return a tile."
-msgstr ""
-
-#: packages/wordpress/src/Api/ProvidersController.php:161
-msgid "The file is not a PMTiles archive (version 3)."
 msgstr ""
 
 #: packages/wordpress/src/Integration/Block.php:27
@@ -226,6 +203,27 @@ msgstr ""
 
 #: packages/wordpress/src/Integration/Renderer.php:138
 msgid "Locations"
+msgstr ""
+
+#: packages/wordpress/src/Providers/ProviderDiagnostics.php:72
+#: packages/wordpress/src/Providers/ProviderDiagnostics.php:93
+msgid "Connection successful."
+msgstr ""
+
+#: packages/wordpress/src/Providers/ProviderDiagnostics.php:72
+msgid "The tile server did not return a tile."
+msgstr ""
+
+#: packages/wordpress/src/Providers/ProviderDiagnostics.php:93
+msgid "The file is not a PMTiles archive (version 3)."
+msgstr ""
+
+#: packages/wordpress/src/Providers/ProviderDiagnostics.php:105
+msgid "The address is not allowed for server requests."
+msgstr ""
+
+#: packages/wordpress/src/Providers/ProviderDiagnostics.php:105
+msgid "The tile server is not reachable."
 msgstr ""
 
 #. translators: 1: required PHP version, 2: current PHP version

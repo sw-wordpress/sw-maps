@@ -1,3 +1,3 @@
 
-- [x] M3-03: WP-CLI: `status`, `maps list`, `import`, `export`; Bestätigung/`--yes` bei destruktiven Befehlen, Exit-Codes, maschinenlesbare Ausgabe
-  - Ergebnis: `Cli\Command` (`status`, `import`, `export`) und `Cli\MapsCommand` (`maps list`), registriert nur unter WP-CLI; Exit-Codes 0/1/2, `--yes`/Rückfrage bei Ersetzen und Überschreiben, JSON-Ausgabe, `--dry-run`. Doku: `docs/cli.md`. Tests: `CliTest` (WP-CLI-Attrappe `WpCliStub.php`).
+- [x] M3-08: Diagnose im Systemstatus (Provider-Erreichbarkeit, Limits, Schema)
+  - Ergebnis: `/status` liefert `schema_ok` und `limits` (Standorte je Layer, Importgrenzen, Seitengröße, PHP-Speicher/Laufzeit/POST-Größe); `POST /status/providers` prüft die Erreichbarkeit aller aktivierten Anbieter nur auf Anforderung (`ProviderDiagnostics`, gleicher geschützter Client wie der Verbindungstest). Anzeige in der Statusseite und in `wp sw-maps status`.

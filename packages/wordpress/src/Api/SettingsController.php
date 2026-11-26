@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace SWMaps\WordPress\Api;
 
 use SWMaps\WordPress\Capabilities;
+use SWMaps\WordPress\Providers\ProviderDiagnostics;
 use SWMaps\WordPress\Settings;
 use SWMaps\WordPress\SystemStatus;
 
@@ -39,6 +40,15 @@ final class SettingsController extends BaseController {
 			array(
 				'methods'             => \WP_REST_Server::READABLE,
 				'callback'            => static fn () => new \WP_REST_Response( SystemStatus::report() ),
+				'permission_callback' => $cap,
+			)
+		);
+		register_rest_route(
+			self::NAMESPACE,
+			'/status/providers',
+			array(
+				'methods'             => \WP_REST_Server::CREATABLE,
+				'callback'            => static fn () => new \WP_REST_Response( array( 'providers' => ProviderDiagnostics::check_enabled() ) ),
 				'permission_callback' => $cap,
 			)
 		);

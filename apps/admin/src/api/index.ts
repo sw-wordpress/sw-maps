@@ -27,6 +27,16 @@ export interface StatusData {
   plugin_version: string;
   db_version: number;
   db_expected: number;
+  schema_ok: boolean;
+  limits: {
+    max_features_per_layer: number;
+    import_max_bytes: number;
+    import_max_coords: number;
+    public_page_size: number;
+    php_memory_limit: string;
+    php_max_execution_time: number;
+    php_post_max_size: string;
+  };
   tables: { name: string; exists: boolean }[];
   php_version: string;
   wp_version: string;
@@ -35,6 +45,16 @@ export interface StatusData {
   environment: string;
   consent_api: boolean;
   settings: SettingsData;
+}
+
+export interface ProviderCheck {
+  id: number;
+  name: string;
+  type: string;
+  host: string;
+  ok: boolean;
+  status: number;
+  message: string;
 }
 
 export interface ConnectionTest {
@@ -137,6 +157,7 @@ export function createApi(client: ApiClient) {
     },
     status: {
       get: () => client.request<StatusData>('GET', 'status'),
+      providers: () => client.request<{ providers: ProviderCheck[] }>('POST', 'status/providers'),
     },
     imports: {
       run: (body: Body) => client.request<ImportReport>('POST', 'imports', { body }),

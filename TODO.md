@@ -10,7 +10,6 @@ Task-IDs sind stabil. Jede Aufgabe liefert Tests, i18n (de/en), Dokumentation un
 ## M3 – Betrieb (P§16 Phase 3)
 
 - [ ] M3-07: Benchmarks 100 / 1.000 / 10.000 Punkte und große Tracks; Payload, Laufzeit, Speicher, Browser-Interaktion dokumentieren
-- [ ] M3-08: Diagnose im Systemstatus (Provider-Erreichbarkeit, Limits, Schema)
 - [ ] M3-09: Accessibility-Tests: axe über Admin-Routen und Frontend-Karte inkl. Standortliste (hell/dunkel), Tastaturbedienung
 - [ ] M3-10: Security-Fixtures komplett: übergroße Geometrien, ungültige Koordinaten, Upload-/MIME-Prüfung, Pfadschutz
 - [ ] M3-11: Lebenszyklus: Exporte vor Löschung, BackupIt-Kompatibilität der Tabellen prüfen, Deinstallationsverhalten testen

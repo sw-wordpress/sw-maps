@@ -33,7 +33,8 @@ Authentifizierung: Cookie + REST-Nonce (`X-WP-Nonce`). Alle Endpunkte haben eine
 | GET/POST | `/categories` | lesen: `swmap_edit_maps`; anlegen: `swmap_manage_layers` | Liste/`Category` (201) |
 | PATCH/DELETE | `/categories/{id}` | `swmap_manage_layers` | `Category` / 204 |
 | GET/PATCH | `/settings` | `swmap_manage_system` | `Settings` |
-| GET | `/status` | `swmap_manage_system` | Systemstatus |
+| GET | `/status` | `swmap_manage_system` | Systemstatus inkl. `schema_ok` und `limits` |
+| POST | `/status/providers` | `swmap_manage_system` | Erreichbarkeit der aktivierten Anbieter (`providers[]`: `ok`, `status`, `message`, `host`); kontaktiert die Anbieter nur auf Anforderung |
 
 Standorte enthalten `length_m` (Länge von Linien in Metern, Haversine; 0 sonst; nur lesend).
 

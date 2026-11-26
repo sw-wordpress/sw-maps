@@ -27,6 +27,7 @@
 - SSRF-Schutz für serverseitige Anfragen (Verbindungstests): nur http(s), private und reservierte Netze gesperrt (auch per Redirect), Admin-Allowlist `allowed_hosts` in den Einstellungen (REST).
 - Geocoding (Nominatim, nur Admin/Editor per Aktion): Koordinaten zur Adresse und Adresse zur Position mit Bestätigung vor der Übernahme; Server, Kontakt und Allowlist in den Einstellungen, Schlüssel nur aus `wp-config.php`.
 - WP-CLI: `wp sw-maps status`, `maps list`, `import` und `export` (Exit-Codes, Rückfragen, JSON-Ausgabe), siehe `docs/cli.md`.
+- Diagnose im Systemstatus: Schemazustand, wirksame Grenzen und Erreichbarkeit der aktivierten Anbieter (auf Knopfdruck).
 
 ### Bugs
 

@@ -1127,4 +1127,43 @@ final class RestApiTest extends SwMapsTestCase {
 		wp_set_current_user( 0 );
 		$this->assertSame( 401, $this->rest( 'POST', '/geocoding/reverse', array( 'lon' => 1, 'lat' => 1 ) )->get_status() );
 	}
+
+	public function test_diagnostics_report_schema_limits_and_provider_reachability(): void {
+		$this->as_role( 'administrator' );
+		$status = $this->rest( 'GET', '/status' )->get_data();
+		$this->assertTrue( $status['schema_ok'] );
+		$this->assertSame( 5000, $status['limits']['max_features_per_layer'] );
+		$this->assertArrayHasKey( 'php_memory_limit', $status['limits'] );
+		$this->assertSame( 500, $status['limits']['public_page_size'] );
+
+		// Reachability is checked only on request and only for enabled providers.
+		$calls = array();
+		$mock  = static function ( $pre, $args, $url ) use ( &$calls ) {
+			$calls[] = $url;
+			$ok      = str_contains( $url, 'good.example.org' );
+			return array(
+				'headers'  => array( 'content-type' => $ok ? 'image/png' : 'text/html' ),
+				'body'     => 'x',
+				'response' => array( 'code' => $ok ? 200 : 503, 'message' => '' ),
+			);
+		};
+		add_filter( 'pre_http_request', $mock, 10, 3 );
+		$this->assertSame( array(), $calls, 'reading the status contacts nobody' );
+		$this->rest( 'POST', '/providers', array( 'name' => 'Good', 'enabled' => true, 'public_config' => array( 'urlTemplate' => 'https://good.example.org/{z}/{x}/{y}.png', 'attribution' => 'x' ) ) );
+		$this->rest( 'POST', '/providers', array( 'name' => 'Bad', 'enabled' => true, 'public_config' => array( 'urlTemplate' => 'https://bad.example.org/{z}/{x}/{y}.png', 'attribution' => 'x' ) ) );
+		$this->rest( 'POST', '/providers', array( 'name' => 'Off', 'enabled' => false, 'public_config' => array( 'urlTemplate' => 'https://off.example.org/{z}/{x}/{y}.png', 'attribution' => 'x' ) ) );
+		$result = $this->rest( 'POST', '/status/providers' )->get_data()['providers'];
+		remove_filter( 'pre_http_request', $mock, 10 );
+		$by_name = array_column( $result, null, 'name' );
+		$this->assertTrue( $by_name['Good']['ok'] );
+		$this->assertFalse( $by_name['Bad']['ok'] );
+		$this->assertSame( 'good.example.org', $by_name['Good']['host'] );
+		$this->assertArrayNotHasKey( 'Off', $by_name );
+		$this->assertNotContains( 'https://off.example.org/0/0/0.png', $calls );
+
+		$this->as_role( 'editor' );
+		$this->assertSame( 403, $this->rest( 'POST', '/status/providers' )->get_status() );
+		wp_set_current_user( 0 );
+		$this->assertSame( 401, $this->rest( 'POST', '/status/providers' )->get_status() );
+	}
 }

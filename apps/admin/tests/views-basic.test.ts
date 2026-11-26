@@ -131,13 +131,47 @@ describe('StatusView', () => {
   it('shows versions, schema state and tables', async () => {
     const w = await mountView(StatusView);
     expect(w.find('[data-test=plugin]').text()).toBe('0.1.0');
-    expect(w.find('[data-test=schema]').text()).toBe('1 / 1');
+    expect(w.find('[data-test=schema]').text()).toContain('1 / 1');
     expect(w.find('[data-test=consent]').text()).toBe('Not active');
     const tables = w.findAll('[data-test=table]').map((t) => t.text());
     expect(tables[0]).toContain('wp_swmap_maps');
     expect(tables[0]).toContain('OK');
     expect(tables[1]).toContain('wp_swmap_layers');
     expect(tables[1]).toContain('Missing');
+  });
+
+  it('shows schema state and limits and checks providers only on request', async () => {
+    const w = await mountView(StatusView);
+    expect(w.find('[data-test=schema-state]').text()).toContain('OK');
+    expect(w.find('[data-test=limits]').text()).toContain('5000');
+    expect(w.find('[data-test=limits]').text()).toContain('5 MiB');
+    expect(w.find('[data-test=limits]').text()).toContain('256M');
+    expect(api.status.providers).not.toHaveBeenCalled();
+    await w.find('[data-test=check-providers]').trigger('click');
+    await flushPromises();
+    const rows = w.findAll('[data-test=provider-check]').map((r) => r.text());
+    expect(rows[0]).toContain('Reachable');
+    expect(rows[1]).toContain('The tile server did not return a tile.');
+    api.status.providers.mockResolvedValueOnce({ providers: [] } as never);
+    await w.find('[data-test=check-providers]').trigger('click');
+    await flushPromises();
+    expect(w.text()).toContain('No provider is enabled.');
+    api.status.providers.mockRejectedValueOnce(new Error('x') as never);
+    await w.find('[data-test=check-providers]').trigger('click');
+    await flushPromises();
+    expect(notifier.error).toHaveBeenCalled();
+  });
+
+  it('flags a schema that needs repair and shows small import limits in KiB', async () => {
+    const status = await api.status.get();
+    api.status.get.mockResolvedValue({
+      ...status,
+      schema_ok: false,
+      limits: { ...status.limits, import_max_bytes: 204800 },
+    } as never);
+    const w = await mountView(StatusView);
+    expect(w.find('[data-test=schema-state]').text()).toContain('Needs repair');
+    expect(w.find('[data-test=limits]').text()).toContain('200 KiB');
   });
 
   it('reports a loading failure', async () => {

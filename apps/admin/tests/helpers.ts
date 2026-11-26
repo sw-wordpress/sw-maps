@@ -257,10 +257,42 @@ export function fakeApi(): FakeApi {
       })),
     },
     status: {
+      providers: vi.fn(async () => ({
+        providers: [
+          {
+            id: 1,
+            name: 'OpenStreetMap',
+            type: 'xyz',
+            host: 'tile.openstreetmap.org',
+            ok: true,
+            status: 200,
+            message: 'Connection successful.',
+          },
+          {
+            id: 2,
+            name: 'Own tiles',
+            type: 'xyz',
+            host: 'tiles.example.org',
+            ok: false,
+            status: 503,
+            message: 'The tile server did not return a tile.',
+          },
+        ],
+      })),
       get: vi.fn(async () => ({
         plugin_version: '0.1.0',
         db_version: 1,
         db_expected: 1,
+        schema_ok: true,
+        limits: {
+          max_features_per_layer: 5000,
+          import_max_bytes: 5242880,
+          import_max_coords: 200000,
+          public_page_size: 500,
+          php_memory_limit: '256M',
+          php_max_execution_time: 30,
+          php_post_max_size: '8M',
+        },
         tables: [
           { name: 'wp_swmap_maps', exists: true },
           { name: 'wp_swmap_layers', exists: false },
