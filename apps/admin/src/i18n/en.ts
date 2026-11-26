@@ -178,6 +178,7 @@ export default {
       gpx_segment: 'Track segment with invalid coordinates.',
       gpx_track: 'Track without a segment of at least two points.',
       duplicate_external_id: 'External ID occurs more than once in the file.',
+      external_id_exists: 'External ID already exists in the layer.',
       external_id_too_long: 'External ID is too long.',
       field_invalid: 'Field "{field}" is invalid and was left empty.',
     },

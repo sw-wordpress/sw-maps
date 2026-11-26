@@ -110,6 +110,27 @@ final class ImportServiceTest extends TestCase
         }
     }
 
+    public function testAppendRejectsExternalIdsThatAlreadyExist(): void
+    {
+        $layer = $this->f->layerService->create($this->mapId, ['title' => 'L']);
+        $this->f->featureService->create($layer->id, ['geometry' => ['type' => 'Point', 'coordinates' => [1, 1]], 'external_id' => 'a1']);
+        $content = self::geojson([['props' => ['id' => 'a1', 'name' => 'dup']], ['props' => ['id' => 'b2', 'name' => 'new']]]);
+        $args = ['format' => 'geojson', 'content' => $content, 'mode' => 'append', 'layer_id' => $layer->id];
+        $dry = $this->service()->run($this->mapId, $args + ['dry_run' => true]);
+        self::assertSame([1, 1], [$dry['created'], $dry['error_count']]);
+        self::assertSame('external_id_exists', $dry['errors'][0]['code']);
+        try {
+            $this->service()->run($this->mapId, $args);
+            self::fail('expected the invalid entry to block the import');
+        } catch (ValidationException $e) {
+            self::assertArrayHasKey('file', $e->errors());
+        }
+        self::assertCount(1, $this->f->features->items);
+        $report = $this->service()->run($this->mapId, $args + ['skip_invalid' => true]);
+        self::assertSame([1, 1], [$report['created'], $report['skipped']]);
+        self::assertCount(2, $this->f->features->items);
+    }
+
     public function testAppendKeepsExistingFeatures(): void
     {
         $layer = $this->f->layerService->create($this->mapId, ['title' => 'L']);

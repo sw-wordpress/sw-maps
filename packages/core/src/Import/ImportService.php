@@ -68,6 +68,19 @@ final class ImportService
         $mapping = $this->mapping($input, $parsed->columns);
         $extra = $this->extraColumns($input, $parsed->columns);
         [$rows, $rowErrors, $rowWarnings] = $this->prepare($parsed, $mapping, $extra);
+        if ($mode === ImportMode::Append && $layer !== null) {
+            // The (layer, external id) pair is unique: appending an id that exists would abort the whole import.
+            $taken = $this->features->byExternalIds($layer->id, $this->externalIds($rows));
+            $free = [];
+            foreach ($rows as $row) {
+                if ($row['external_id'] !== null && isset($taken[$row['external_id']])) {
+                    $rowErrors[] = ['index' => $row['index'], 'code' => 'external_id_exists', 'message' => 'External ID already exists in the layer.', 'params' => []];
+                } else {
+                    $free[] = $row;
+                }
+            }
+            $rows = $free;
+        }
         $errorCount = $parsed->errorCount + count($rowErrors);
         $errors = array_slice(array_merge(array_map(static fn (ParseIssue $i): array => $i->toArray(), $parsed->errors), $rowErrors), 0, $this->limits->maxErrors);
         $warnings = array_slice(array_merge(array_map(static fn (ParseIssue $i): array => $i->toArray(), $parsed->warnings), $rowWarnings), 0, $this->limits->maxErrors);
@@ -220,7 +233,7 @@ final class ImportService
     /**
      * @param array<string, string> $mapping
      * @param list<string> $extra source columns that become additional fields
-     * @return array{0: list<array{geometry: \SWMaps\Core\Domain\Geometry, properties: FeatureProperties, external_id: ?string}>, 1: list<array{index: int, code: string, message: string, params: array<string, string>}>, 2: list<array{index: int, code: string, message: string, params: array<string, string>}>}
+     * @return array{0: list<array{geometry: \SWMaps\Core\Domain\Geometry, properties: FeatureProperties, external_id: ?string, index: int}>, 1: list<array{index: int, code: string, message: string, params: array<string, string>}>, 2: list<array{index: int, code: string, message: string, params: array<string, string>}>}
      */
     private function prepare(ParseResult $parsed, array $mapping, array $extra): array
     {
@@ -250,7 +263,7 @@ final class ImportService
             if ($external !== null) {
                 $seen[$external] = true;
             }
-            $rows[] = ['geometry' => $feature->geometry, 'properties' => $properties, 'external_id' => $external];
+            $rows[] = ['geometry' => $feature->geometry, 'properties' => $properties, 'external_id' => $external, 'index' => $feature->index];
         }
 
         return [$rows, $errors, $warnings];
@@ -327,7 +340,7 @@ final class ImportService
     }
 
     /**
-     * @param list<array{geometry: \SWMaps\Core\Domain\Geometry, properties: FeatureProperties, external_id: ?string}> $rows
+     * @param list<array{geometry: \SWMaps\Core\Domain\Geometry, properties: FeatureProperties, external_id: ?string, index: int}> $rows
      * @return list<string>
      */
     private function externalIds(array $rows): array

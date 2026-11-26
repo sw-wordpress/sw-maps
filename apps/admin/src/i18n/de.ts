@@ -182,6 +182,7 @@ const de: Messages = {
       gpx_segment: 'Track-Segment mit ungültigen Koordinaten.',
       gpx_track: 'Track ohne Segment mit mindestens zwei Punkten.',
       duplicate_external_id: 'Externe ID kommt in der Datei mehrfach vor.',
+      external_id_exists: 'Externe ID existiert im Layer bereits.',
       external_id_too_long: 'Externe ID ist zu lang.',
       field_invalid: 'Feld „{field}“ ist ungültig und bleibt leer.',
     },
