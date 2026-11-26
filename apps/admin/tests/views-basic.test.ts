@@ -40,6 +40,32 @@ describe('DashboardView', () => {
     expect(w.find('[data-test=provider-card]').text()).toContain('tile.openstreetmap.org');
   });
 
+  it('counts across every page of maps', async () => {
+    api.maps.list
+      .mockResolvedValueOnce({
+        items: [makeMap({ status: 'published', feature_count: 2 })],
+        total: 3,
+        totalPages: 2,
+      } as never)
+      .mockResolvedValueOnce({
+        items: [
+          makeMap({ id: 2, status: 'published', feature_count: 5 }),
+          makeMap({ id: 3, feature_count: 1 }),
+        ],
+        total: 3,
+        totalPages: 2,
+      } as never);
+    const w = await mountView(DashboardView);
+    expect(api.maps.list).toHaveBeenCalledTimes(2);
+    expect(api.maps.list).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 2, per_page: 100 }),
+    );
+    expect(w.find('[data-test=stat-maps]').text()).toBe('3');
+    expect(w.find('[data-test=stat-published]').text()).toBe('2');
+    expect(w.find('[data-test=stat-drafts]').text()).toBe('1');
+    expect(w.find('[data-test=stat-features]').text()).toBe('8');
+  });
+
   it('shows a hint without enabled provider and hides the card without permission', async () => {
     api.providers.list.mockResolvedValue([makeProvider({ enabled: false })] as never);
     expect((await mountView(DashboardView)).find('[data-test=provider-card]').text()).toContain(

@@ -1,29 +1,40 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { getConfig, hasCapability } from '@/config';
-import { useMapsStore } from '@/stores/maps';
+import { api } from '@/api';
 import { useProvidersStore } from '@/stores/providers';
 import { useNotify } from '@/composables/useNotify';
 import { errorMessage } from '@/utils/errors';
 
 const { t } = useI18n();
-const maps = useMapsStore();
 const providers = useProvidersStore();
 const notify = useNotify();
 const canManage = hasCapability(getConfig(), 'swmap_manage_system');
 const ready = ref(false);
 
-const published = computed(() => maps.items.filter((m) => m.status === 'published').length);
-const features = computed(() => maps.items.reduce((sum, m) => sum + (m.feature_count ?? 0), 0));
+const stats = ref({ total: 0, published: 0, drafts: 0, features: 0 });
+const MAX_PAGES = 100;
+
+/** Aggregates over every page (the list endpoint is paginated), without touching the shared list store. */
+async function loadStats(): Promise<void> {
+  const next = { total: 0, published: 0, drafts: 0, features: 0 };
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    const result = await api().maps.list({ page, per_page: 100 });
+    for (const map of result.items) {
+      if (map.status === 'published') next.published++;
+      else next.drafts++;
+      next.features += map.feature_count ?? 0;
+    }
+    next.total = result.total;
+    if (page >= result.totalPages) break;
+  }
+  stats.value = next;
+}
 
 onMounted(async () => {
-  maps.search = '';
-  maps.status = '';
-  maps.page = 1;
-  maps.perPage = 100;
   try {
-    await Promise.all([maps.load(), canManage ? providers.load() : Promise.resolve()]);
+    await Promise.all([loadStats(), canManage ? providers.load() : Promise.resolve()]);
   } catch (error) {
     notify.error(errorMessage(error, t('app.loadFailed')));
   } finally {
@@ -36,21 +47,21 @@ onMounted(async () => {
   <div v-if="ready">
     <div class="swmap-grid">
       <div class="swmap-stat">
-        <div class="swmap-stat__value" data-test="stat-maps">{{ maps.total }}</div>
+        <div class="swmap-stat__value" data-test="stat-maps">{{ stats.total }}</div>
         <div class="swmap-stat__label">{{ t('dashboard.maps') }}</div>
       </div>
       <div class="swmap-stat">
-        <div class="swmap-stat__value" data-test="stat-published">{{ published }}</div>
+        <div class="swmap-stat__value" data-test="stat-published">{{ stats.published }}</div>
         <div class="swmap-stat__label">{{ t('dashboard.published') }}</div>
       </div>
       <div class="swmap-stat">
         <div class="swmap-stat__value" data-test="stat-drafts">
-          {{ maps.items.length - published }}
+          {{ stats.drafts }}
         </div>
         <div class="swmap-stat__label">{{ t('dashboard.drafts') }}</div>
       </div>
       <div class="swmap-stat">
-        <div class="swmap-stat__value" data-test="stat-features">{{ features }}</div>
+        <div class="swmap-stat__value" data-test="stat-features">{{ stats.features }}</div>
         <div class="swmap-stat__label">{{ t('dashboard.features') }}</div>
       </div>
     </div>
