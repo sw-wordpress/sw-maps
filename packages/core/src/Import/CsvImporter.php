@@ -14,8 +14,8 @@ use SWMaps\Core\Exception\InvalidGeometryException;
 final class CsvImporter implements ImporterInterface
 {
     public const DELIMITERS = [',', ';', "\t", '|'];
-    private const LON_NAMES = ['lon', 'lng', 'long', 'longitude', 'x'];
-    private const LAT_NAMES = ['lat', 'latitude', 'y'];
+    private const LON_NAMES = ['lon', 'lng', 'long', 'longitude', 'x', 'laenge', 'länge', 'laengengrad', 'längengrad'];
+    private const LAT_NAMES = ['lat', 'latitude', 'y', 'breite', 'breitengrad'];
 
     public function parse(string $content, ImportLimits $limits, array $options = []): ParseResult
     {

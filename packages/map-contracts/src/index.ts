@@ -31,6 +31,8 @@ export interface FeatureProperties {
   link: string | null;
   /** `builtin:<name>` or `media:<attachment id>` */
   icon: string;
+  /** Structured additional fields (label/value pairs, plain text). */
+  fields?: { label: string; value: string }[];
   /** Public output only: resolved media URLs (local files). */
   image_url?: string | null;
   icon_url?: string | null;
@@ -92,6 +94,8 @@ export interface MapSettingsData {
   clickToLoad: boolean;
   /** Viewer only: group nearby markers into clickable clusters. */
   cluster: boolean;
+  /** Features are loaded for the visible area instead of being embedded (large maps). */
+  ajax: boolean;
   providerId: number | null;
 }
 
@@ -111,7 +115,7 @@ export interface MapData {
 
 export interface ProviderData {
   id: number;
-  type: 'xyz';
+  type: 'xyz' | 'pmtiles';
   name: string;
   public_config: {
     urlTemplate: string;
@@ -129,7 +133,7 @@ export interface ProviderData {
 
 /** Provider as delivered to visitors: the key is already resolved, no secrets. */
 export interface PublicProvider {
-  type: 'xyz';
+  type: 'xyz' | 'pmtiles';
   urlTemplate: string;
   attribution: string;
   minZoom: number;
@@ -161,6 +165,8 @@ export interface PublicFeature {
   properties: FeatureProperties;
   style: StyleMap;
   categories?: number[];
+  /** Display variant: the geometry was simplified for output (the stored geometry is unchanged). */
+  simplified?: boolean;
 }
 
 export interface PublicCategory {
@@ -185,6 +191,8 @@ export interface MapRenderData {
   provider: PublicProvider | null;
   layers: PublicLayer[];
   categories?: PublicCategory[];
+  /** Public features endpoint when the map loads its features on demand (AJAX mode); null/absent = inline. */
+  ajaxUrl?: string | null;
   /** WP Consent API category that must be granted before tiles are requested; null = no gating. */
   consentCategory: string | null;
   strings: ViewerStrings;

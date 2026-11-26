@@ -19,6 +19,8 @@
 - Kategorien für Standorte (REST `/categories`): Standardfarbe und -symbol pro Kategorie, Filter-Legende und Suche im Viewer, die Liste und Karte gemeinsam filtern.
 - Stile im Editor: Linienstärke, Strichmuster, Deckkraft und Flächenfüllung; Kategorien zuweisen und verwalten; Kaskade Layer → Kategorie → Standort für Farbe und Symbol.
 - Layer: Reihenfolge ändern (bestimmt die Zeichenreihenfolge), Layer-Stil (Farbe, Stärke, Muster, Deckkraft) und Zoombegrenzung pro Layer; Basiskarte (Anbieter) und Overlays (Layer) sind getrennt.
+- Optionaler AJAX-Modus pro Karte (öffentlicher Endpunkt `/public/maps/{id}/features` mit bbox, Zoom und Kategoriefilter, begrenzte Seitengröße, entprellt und abbrechbar); große Linien und Flächen werden für die Ausgabe vereinfacht (gespeicherte Geometrie unverändert; Filter `swmap_simplify_min_points`, `swmap_simplify_tolerance`).
+- PMTiles-Anbieter für Raster-Archive (Verbindungstest, externer Host wird vor der Aktivierung angezeigt); Zusatzfelder (Bezeichnung/Wert) für Standorte, auch aus CSV-Spalten; Streckenlänge (Haversine) im Editor.
 
 ### Bugs
 

@@ -61,6 +61,7 @@ msgid "The geometry is invalid."
 msgstr "Die Geometrie ist ungültig."
 
 #: packages/wordpress/src/Api/BaseController.php:76
+#: packages/wordpress/src/Api/PublicController.php:55
 #: packages/wordpress/src/Api/SettingsController.php:53
 msgid "Invalid input."
 msgstr "Ungültige Eingabe."
@@ -70,6 +71,7 @@ msgid "The file cannot be imported."
 msgstr "Die Datei kann nicht importiert werden."
 
 #: packages/wordpress/src/Api/BaseController.php:94
+#: packages/wordpress/src/Api/PublicController.php:51
 msgid "Not found."
 msgstr "Nicht gefunden."
 
@@ -89,17 +91,23 @@ msgstr "Das Standortlimit dieses Layers ist erreicht."
 msgid "You are not allowed to publish maps."
 msgstr "Sie dürfen Karten nicht veröffentlichen."
 
-#: packages/wordpress/src/Api/ProvidersController.php:120
+#: packages/wordpress/src/Api/ProvidersController.php:124
+#: packages/wordpress/src/Api/ProvidersController.php:162
 msgid "The tile server is not reachable."
 msgstr "Der Kachelserver ist nicht erreichbar."
 
-#: packages/wordpress/src/Api/ProvidersController.php:131
+#: packages/wordpress/src/Api/ProvidersController.php:135
+#: packages/wordpress/src/Api/ProvidersController.php:173
 msgid "Connection successful."
 msgstr "Verbindung erfolgreich."
 
-#: packages/wordpress/src/Api/ProvidersController.php:131
+#: packages/wordpress/src/Api/ProvidersController.php:135
 msgid "The tile server did not return a tile."
 msgstr "Der Kachelserver hat keine Kachel geliefert."
+
+#: packages/wordpress/src/Api/ProvidersController.php:173
+msgid "The file is not a PMTiles archive (version 3)."
+msgstr "Die Datei ist kein PMTiles-Archiv (Version 3)."
 
 #: packages/wordpress/src/Integration/Block.php:27
 msgid "SW Map"
@@ -113,60 +121,60 @@ msgstr "Zeigt eine mit SW Maps erstellte Karte an."
 msgid "Draft"
 msgstr "Entwurf"
 
-#: packages/wordpress/src/Integration/MapPayload.php:134
+#: packages/wordpress/src/Integration/MapPayload.php:194
 msgid "Zoom in"
 msgstr "Vergrößern"
 
-#: packages/wordpress/src/Integration/MapPayload.php:135
+#: packages/wordpress/src/Integration/MapPayload.php:195
 msgid "Zoom out"
 msgstr "Verkleinern"
 
-#: packages/wordpress/src/Integration/MapPayload.php:136
+#: packages/wordpress/src/Integration/MapPayload.php:196
 msgid "Fullscreen"
 msgstr "Vollbild"
 
-#: packages/wordpress/src/Integration/MapPayload.php:137
+#: packages/wordpress/src/Integration/MapPayload.php:197
 msgid "Exit fullscreen"
 msgstr "Vollbild beenden"
 
-#: packages/wordpress/src/Integration/MapPayload.php:138
+#: packages/wordpress/src/Integration/MapPayload.php:198
 msgid "Load map"
 msgstr "Karte laden"
 
-#: packages/wordpress/src/Integration/MapPayload.php:139
+#: packages/wordpress/src/Integration/MapPayload.php:199
 msgid "The map is shown after you accept the cookies required for it."
 msgstr "Die Karte wird angezeigt, sobald Sie die dafür nötigen Cookies akzeptieren."
 
-#: packages/wordpress/src/Integration/MapPayload.php:140
+#: packages/wordpress/src/Integration/MapPayload.php:200
 msgid "Loading the map contacts the map provider and transmits your IP address."
 msgstr "Beim Laden der Karte wird der Kartenanbieter kontaktiert und Ihre IP-Adresse übertragen."
 
-#: packages/wordpress/src/Integration/MapPayload.php:141
+#: packages/wordpress/src/Integration/MapPayload.php:201
 msgid "The map could not be displayed."
 msgstr "Die Karte konnte nicht angezeigt werden."
 
-#: packages/wordpress/src/Integration/MapPayload.php:142
+#: packages/wordpress/src/Integration/MapPayload.php:202
 msgid "Map attribution"
 msgstr "Kartenquelle"
 
-#: packages/wordpress/src/Integration/MapPayload.php:143
+#: packages/wordpress/src/Integration/MapPayload.php:203
 #: packages/wordpress/src/Integration/Renderer.php:133
 msgid "Open link"
 msgstr "Link öffnen"
 
-#: packages/wordpress/src/Integration/MapPayload.php:144
+#: packages/wordpress/src/Integration/MapPayload.php:204
 msgid "Close"
 msgstr "Schließen"
 
-#: packages/wordpress/src/Integration/MapPayload.php:145
+#: packages/wordpress/src/Integration/MapPayload.php:205
 msgid "Search locations"
 msgstr "Standorte suchen"
 
-#: packages/wordpress/src/Integration/MapPayload.php:146
+#: packages/wordpress/src/Integration/MapPayload.php:206
 msgid "Filter by category"
 msgstr "Nach Kategorie filtern"
 
-#: packages/wordpress/src/Integration/MapPayload.php:147
+#: packages/wordpress/src/Integration/MapPayload.php:207
 msgid "No locations found."
 msgstr "Keine Standorte gefunden."
 

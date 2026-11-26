@@ -21,10 +21,13 @@ const content = ref('');
 const format = ref<Format>('geojson');
 const delimiter = ref(',');
 const decimal = ref('.');
+const lonColumn = ref('');
+const latColumn = ref('');
 const mode = ref('new_layer');
 const layerId = ref<number | null>(null);
 const layerTitle = ref('');
 const mapping = ref<Record<string, string>>({});
+const extraColumns = ref<string[]>([]);
 const skipInvalid = ref(false);
 const confirmReplace = ref(false);
 const report = ref<ImportReport | null>(null);
@@ -65,6 +68,7 @@ function reset(): void {
   report.value = null;
   failure.value = '';
   mapping.value = {};
+  extraColumns.value = [];
   skipInvalid.value = false;
   confirmReplace.value = false;
   layerTitle.value = '';
@@ -82,6 +86,7 @@ watch(
 async function onFile(picked: File | null): Promise<void> {
   report.value = null;
   mapping.value = {};
+  extraColumns.value = [];
   failure.value = '';
   if (!picked) {
     content.value = '';
@@ -105,9 +110,16 @@ function body(dryRun: boolean): Record<string, unknown> {
   };
   if (needsLayer.value) payload['layer_id'] = layerId.value;
   else payload['layer_title'] = layerTitle.value;
-  if (format.value === 'csv')
-    payload['options'] = { delimiter: delimiter.value, decimal: decimal.value };
+  if (format.value === 'csv') {
+    payload['options'] = {
+      delimiter: delimiter.value,
+      decimal: decimal.value,
+      ...(lonColumn.value.trim() === '' ? {} : { lon_column: lonColumn.value.trim() }),
+      ...(latColumn.value.trim() === '' ? {} : { lat_column: latColumn.value.trim() }),
+    };
+  }
   if (Object.keys(mapping.value).length > 0) payload['mapping'] = mapping.value;
+  if (extraColumns.value.length > 0) payload['extra_columns'] = extraColumns.value;
   if (!dryRun) {
     payload['skip_invalid'] = skipInvalid.value;
     payload['confirm_replace'] = confirmReplace.value;
@@ -219,6 +231,26 @@ async function run(): Promise<void> {
             />
           </template>
         </div>
+        <div v-if="format === 'csv'" class="row q-col-gutter-md">
+          <q-input
+            v-model="lonColumn"
+            class="col-6"
+            dense
+            outlined
+            :label="t('import.lonColumn')"
+            data-test="lon-column"
+            @update:model-value="report = null"
+          />
+          <q-input
+            v-model="latColumn"
+            class="col-6"
+            dense
+            outlined
+            :label="t('import.latColumn')"
+            data-test="lat-column"
+            @update:model-value="report = null"
+          />
+        </div>
         <div class="row q-col-gutter-md">
           <q-select
             v-model="mode"
@@ -291,6 +323,18 @@ async function run(): Promise<void> {
             </div>
           </div>
 
+          <q-select
+            v-if="report.columns.length > 0"
+            v-model="extraColumns"
+            multiple
+            use-chips
+            dense
+            outlined
+            :options="report.columns"
+            :label="t('import.extraColumns')"
+            data-test="extra-columns"
+            @update:model-value="check(true)"
+          />
           <ul v-if="report.preview.length > 0" class="swmap-import-list" data-test="preview">
             <li v-for="(row, i) in report.preview" :key="i">
               {{ row.title || t('editor.untitledFeature') }}

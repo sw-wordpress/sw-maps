@@ -31,7 +31,11 @@ final class Provider
         if (trim($name) === '' || mb_strlen($name) > 190) {
             $errors['name'] = 'Name is required (max. 190 characters).';
         }
-        if (!self::validUrlTemplate($urlTemplate)) {
+        if ($type === ProviderType::Pmtiles) {
+            if (!self::validPmtilesUrl($urlTemplate)) {
+                $errors['public_config.urlTemplate'] = 'Must be an http(s) URL of a .pmtiles file.';
+            }
+        } elseif (!self::validUrlTemplate($urlTemplate)) {
             $errors['public_config.urlTemplate'] = 'Must be an http(s) URL containing {z}, {x} and {y}.';
         }
         if (trim($attribution) === '' || mb_strlen($attribution) > 500 || preg_match('/[<>]/', $attribution) === 1) {
@@ -62,6 +66,14 @@ final class Provider
         return preg_match('/^' . self::SECRET_PREFIX . '[A-Z0-9_]{1,57}$/', $name) === 1;
     }
 
+    /** One archive file; the path (before any query) must end in .pmtiles. */
+    public static function validPmtilesUrl(string $url): bool
+    {
+        return strlen($url) <= 2000
+            && preg_match('#^https?://[^\s"<>\\{}]+$#i', $url) === 1
+            && preg_match('#^[^?\#]*\.pmtiles(?:[?\#]|$)#i', $url) === 1;
+    }
+
     public static function validUrlTemplate(string $url): bool
     {
         return strlen($url) <= 2000
@@ -74,10 +86,15 @@ final class Provider
         return new self($id, ProviderType::Xyz, 'OpenStreetMap', self::OSM_URL, self::OSM_ATTRIBUTION, 0, 19, 256, '', null, true);
     }
 
+    public static function pmtiles(string $name, string $url, string $attribution, int $maxZoom = 15, int $id = 0): self
+    {
+        return new self($id, ProviderType::Pmtiles, $name, $url, $attribution, 0, $maxZoom, 256, '', null, false);
+    }
+
     /** The key placeholder is resolved here. Attribution is plain text with optional [label](https://url) links, rendered as DOM nodes by the renderer. */
     public function resolvedUrlTemplate(): string
     {
-        return str_replace('{key}', rawurlencode($this->publicKey), $this->urlTemplate);
+        return $this->type === ProviderType::Pmtiles ? $this->urlTemplate : str_replace('{key}', rawurlencode($this->publicKey), $this->urlTemplate);
     }
 
     /**

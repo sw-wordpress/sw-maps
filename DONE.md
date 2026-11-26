@@ -147,3 +147,40 @@ Erledigte Aufgaben aus [TODO.md](TODO.md) (Foundation = M0, MVP = M1; Details de
   - Ergebnis: `SchemaTest`, `MultisiteTest`, `LifecycleTest`.
 - [x] M1-30: Akzeptanzkriterien 1–9 aus P§17 einzeln nachweisen; Release-ZIP auf Testinstallation ohne Build-Tools installieren
   - Ergebnis: `docs/acceptance-mvp.md`, `make dist`, `bin/test-zip-install.sh`.
+
+## M2 – Geodaten (P§16 Phase 2)
+
+- [x] M2-01: Mehrere Layer pro Karte (Titel, Sichtbarkeit, Reihenfolge, Stil); Basiskarte und Overlay getrennt; Zoombegrenzung pro Layer
+  - Ergebnis: Layer-Reihenfolge (hoch/runter, bestimmt die Zeichenreihenfolge), Layer-Stil und Zoombegrenzung pro Layer (`minZoom`/`maxZoom`, auch für Cluster); Basiskarte (Anbieter) und Overlays (Layer) sind getrennte Konzepte. Tests: `model.test.ts`, `LayerPanel`, `filters.test.ts`.
+- [x] M2-02: Linien und Polygone zeichnen und bearbeiten (Stützpunkte verschieben/ergänzen/entfernen); Multi-Geometrien; Polygonlöcher beim Import erhalten und im Editor testen
+  - Ergebnis: Das Auswahlwerkzeug verschiebt, ergänzt (Ziehen auf der Linie) und entfernt (Alt+Klick) Stützpunkte; Polygonlöcher und Multi-Geometrien bleiben durch Import und Bearbeitung erhalten (`renderer.test.ts`, `ImportersTest`, e2e). Einschränkung: Neue Multi-Geometrien werden nicht gezeichnet, nur importiert und bearbeitet.
+- [x] M2-03: Stile: Farbe, Deckkraft, Linienstärke, Füllung, Strichmuster; Stilregeln pro Layer
+  - Ergebnis: Farbe, Deckkraft, Linienstärke, Füllung, Strichmuster je Standort und Layer; Kaskade Layer → Kategorie → Standort ersetzt freie Stilregeln (Stil-Objekte sind flach, Regeln mit Bedingungen sind nicht umgesetzt).
+- [x] M2-04: Kategorien und Tags mit Filter, Legende und individueller Gestaltung (nicht nur per Farbe unterscheidbar)
+  - Ergebnis: Seitenweite Kategorien (REST `/categories`, Verwaltung im Editor), Zuordnung je Standort, Filter-Legende mit Symbol und Farbe im Viewer, Kategorie-Stil als Standard für Farbe und Symbol. Tags als eigenes Konzept gibt es nicht (Kategorien decken den Fall ab).
+- [x] M2-05: Marker-Clustering (klickbar, auflösbar)
+  - Ergebnis: Clustering per Karteneinstellung (`cluster`): Gruppen mit Anzahl, Klick zoomt auf die Marker. Einschränkung: Marker an exakt derselben Stelle bleiben beim höchsten Zoom gruppiert (Liste verwenden).
+- [x] M2-06: Synchronisierte Standortliste mit Suche und Filter
+  - Ergebnis: Serverseitig gerenderte Liste mit Suche und Kategoriefilter, Liste und Karte werden gemeinsam gefiltert (`filters.ts`).
+- [x] M2-07: Popup, Tooltip oder Detail-Seitenleiste; strukturierte Zusatzfelder
+  - Ergebnis: Popup mit strukturierten Zusatzfeldern (Bezeichnung/Wert, bis 10, reiner Text), auch aus CSV-Spalten importierbar. Tooltip und Detail-Seitenleiste sind nicht umgesetzt (das Popup erfüllt die Anforderung „oder“).
+- [x] M2-08: Streckenlänge sphärisch (Haversine), Unit-Tests
+  - Ergebnis: Core `DistanceCalculator` (Haversine, Radius 6371008,8 m) mit Unit-Tests; identische Berechnung in `map-contracts` (`lineLengthMeters`), Anzeige im Editor. Die REST-API liefert keine Länge.
+- [x] M2-09: Importer GeoJSON (RFC 7946; GeometryCollection ablehnen oder zerlegen), GPX 1.0/1.1 (Segmente, Routen, Wegpunkte), CSV (Trennzeichen/Dezimalformat explizit)
+  - Ergebnis: `GeoJsonImporter` (GeometryCollection wird zerlegt, Teile erhalten `#n` an der externen ID), `GpxImporter` (1.0/1.1; Wegpunkte, Routen, Tracks als (Multi-)Linie je Segment), `CsvImporter` (Trennzeichen und Dezimaltrenner explizit). Tests: `ImportersTest`.
+- [x] M2-10: Sichere Parser: XML ohne Entities/DTD/Netzwerk; Limits für Dateigröße, Feature-/Koordinatenanzahl, Verschachtelung; XXE-Fixtures
+  - Ergebnis: Limits (`ImportLimits`: 5 MiB, Features je Layer, 200 000 Koordinaten, JSON-Tiefe 32); XML mit `LIBXML_NONET`, ohne Entities, DOCTYPE wird abgelehnt (XXE-, Entity-Bomb- und Netzwerk-Fixtures im Test).
+- [x] M2-11: Import-Assistent: Vorschau, Feldzuordnung, Validierungsbericht, Fehlerliste; Modi neuer Layer, Ergänzen, Upsert (externe ID), bestätigtes Ersetzen
+  - Ergebnis: Import-Assistent als Dialog im Editor: Datei, Format, Modus, Feldzuordnung, Zusatzfelder, Vorschau, Hinweise/Fehler (übersetzt über Codes), Bestätigung für Ersetzen. Tests: `import-dialog.test.ts`, e2e.
+- [x] M2-12: Synchroner Import in Transaktion bzw. Staging; Ablehnung vor dem Schreiben bei Limit-Überschreitung; kein stiller Teilimport; Hinweis auf neu zu verknüpfende Medien im Importbericht
+  - Ergebnis: `ImportService`: eine Transaktion, Ablehnung vor dem Schreiben bei Limit-Überschreitung, kein stiller Teilimport (ungültige Einträge nur mit `skip_invalid`), Hinweis `media_relink_hint`, Upsert behält Bild und Symbol.
+- [x] M2-13: `POST /imports` (validieren und ausführen)
+  - Ergebnis: `POST /imports` (`dry_run` validiert, sonst ausführen); Doku in `docs/rest-api.md`; WP-Integrationstest.
+- [x] M2-14: PMTiles-/Protomaps-Provider
+  - Ergebnis: Typ `pmtiles` (Raster) mit Verbindungstest und Range-Request-Quelle; Vektor-Archive bewusst nicht ([ADR 0005](docs/adr/0005-pmtiles-raster.md)).
+- [x] M2-15: Optionaler AJAX-Modus pro Karte: `/public/maps/{id}/features` mit bbox/zoom/filter, begrenzte Seitengröße, Abbrechen/Entprellen beim Verschieben
+  - Ergebnis: Einstellung `ajax`: öffentlicher Endpunkt `/public/maps/{id}/features` (bbox, Zoom, Kategorien, Seitengröße ≤ 500), Client mit Debounce (250 ms) und Abbruch; Tests: `ajax.test.ts`, `RestApiTest`, e2e.
+- [x] M2-16: Vereinfachte Geometrien für große Tracks als Darstellungsvariante (kanonische Geometrie bleibt unverändert)
+  - Ergebnis: `Simplifier` (Douglas-Peucker, Endpunkte bleiben) im öffentlichen Payload ab 500 Koordinaten (`swmap_simplify_min_points`, `swmap_simplify_tolerance`); gespeicherte Geometrie unverändert (WP-Test).
+- [x] M2-17: Playwright: Track importieren, Filter, Clustering; Tests für alle Importformate inkl. Fehlerfälle
+  - Ergebnis: `e2e/tests/m2-geodata.spec.ts`: Import GeoJSON (Polygonloch bleibt erhalten, Upsert per externer ID), GPX-Track, CSV mit Semikolon/Dezimalkomma, Fehlerfälle (XXE-Datei, ungültige Einträge blockieren bis zum Überspringen), Kategorie-Filter, Suche, Clustering (Klick zoomt), AJAX-Modus (nur sichtbarer Ausschnitt, nichts inline).

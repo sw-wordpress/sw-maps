@@ -232,6 +232,26 @@ final class ImportServiceTest extends TestCase
         self::assertSame(1, $this->service()->run($this->mapId, ['format' => 'csv', 'content' => $semi, 'options' => ['delimiter' => ';', 'decimal' => ',']])['created']);
     }
 
+    public function testExtraColumnsBecomeStructuredFieldsAndUpsertKeepsOthers(): void
+    {
+        $csv = "name,lat,lon,id,Hours,Phone\nHut,49,8,h1,9-17,\n";
+        $report = $this->service()->run($this->mapId, ['format' => 'csv', 'content' => $csv, 'extra_columns' => ['Hours', 'Phone']]);
+        $feature = array_values($this->f->features->items)[0];
+        self::assertSame([['label' => 'Hours', 'value' => '9-17']], $feature->properties->fields, 'empty values are skipped');
+        $this->f->features->save($feature->with(null, \SWMaps\Core\Domain\FeatureProperties::fromArray(['fields' => [['label' => 'Own', 'value' => 'kept']]], $feature->properties)));
+        $this->service()->run($this->mapId, ['format' => 'csv', 'content' => "name,lat,lon,id\nHut2,49,8,h1\n", 'mode' => 'upsert', 'layer_id' => $report['layer_id']]);
+        $after = array_values($this->f->features->items)[0];
+        self::assertSame([['label' => 'Own', 'value' => 'kept']], $after->properties->fields, 'a file without extra columns keeps existing fields');
+        foreach ([['x'], 'x', ['nope'], array_fill(0, 11, 'Hours')] as $bad) {
+            try {
+                $this->service()->run($this->mapId, ['format' => 'csv', 'content' => $csv, 'extra_columns' => $bad, 'dry_run' => true]);
+                self::fail('expected ValidationException');
+            } catch (ValidationException $e) {
+                self::assertArrayHasKey('extra_columns', $e->errors());
+            }
+        }
+    }
+
     public function testFieldMapperSuggestAndApply(): void
     {
         self::assertSame(['title' => 'Name', 'link' => 'Website', 'external_id' => 'ID'], FieldMapper::suggest(['Name', 'ID', 'Website', 'x']));

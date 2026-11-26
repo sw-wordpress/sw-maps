@@ -480,6 +480,79 @@ describe('EditableOpenLayersRenderer', () => {
     expect((moved[0]?.geometry.coordinates as number[])[0]).toBeCloseTo(9, 6);
   });
 
+  it('keeps polygon holes and multi geometries through a modification and a round trip', () => {
+    const polygon = {
+      type: 'Polygon' as const,
+      coordinates: [
+        [
+          [8, 49],
+          [9, 49],
+          [9, 50],
+          [8, 50],
+          [8, 49],
+        ],
+        [
+          [8.2, 49.2],
+          [8.4, 49.2],
+          [8.4, 49.4],
+          [8.2, 49.2],
+        ],
+      ],
+    };
+    const multiLine = {
+      type: 'MultiLineString' as const,
+      coordinates: [
+        [
+          [8, 49],
+          [8.5, 49.5],
+        ],
+        [
+          [9, 49],
+          [9.5, 49.5],
+        ],
+      ],
+    };
+    const multiPolygon = {
+      type: 'MultiPolygon' as const,
+      coordinates: [
+        [
+          [
+            [8, 49],
+            [9, 49],
+            [9, 50],
+            [8, 49],
+          ],
+        ],
+        [polygon.coordinates[0]!, polygon.coordinates[1]!],
+      ],
+    };
+    const data = makeData();
+    const props = feature(1).properties;
+    data.layers[0]!.features = [
+      { id: 30, geometry: polygon, properties: props, style: {} },
+      { id: 31, geometry: multiLine, properties: props, style: {} },
+      { id: 32, geometry: multiPolygon, properties: props, style: {} },
+    ];
+    const r = new EditableOpenLayersRenderer();
+    r.mount(target, { data });
+    const moved: Array<{ id: number; geometry: { type: string; coordinates: unknown } }> = [];
+    r.onEdit('geometrychange', (e) => moved.push(e as never));
+    const inner = r as unknown as Internals;
+    const features = inner.source.getFeatures();
+    inner.modify.dispatchEvent(
+      new ModifyEvent(
+        'modifyend',
+        new Collection(features),
+        new MapBrowserEvent('pointerup', {} as never, new Event('pointerup') as never),
+      ),
+    );
+    expect(moved.map((m) => m.id)).toEqual([30, 31, 32]);
+    expect(moved[0]!.geometry).toEqual(polygon);
+    expect((moved[0]!.geometry.coordinates as unknown[]).length).toBe(2);
+    expect(moved[1]!.geometry).toEqual(multiLine);
+    expect(moved[2]!.geometry).toEqual(multiPolygon);
+  });
+
   it('keeps drawing and editing working after the map was rebuilt', () => {
     const r = editor();
     r.setTool('line');

@@ -24,6 +24,7 @@ final class MapSettings
         public readonly bool $showList,
         public readonly bool $clickToLoad,
         public readonly bool $cluster,
+        public readonly bool $ajax,
         public readonly ?int $providerId
     ) {
         $errors = [];
@@ -43,10 +44,10 @@ final class MapSettings
 
     public static function default(): self
     {
-        return new self(400, null, false, true, true, true, true, true, true, false, true, null);
+        return new self(400, null, false, true, true, true, true, true, true, false, true, false, null);
     }
 
-    private const BOOLEANS = ['scrollZoom', 'touch', 'drag', 'zoomControls', 'fullscreen', 'scale', 'showList', 'clickToLoad', 'cluster'];
+    private const BOOLEANS = ['scrollZoom', 'touch', 'drag', 'zoomControls', 'fullscreen', 'scale', 'showList', 'clickToLoad', 'cluster', 'ajax'];
 
     /** @param array<string, mixed> $data */
     public static function fromArray(array $data, ?self $base = null): self
@@ -96,6 +97,7 @@ final class MapSettings
             $flags['showList'],
             $flags['clickToLoad'],
             $flags['cluster'],
+            $flags['ajax'],
             $provider
         );
     }
@@ -115,6 +117,7 @@ final class MapSettings
             'showList' => $this->showList,
             'clickToLoad' => $this->clickToLoad,
             'cluster' => $this->cluster,
+            'ajax' => $this->ajax,
             'providerId' => $this->providerId,
         ];
     }

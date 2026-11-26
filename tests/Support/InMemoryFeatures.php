@@ -44,6 +44,18 @@ final class InMemoryFeatures implements FeatureRepositoryInterface
         return $out;
     }
 
+    public function inBounds(array $layerIds, array $bounds, array $categoryIds, int $page, int $perPage): array
+    {
+        $matching = array_values(array_filter($this->forLayers($layerIds), static function (Feature $f) use ($bounds, $categoryIds): bool {
+            $b = $f->bounds();
+
+            return $b->maxLongitude >= $bounds[0] && $b->minLongitude <= $bounds[2] && $b->maxLatitude >= $bounds[1] && $b->minLatitude <= $bounds[3]
+                && ($categoryIds === [] || array_intersect($categoryIds, $f->categoryIds) !== []);
+        }));
+
+        return ['items' => array_slice($matching, ($page - 1) * $perPage, $perPage), 'total' => count($matching)];
+    }
+
     public function count(int $layerId): int
     {
         return count($this->forLayers([$layerId]));

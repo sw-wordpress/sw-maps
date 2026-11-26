@@ -18,5 +18,5 @@ Nicht übernommen: Backup/Restore-Logik, Restore-App, Update-Mechanismus (X-01).
 
 ## OpenLayers und PMTiles (M0-03)
 - `ol` 10.x: Lizenz BSD-2-Clause (GPL-kompatibel), aktiv gepflegt. Gemessene Bundlegrößen (gzip): Frontend-Viewer ≈ 101 KB JS + 2 KB CSS; Budget in `bin/bundle-budget.json` (CI: `node bin/check-bundle-size.mjs`). Editor-Interaktionen (`Draw`, `Modify`, `Snap`) sind nur im Admin-Chunk enthalten, nicht im Frontend-Bundle.
-- PMTiles: `pmtiles` (BSD-3-Clause) mit eigener `ol`-Anbindung. Die Einbindung erfolgt erst in M2-14; Entscheidung für die Bibliothek wird dort anhand von Bundlegröße gegen das Budget getroffen. Bis dahin keine Abhängigkeit.
+- PMTiles: `pmtiles` 4.x (BSD-3-Clause), nur im Frontend-Viewer, nur Raster-Archive mit eigener `ol`-Anbindung (≈ 5,5 KB gzip; Viewer jetzt 112,4 von 115 KB). Entscheidung und Grenzen: [ADR 0005](adr/0005-pmtiles-raster.md).
 - Tile-Nutzung: https://operations.osmfoundation.org/policies/tiles/ (Attribution, kein Prefetch, Hinweis auf Alternativen im Admin).

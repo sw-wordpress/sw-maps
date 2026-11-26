@@ -66,7 +66,8 @@ final class ImportService
 
         $parsed = $this->importer($format)->parse($content, $this->limits, Input::object($input, 'options') ?? []);
         $mapping = $this->mapping($input, $parsed->columns);
-        [$rows, $rowErrors, $rowWarnings] = $this->prepare($parsed, $mapping);
+        $extra = $this->extraColumns($input, $parsed->columns);
+        [$rows, $rowErrors, $rowWarnings] = $this->prepare($parsed, $mapping, $extra);
         $errorCount = $parsed->errorCount + count($rowErrors);
         $errors = array_slice(array_merge(array_map(static fn (ParseIssue $i): array => $i->toArray(), $parsed->errors), $rowErrors), 0, $this->limits->maxErrors);
         $warnings = array_slice(array_merge(array_map(static fn (ParseIssue $i): array => $i->toArray(), $parsed->warnings), $rowWarnings), 0, $this->limits->maxErrors);
@@ -141,7 +142,7 @@ final class ImportService
     /**
      * Upsert only overwrites what the file provides; image and icon of the existing location stay untouched.
      *
-     * @return array<string, string>
+     * @return array<string, mixed>
      */
     private function patch(FeatureProperties $properties): array
     {
@@ -150,6 +151,9 @@ final class ImportService
             if ($value !== '') {
                 $patch[$key] = $value;
             }
+        }
+        if ($properties->fields !== []) {
+            $patch['fields'] = $properties->fields;
         }
 
         return $patch;
@@ -215,9 +219,10 @@ final class ImportService
 
     /**
      * @param array<string, string> $mapping
+     * @param list<string> $extra source columns that become additional fields
      * @return array{0: list<array{geometry: \SWMaps\Core\Domain\Geometry, properties: FeatureProperties, external_id: ?string}>, 1: list<array{index: int, code: string, message: string, params: array<string, string>}>, 2: list<array{index: int, code: string, message: string, params: array<string, string>}>}
      */
-    private function prepare(ParseResult $parsed, array $mapping): array
+    private function prepare(ParseResult $parsed, array $mapping, array $extra): array
     {
         $rows = [];
         $errors = [];
@@ -241,7 +246,7 @@ final class ImportService
                 ];
                 continue;
             }
-            $properties = $this->properties($fields, $feature->index, $warnings);
+            $properties = $this->properties($fields + ['fields' => $this->extraFields($feature->attributes, $extra)], $feature->index, $warnings);
             if ($external !== null) {
                 $seen[$external] = true;
             }
@@ -252,9 +257,51 @@ final class ImportService
     }
 
     /**
+     * @param array<string, mixed> $input
+     * @param list<string> $columns
+     * @return list<string>
+     */
+    private function extraColumns(array $input, array $columns): array
+    {
+        if (!array_key_exists('extra_columns', $input)) {
+            return [];
+        }
+        $given = $input['extra_columns'];
+        if (!is_array($given) || !array_is_list($given) || count($given) > FeatureProperties::MAX_FIELDS) {
+            throw ValidationException::field('extra_columns', sprintf('Select at most %d columns.', FeatureProperties::MAX_FIELDS));
+        }
+        $out = [];
+        foreach ($given as $column) {
+            if (!is_string($column) || !in_array($column, $columns, true)) {
+                throw ValidationException::field('extra_columns', 'Column does not exist in the file.');
+            }
+            $out[] = $column;
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param array<string, string> $attributes
+     * @param list<string> $extra
+     * @return list<array{label: string, value: string}>
+     */
+    private function extraFields(array $attributes, array $extra): array
+    {
+        $fields = [];
+        foreach ($extra as $column) {
+            if (($attributes[$column] ?? '') !== '') {
+                $fields[] = ['label' => $column, 'value' => $attributes[$column]];
+            }
+        }
+
+        return $fields;
+    }
+
+    /**
      * Invalid optional fields are dropped with a warning instead of rejecting the entry.
      *
-     * @param array<string, string> $fields
+     * @param array<string, mixed> $fields
      * @param list<array{index: int, code: string, message: string, params: array<string, string>}> $warnings
      */
     private function properties(array $fields, int $index, array &$warnings): FeatureProperties

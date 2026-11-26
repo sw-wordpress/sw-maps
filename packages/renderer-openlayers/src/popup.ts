@@ -54,6 +54,18 @@ export function buildPopup(
     a.textContent = properties.address;
     root.append(a);
   }
+  if (properties.fields && properties.fields.length > 0) {
+    const list = doc.createElement('dl');
+    list.className = 'swmap-popup__fields';
+    for (const field of properties.fields) {
+      const term = doc.createElement('dt');
+      term.textContent = field.label;
+      const value = doc.createElement('dd');
+      value.textContent = field.value;
+      list.append(term, value);
+    }
+    root.append(list);
+  }
   const href = safeLink(properties.link);
   if (href !== null) {
     const link = doc.createElement('a');

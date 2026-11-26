@@ -28,6 +28,7 @@ export const EMPTY_PROPERTIES: FeatureProperties = {
   image_id: null,
   link: null,
   icon: 'builtin:pin',
+  fields: [],
 };
 
 export function cloneDoc(doc: EditorDoc): EditorDoc {
@@ -467,6 +468,7 @@ export function buildRenderData(
       fullscreen: false,
       clickToLoad: false,
       cluster: false,
+      ajax: false,
     },
     provider: toPublicProvider(provider),
     layers,

@@ -32,6 +32,7 @@ import { Emitter } from './emitter';
 import { toOlGeometry } from './geometry';
 import { buildPopup } from './popup';
 import type { FeatureMeta } from './styles';
+import { createPmtilesSource } from './pmtiles';
 import { createClusterStyleFunction, createStyleFunction, layerInRange } from './styles';
 
 export interface RendererConfig {
@@ -106,6 +107,24 @@ export class OpenLayersRenderer implements MapRenderer {
     const center = view.getCenter() ?? [0, 0];
     const [lon, lat] = toLonLat(center);
     return { center: [lon ?? 0, lat ?? 0], zoom: view.getZoom() ?? 0 };
+  }
+
+  /** Visible area in WGS84 (clamped to the valid range), used to load features for the viewport. */
+  getBounds(): BoundsTuple {
+    const map = this.requireMap();
+    const extent = map.getView().calculateExtent(map.getSize());
+    const [minLon = -180, minLat = -85, maxLon = 180, maxLat = 85] = transformExtent(
+      extent,
+      'EPSG:3857',
+      'EPSG:4326',
+    );
+    const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
+    return [
+      clamp(minLon, -180, 180),
+      clamp(minLat, -90, 90),
+      clamp(maxLon, -180, 180),
+      clamp(maxLat, -90, 90),
+    ];
   }
 
   fitBounds(bounds: BoundsTuple, options: { padding?: number; maxZoom?: number } = {}): void {
@@ -359,6 +378,8 @@ export class OpenLayersRenderer implements MapRenderer {
     const p = data.provider;
     // The tile grid (size, zoom range) is fixed when the source is created: changing it needs a rebuild.
     return JSON.stringify([
+      p?.type,
+      p?.type === 'pmtiles' ? p.urlTemplate : null,
       p?.tileSize,
       p?.minZoom,
       p?.maxZoom,
@@ -376,6 +397,11 @@ export class OpenLayersRenderer implements MapRenderer {
   private createTileSource(data: MapRenderData): XYZ | null {
     const p = data.provider;
     if (!p) return null;
+    if (p.type === 'pmtiles') {
+      return createPmtilesSource(p, () =>
+        this.events.emit('error', new Error('Vector tiles are not supported.')),
+      );
+    }
     return new XYZ({
       url: p.urlTemplate,
       minZoom: p.minZoom,
@@ -391,7 +417,7 @@ export class OpenLayersRenderer implements MapRenderer {
     const source = this.tileLayer?.getSource();
     const p = data.provider;
     if (!p || !source) return;
-    if (source.getUrls()?.[0] !== p.urlTemplate) source.setUrl(p.urlTemplate);
+    if (p.type === 'xyz' && source.getUrls()?.[0] !== p.urlTemplate) source.setUrl(p.urlTemplate);
     if (this.attribution) {
       const next = buildAttribution(
         p.attribution,

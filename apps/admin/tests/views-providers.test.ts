@@ -116,6 +116,29 @@ describe('ProvidersView', () => {
     expect(w.exists()).toBe(true);
   });
 
+  it('creates a PMTiles provider without tile size, key and secret and fixes the type afterwards', async () => {
+    const w = await mountView(ProvidersView);
+    await w.find('[data-test=add]').trigger('click');
+    await flushPromises();
+    const select = w
+      .findAllComponents({ name: 'QSelect' })
+      .find((c) => c.vm.$attrs['data-test'] === 'type')!;
+    select.vm.$emit('update:modelValue', 'pmtiles');
+    await flushPromises();
+    expect(dialog('input[data-test=secret]')).toBeNull();
+    expect(dialog('.q-dialog')?.textContent).toContain('PMTiles URL');
+    await typeInto('input[data-test=name]', 'Archive');
+    await typeInto('input[data-test=url]', 'https://files.example.org/world.pmtiles');
+    await typeInto('input[data-test=attribution]', '© Protomaps');
+    dialog('[data-test=save]')?.click();
+    await flushPromises();
+    const body = api.providers.create.mock.calls[0]![0] as Record<string, unknown>;
+    expect(body).toMatchObject({ type: 'pmtiles', name: 'Archive' });
+    expect(body).not.toHaveProperty('secret_constant');
+    expect(body['public_config']).not.toHaveProperty('tileSize');
+    expect(body['public_config']).not.toHaveProperty('publicKey');
+  });
+
   it('edits an existing provider and sends no secret when the constant is cleared', async () => {
     const w = await mountView(ProvidersView);
     await w.findAll('[data-test=edit]')[1]?.trigger('click');
@@ -129,6 +152,7 @@ describe('ProvidersView', () => {
       2,
       expect.objectContaining({ secret_constant: null }),
     );
+    expect(api.providers.update.mock.calls.at(-1)![1]).not.toHaveProperty('type');
   });
 
   it('shows server side validation errors at the fields and keeps the dialog open', async () => {

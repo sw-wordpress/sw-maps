@@ -92,6 +92,24 @@ describe('ImportDialog', () => {
     expect(w.emitted('imported')?.[0]).toEqual([12]);
   });
 
+  it('sends explicit longitude and latitude columns for CSV only when given', async () => {
+    const w = await open();
+    await pick(w, 'a.csv', 'a');
+    for (const [test, value] of [
+      ['lon-column', 'X'],
+      ['lat-column', ' Y '],
+    ] as const) {
+      const input = el(`input[data-test=${test}]`) as HTMLInputElement;
+      input.value = value;
+      input.dispatchEvent(new Event('input'));
+    }
+    await flushPromises();
+    await click('[data-test=check]');
+    expect(api.imports.run.mock.calls[0]![0]).toMatchObject({
+      options: { delimiter: ',', decimal: '.', lon_column: 'X', lat_column: 'Y' },
+    });
+  });
+
   it('guesses the format from the extension and sends CSV options', async () => {
     const w = await open();
     await pick(w, 'places.csv', 'a,b');
@@ -169,6 +187,18 @@ describe('ImportDialog', () => {
     await pick(w, 'b.geojson', '{}');
     await click('[data-test=check]');
     expect(api.imports.run.mock.calls[1]![0]).not.toHaveProperty('mapping');
+  });
+
+  it('sends columns chosen as additional fields and re-checks', async () => {
+    const w = await open();
+    await pick(w, 'a.csv', 'a');
+    await click('[data-test=check]');
+    const select = w
+      .findAllComponents({ name: 'QSelect' })
+      .find((c) => c.vm.$attrs['data-test'] === 'extra-columns')!;
+    select.vm.$emit('update:modelValue', ['desc']);
+    await flushPromises();
+    expect(api.imports.run.mock.calls[1]![0]).toMatchObject({ extra_columns: ['desc'] });
   });
 
   it('re-checks with the changed field mapping', async () => {

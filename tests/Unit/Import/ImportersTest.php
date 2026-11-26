@@ -161,6 +161,8 @@ final class ImportersTest extends TestCase
         $result = (new CsvImporter())->parse("title,lat,LNG\nA,1.5,2.5\nB,99,1\n", new ImportLimits());
         self::assertCount(1, $result->features);
         self::assertSame(1, $result->errorCount);
+        $german = (new CsvImporter())->parse("Name,Breitengrad,Längengrad\nA,49.5,8.5\n", new ImportLimits());
+        self::assertSame([8.5, 49.5], $german->features[0]->geometry->coordinates);
         $tab = (new CsvImporter())->parse("x\ty\n1\t2\n", new ImportLimits(), ['delimiter' => "\t"]);
         self::assertCount(1, $tab->features);
         $this->expectReason(ImportException::INVALID_OPTION, fn () => (new CsvImporter())->parse("a,b\n1,2\n", new ImportLimits(), ['delimiter' => 'x']));

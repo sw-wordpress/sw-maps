@@ -172,6 +172,15 @@
   margin: 0 0 0.4em;
   font-style: italic;
 }
+.swmap-popup__fields {
+  margin: 0 0 0.4em;
+}
+.swmap-popup__fields dt {
+  font-weight: 600;
+}
+.swmap-popup__fields dd {
+  margin: 0 0 0.25em;
+}
 .swmap-popup__link {
   color: #0b4a8f;
 }

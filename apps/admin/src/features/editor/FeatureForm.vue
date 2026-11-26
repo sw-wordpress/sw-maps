@@ -3,7 +3,7 @@ import { computed, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { CategoryData, FeatureData } from '@sw-maps/map-contracts';
 import { FEATURE_ICONS } from './icons';
-import { isValidPosition, safeColor } from '@sw-maps/map-contracts';
+import { isValidPosition, lineLengthMeters, safeColor } from '@sw-maps/map-contracts';
 import { pickImage } from '@/utils/media';
 
 const props = defineProps<{
@@ -41,9 +41,17 @@ const imageUrl = ref<string | null>(null);
 const coordinatesError = ref(false);
 const linkError = ref(false);
 
+const fieldRows = ref<{ label: string; value: string }[]>([]);
+const MAX_FIELDS = 10;
+
 const isPoint = computed(() => props.feature.geometry.type === 'Point');
 const isArea = computed(() => /Polygon$/.test(props.feature.geometry.type));
 const isLine = computed(() => !isPoint.value && !/^MultiPoint$/.test(props.feature.geometry.type));
+const lengthLabel = computed(() => {
+  const meters = lineLengthMeters(props.feature.geometry);
+  if (meters <= 0) return '';
+  return meters >= 1000 ? `${(meters / 1000).toFixed(2)} km` : `${Math.round(meters)} m`;
+});
 const categoryOptions = computed(() =>
   (props.categories ?? []).map((c) => ({ value: c.id, label: c.title })),
 );
@@ -91,6 +99,7 @@ watch(
     form.address = f.properties.address;
     form.link = f.properties.link ?? '';
     form.color = safeColor(f.style['color'], '#c0392b');
+    fieldRows.value = (f.properties.fields ?? []).map((row) => ({ ...row }));
     form.weight = styleNumber('weight', 3, f);
     form.opacity = styleNumber('opacity', 1, f);
     form.fillOpacity = styleNumber('fillOpacity', 0.25, f);
@@ -108,6 +117,21 @@ watch(
 function commitText(field: 'title' | 'description' | 'address'): void {
   if (form[field] !== props.feature.properties[field])
     emit('patch', { properties: { [field]: form[field] } });
+}
+
+/** Rows without a label are kept in the form until one is entered; only complete rows are stored. */
+function commitFields(): void {
+  const complete = fieldRows.value
+    .map((row) => ({ label: row.label.trim(), value: row.value.trim() }))
+    .filter((row) => row.label !== '');
+  const current = props.feature.properties.fields ?? [];
+  if (JSON.stringify(complete) !== JSON.stringify(current))
+    emit('patch', { properties: { fields: complete } });
+}
+
+function removeField(index: number): void {
+  fieldRows.value.splice(index, 1);
+  commitFields();
 }
 
 function commitLink(): void {
@@ -153,6 +177,9 @@ async function chooseImage(): Promise<void> {
     <div class="text-caption swmap-muted q-mb-sm">
       {{ t('feature.geometry') }}:
       {{ t(`feature.type.${feature.geometry.type}` as 'feature.type.Point') }}
+      <template v-if="lengthLabel">
+        · {{ t('feature.length') }}: <span data-test="length">{{ lengthLabel }}</span>
+      </template>
     </div>
     <q-input
       v-model="form.title"
@@ -217,6 +244,53 @@ async function chooseImage(): Promise<void> {
         :label="t('categories.manage')"
         data-test="manage-categories"
         @click="emit('manageCategories')"
+      />
+    </div>
+    <div class="swmap-field" data-test="fields">
+      <div class="text-caption">{{ t('feature.fields') }}</div>
+      <div
+        v-for="(row, index) in fieldRows"
+        :key="index"
+        class="row q-col-gutter-xs items-center no-wrap q-mb-xs"
+        data-test="field-row"
+      >
+        <q-input
+          v-model="row.label"
+          class="col"
+          outlined
+          dense
+          :label="t('feature.fieldLabel')"
+          data-test="field-label"
+          @blur="commitFields"
+        />
+        <q-input
+          v-model="row.value"
+          class="col"
+          outlined
+          dense
+          :label="t('feature.fieldValue')"
+          data-test="field-value"
+          @blur="commitFields"
+        />
+        <q-btn
+          flat
+          dense
+          round
+          icon="r_close"
+          :aria-label="t('common.delete')"
+          data-test="field-remove"
+          @click="removeField(index)"
+        />
+      </div>
+      <q-btn
+        v-if="fieldRows.length < MAX_FIELDS"
+        flat
+        dense
+        no-caps
+        icon="r_add"
+        :label="t('feature.addField')"
+        data-test="field-add"
+        @click="fieldRows.push({ label: '', value: '' })"
       />
     </div>
     <q-select

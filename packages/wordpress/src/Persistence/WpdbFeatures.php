@@ -66,6 +66,40 @@ final class WpdbFeatures implements FeatureRepositoryInterface {
 		return $out;
 	}
 
+	/**
+	 * @param int[]   $layerIds Layer ids.
+	 * @param float[] $bounds minLon, minLat, maxLon, maxLat.
+	 * @param int[]   $categoryIds Category filter (any).
+	 * @param int     $page Page.
+	 * @param int     $perPage Page size.
+	 * @return array{items: list<Feature>, total: int}
+	 */
+	public function inBounds( array $layerIds, array $bounds, array $categoryIds, int $page, int $perPage ): array {
+		global $wpdb;
+		if ( array() === $layerIds ) {
+			return array(
+				'items' => array(),
+				'total' => 0,
+			);
+		}
+		$table    = Schema::table( 'features' );
+		$links    = Schema::table( 'feature_categories' );
+		$layer_in = implode( ',', array_fill( 0, count( $layerIds ), '%d' ) );
+		$where    = "f.layer_id IN ({$layer_in}) AND f.bbox_max_lon >= %f AND f.bbox_min_lon <= %f AND f.bbox_max_lat >= %f AND f.bbox_min_lat <= %f";
+		$args     = array_merge( array_map( 'intval', $layerIds ), array( $bounds[0], $bounds[2], $bounds[1], $bounds[3] ) );
+		if ( array() !== $categoryIds ) {
+			$cat_in = implode( ',', array_fill( 0, count( $categoryIds ), '%d' ) );
+			$where .= " AND EXISTS (SELECT 1 FROM {$links} fc WHERE fc.feature_id = f.id AND fc.category_id IN ({$cat_in}))";
+			$args   = array_merge( $args, array_map( 'intval', $categoryIds ) );
+		}
+		$total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} f WHERE {$where}", ...$args ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+		$rows  = $wpdb->get_results( $wpdb->prepare( "SELECT f.* FROM {$table} f WHERE {$where} ORDER BY f.layer_id ASC, f.id ASC LIMIT %d OFFSET %d", ...array_merge( $args, array( $perPage, ( $page - 1 ) * $perPage ) ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare,WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+		return array(
+			'items' => $this->hydrate_all( $rows ),
+			'total' => $total,
+		);
+	}
+
 	public function count( int $layerId ): int {
 		global $wpdb;
 		$table = Schema::table( 'features' );

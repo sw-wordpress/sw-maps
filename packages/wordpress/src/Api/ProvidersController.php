@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace SWMaps\WordPress\Api;
 
 use SWMaps\Core\Domain\Provider;
+use SWMaps\Core\Domain\ProviderType;
 use SWMaps\WordPress\Capabilities;
 
 final class ProvidersController extends BaseController {
@@ -99,8 +100,11 @@ final class ProvidersController extends BaseController {
 		return $this->run(
 			function () use ( $request ) {
 				$provider = $this->services()->providers()->get( $this->id( $request ) );
-				$url      = str_replace( array( '{z}', '{x}', '{y}', '{-y}', '{s}' ), array( '0', '0', '0', '0', 'a' ), $provider->resolvedUrlTemplate() );
-				$secret   = $this->secret_value( $provider );
+				if ( ProviderType::Pmtiles === $provider->type ) {
+					return $this->test_pmtiles( $provider );
+				}
+				$url    = str_replace( array( '{z}', '{x}', '{y}', '{-y}', '{s}' ), array( '0', '0', '0', '0', 'a' ), $provider->resolvedUrlTemplate() );
+				$secret = $this->secret_value( $provider );
 				if ( null !== $secret ) {
 					$url = str_replace( '{secret}', rawurlencode( $secret ), $url );
 				}
@@ -132,6 +136,42 @@ final class ProvidersController extends BaseController {
 					)
 				);
 			}
+		);
+	}
+
+	/**
+	 * A PMTiles archive starts with the magic bytes "PMTiles" followed by the version (3); a range request reads them.
+	 *
+	 * @param Provider $provider PMTiles provider.
+	 */
+	private function test_pmtiles( Provider $provider ): \WP_REST_Response {
+		$response = wp_safe_remote_get(
+			$provider->urlTemplate,
+			array(
+				'timeout'     => 5,
+				'redirection' => 2,
+				'headers'     => array( 'Range' => 'bytes=0-7' ),
+				'user-agent'  => 'SW-Maps/' . SWMAPS_VERSION . '; ' . home_url(),
+			)
+		);
+		if ( is_wp_error( $response ) ) {
+			return new \WP_REST_Response(
+				array(
+					'ok'      => false,
+					'status'  => 0,
+					'message' => __( 'The tile server is not reachable.', 'sw-maps' ),
+				)
+			);
+		}
+		$status = (int) wp_remote_retrieve_response_code( $response );
+		$body   = wp_remote_retrieve_body( $response );
+		$ok     = in_array( $status, array( 200, 206 ), true ) && str_starts_with( $body, 'PMTiles' ) && 3 === ord( $body[7] ?? "\0" );
+		return new \WP_REST_Response(
+			array(
+				'ok'      => $ok,
+				'status'  => $status,
+				'message' => $ok ? __( 'Connection successful.', 'sw-maps' ) : __( 'The file is not a PMTiles archive (version 3).', 'sw-maps' ),
+			)
 		);
 	}
 

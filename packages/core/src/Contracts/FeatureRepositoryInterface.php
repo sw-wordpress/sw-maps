@@ -25,6 +25,16 @@ interface FeatureRepositoryInterface
      */
     public function byExternalIds(int $layerId, array $externalIds): array;
 
+    /**
+     * Features whose bounding box intersects the bounds (used by the optional AJAX mode).
+     *
+     * @param list<int> $layerIds
+     * @param array{0: float, 1: float, 2: float, 3: float} $bounds minLon, minLat, maxLon, maxLat
+     * @param list<int> $categoryIds when not empty, only features in at least one of these categories
+     * @return array{items: list<Feature>, total: int}
+     */
+    public function inBounds(array $layerIds, array $bounds, array $categoryIds, int $page, int $perPage): array;
+
     public function count(int $layerId): int;
 
     public function countForMap(int $mapId): int;

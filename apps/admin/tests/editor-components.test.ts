@@ -202,6 +202,84 @@ describe('FeatureForm', () => {
       style: { color: '#336699' },
     });
 
+  it('edits additional fields: add, complete rows only, remove', async () => {
+    const f = makeFeature({
+      properties: { ...makeFeature().properties, fields: [{ label: 'Hours', value: '9-17' }] },
+    });
+    const w = mount(FeatureForm, { props: { feature: f } });
+    expect(w.findAll('[data-test=field-row]')).toHaveLength(1);
+    expect(w.find<HTMLInputElement>('input[data-test=field-label]').element.value).toBe('Hours');
+    await w.find('[data-test=field-add]').trigger('click');
+    expect(w.findAll('[data-test=field-row]')).toHaveLength(2);
+    await blur(w, 'input[data-test=field-value]', '9-17');
+    expect(w.emitted('patch')).toBeUndefined();
+    const labels = w.findAll<HTMLInputElement>('input[data-test=field-label]');
+    await labels[1]!.trigger('focus');
+    await labels[1]!.trigger('focusin');
+    await labels[1]!.setValue(' Phone ');
+    await labels[1]!.trigger('blur');
+    await labels[1]!.trigger('focusout');
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    expect(w.emitted('patch')?.at(-1)).toEqual([
+      {
+        properties: {
+          fields: [
+            { label: 'Hours', value: '9-17' },
+            { label: 'Phone', value: '' },
+          ],
+        },
+      },
+    ]);
+    await w.findAll('[data-test=field-remove]')[0]!.trigger('click');
+    expect(w.emitted('patch')?.at(-1)).toEqual([
+      { properties: { fields: [{ label: 'Phone', value: '' }] } },
+    ]);
+  });
+
+  it('hides the add button at the field limit', () => {
+    const fields = Array.from({ length: 10 }, (_, i) => ({ label: `L${i}`, value: 'v' }));
+    const w = mount(FeatureForm, {
+      props: { feature: makeFeature({ properties: { ...makeFeature().properties, fields } }) },
+    });
+    expect(w.find('[data-test=field-add]').exists()).toBe(false);
+  });
+
+  it('shows the length of lines in metres or kilometres and nothing for other shapes', () => {
+    const long = mount(FeatureForm, {
+      props: {
+        feature: makeFeature({
+          geometry: {
+            type: 'LineString',
+            coordinates: [
+              [0, 0],
+              [0, 1],
+            ],
+          },
+        }),
+      },
+    });
+    expect(long.find('[data-test=length]').text()).toBe('111.20 km');
+    const short = mount(FeatureForm, {
+      props: {
+        feature: makeFeature({
+          geometry: {
+            type: 'LineString',
+            coordinates: [
+              [0, 0],
+              [0, 0.003],
+            ],
+          },
+        }),
+      },
+    });
+    expect(short.find('[data-test=length]').text()).toBe('334 m');
+    expect(
+      mount(FeatureForm, { props: { feature: feature() } })
+        .find('[data-test=length]')
+        .exists(),
+    ).toBe(false);
+  });
+
   it('assigns categories and opens the management dialog', async () => {
     const w = mount(FeatureForm, {
       props: {

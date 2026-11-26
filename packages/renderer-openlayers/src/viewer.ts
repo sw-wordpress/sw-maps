@@ -1,4 +1,5 @@
 import type { MapRenderData, ViewerStrings } from '@sw-maps/map-contracts';
+import { AjaxLoader } from './ajax';
 import { hasConsent, onConsentChange } from './consent';
 import type { FilterBar, FilterState } from './filters';
 import { buildFilterBar, matchingIds } from './filters';
@@ -58,6 +59,7 @@ export class MapViewer {
   private readonly stage: HTMLElement | null;
   private readonly list: HTMLElement | null;
   private readonly listCleanup: Array<() => void> = [];
+  private loader: AjaxLoader | null = null;
   private filterBar: FilterBar | null = null;
   private filterState: FilterState | null = null;
 
@@ -105,6 +107,8 @@ export class MapViewer {
     this.observer?.disconnect();
     this.unsubscribeConsent?.();
     this.unsubscribeConsent = null;
+    this.loader?.destroy();
+    this.loader = null;
     this.renderer?.destroy();
     this.renderer = null;
     for (const fn of this.listCleanup.splice(0)) fn();
@@ -150,6 +154,8 @@ export class MapViewer {
   private withdraw(): void {
     const data = this.data;
     if (!data) return;
+    this.loader?.destroy();
+    this.loader = null;
     this.renderer?.destroy();
     this.renderer = null;
     this.clicked = false;
@@ -173,6 +179,7 @@ export class MapViewer {
       renderer.on('select', (id) => this.markSelected(id));
       renderer.mount(this.stage, { data });
       this.renderer = renderer;
+      this.startAjax(data, renderer);
       this.applyFilter();
       this.setState('ready');
       this.enableListButtons();
@@ -261,10 +268,42 @@ export class MapViewer {
     this.stage.before(bar.element);
   }
 
+  /** On-demand mode: the features of the visible area are requested when the view changes (debounced, abortable). */
+  private startAjax(data: MapRenderData, renderer: OpenLayersRenderer): void {
+    if (!data.ajaxUrl) return;
+    this.loader = new AjaxLoader(data, {
+      url: data.ajaxUrl,
+      onData: (next) => {
+        this.data = next;
+        this.renderer?.update(next);
+      },
+      onError: () => this.showNotice(data.strings.error),
+    });
+    renderer.on('viewchange', () => this.requestArea());
+    this.loader.requestNow(renderer.getBounds(), renderer.getView().zoom, this.categories());
+  }
+
+  private categories(): ReadonlySet<number> {
+    return this.filterState?.categories ?? new Set<number>();
+  }
+
+  private requestArea(now = false): void {
+    const renderer = this.renderer;
+    if (!this.loader || !renderer) return;
+    const args = [renderer.getBounds(), renderer.getView().zoom, this.categories()] as const;
+    if (now) this.loader.requestNow(...args);
+    else this.loader.request(...args);
+  }
+
   private applyFilter(): void {
     const data = this.data;
     const state = this.filterState;
     if (!data || !state) return;
+    if (this.loader) {
+      // Features are not inline: the server applies the category filter.
+      this.requestArea(true);
+      return;
+    }
     const { ids, active } = matchingIds(data, state);
     for (const item of this.list?.querySelectorAll<HTMLElement>('li[data-feature-id]') ?? []) {
       item.hidden = active && !ids.has(Number(item.dataset['featureId']));

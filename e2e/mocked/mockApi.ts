@@ -153,6 +153,7 @@ export async function mockApi(page: Page): Promise<MockApi> {
           showList: true,
           clickToLoad: false,
           cluster: true,
+          ajax: false,
           providerId: null,
         },
         created_at: now,

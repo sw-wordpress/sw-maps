@@ -479,4 +479,137 @@ final class RestApiTest extends SwMapsTestCase {
 		wp_set_current_user( 0 );
 		$this->assertSame( 401, $this->rest( 'GET', '/categories' )->get_status() );
 	}
+
+	public function test_large_tracks_get_a_simplified_display_variant_but_stay_canonical(): void {
+		$map_id = $this->create_map();
+		$layer  = $this->rest( 'POST', "/maps/{$map_id}/layers", array( 'title' => 'Tracks' ) )->get_data();
+		$points = array();
+		for ( $i = 0; $i < 800; $i++ ) {
+			$points[] = array( 8 + $i * 0.0001, 49 + ( 0 === $i % 2 ? 0.0 : 0.000001 ) );
+		}
+		$created = $this->rest( 'POST', "/layers/{$layer['id']}/features", array( 'geometry' => array( 'type' => 'LineString', 'coordinates' => $points ), 'properties' => array( 'title' => 'Long', 'fields' => array( array( 'label' => 'Length', 'value' => '8 km' ) ) ) ) );
+		$this->assertSame( 201, $created->get_status() );
+		$this->assertSame( array( array( 'label' => 'Length', 'value' => '8 km' ) ), $created->get_data()['properties']['fields'] );
+		$small = $this->rest( 'POST', "/layers/{$layer['id']}/features", array( 'geometry' => array( 'type' => 'LineString', 'coordinates' => array_slice( $points, 0, 10 ) ) ) )->get_data();
+		$this->rest( 'PATCH', "/maps/{$map_id}", array( 'status' => 'published' ) );
+
+		$payload = \SWMaps\WordPress\Integration\MapPayload::build( \SWMaps\WordPress\Services::instance()->maps()->get( $map_id ) );
+		$long_out  = $payload['layers'][0]['features'][0];
+		$small_out = $payload['layers'][0]['features'][1];
+		$this->assertTrue( $long_out['simplified'] );
+		$this->assertLessThan( 50, count( $long_out['geometry']['coordinates'] ) );
+		$this->assertSame( $points[0], $long_out['geometry']['coordinates'][0] );
+		$this->assertSame( $points[799], end( $long_out['geometry']['coordinates'] ) );
+		$this->assertArrayNotHasKey( 'simplified', $small_out );
+		$this->assertCount( 10, $small_out['geometry']['coordinates'] );
+
+		// The stored (canonical) geometry is untouched.
+		$stored = $this->rest( 'GET', "/features/{$created->get_data()['id']}" )->get_data();
+		$this->assertCount( 800, $stored['geometry']['coordinates'] );
+
+		// Both thresholds are filterable; 0 disables the display variant.
+		add_filter( 'swmap_simplify_min_points', '__return_zero' );
+		$off = \SWMaps\WordPress\Integration\MapPayload::build( \SWMaps\WordPress\Services::instance()->maps()->get( $map_id ) );
+		$this->assertCount( 800, $off['layers'][0]['features'][0]['geometry']['coordinates'] );
+		$this->assertArrayNotHasKey( 'simplified', $off['layers'][0]['features'][0] );
+		remove_filter( 'swmap_simplify_min_points', '__return_zero' );
+		$this->assertSame( $small['id'], $small_out['id'] );
+	}
+
+	public function test_public_features_endpoint_serves_the_visible_area_of_published_ajax_maps_only(): void {
+		$map_id = $this->create_map();
+		$this->rest( 'PATCH', "/maps/{$map_id}", array( 'settings' => array( 'ajax' => true ) ) );
+		$layer  = $this->rest( 'POST', "/maps/{$map_id}/layers", array( 'title' => 'L' ) )->get_data();
+		$draft  = $this->rest( 'POST', "/maps/{$map_id}/layers", array( 'title' => 'Draft', 'status' => 'draft' ) )->get_data();
+		$cat    = $this->rest( 'POST', '/categories', array( 'title' => 'Huts' ) )->get_data();
+		$in     = $this->rest( 'POST', "/layers/{$layer['id']}/features", array( 'geometry' => $this->point( 8.4, 49.0 ), 'categories' => array( $cat['id'] ) ) )->get_data();
+		$this->rest( 'POST', "/layers/{$layer['id']}/features", array( 'geometry' => $this->point( 8.5, 49.1 ) ) );
+		$this->rest( 'POST', "/layers/{$layer['id']}/features", array( 'geometry' => $this->point( 2.0, 10.0 ) ) );
+		$this->rest( 'POST', "/layers/{$layer['id']}/features", array( 'geometry' => array( 'type' => 'LineString', 'coordinates' => array( array( 7, 48 ), array( 9, 50 ) ) ) ) );
+		$this->rest( 'POST', "/layers/{$draft['id']}/features", array( 'geometry' => $this->point( 8.4, 49.0 ) ) );
+		$route = "/public/maps/{$map_id}/features";
+		$query = array( 'bbox' => '8,48.9,9,49.5' );
+
+		// Not published yet: indistinguishable from "does not exist".
+		wp_set_current_user( 0 );
+		$this->assertSame( 404, $this->rest( 'GET', $route, null, $query )->get_status() );
+		$this->as_role( 'administrator' );
+		$this->rest( 'PATCH', "/maps/{$map_id}", array( 'status' => 'published' ) );
+		wp_set_current_user( 0 );
+
+		$all = $this->rest( 'GET', $route, null, $query );
+		$this->assertSame( 200, $all->get_status(), 'anonymous visitors may read published maps: ' . wp_json_encode( $all->get_data() ) );
+		$data = $all->get_data();
+		$this->assertSame( 3, $data['total'] );
+		$this->assertSame( 1, $data['total_pages'] );
+		$this->assertSame( $layer['id'], $data['layers'][0]['id'] );
+		$this->assertCount( 3, $data['layers'][0]['features'], 'two markers and the crossing line, no draft layer' );
+		$this->assertStringContainsString( 'max-age', (string) $all->get_headers()['Cache-Control'] );
+
+		$filtered = $this->rest( 'GET', $route, null, $query + array( 'categories' => (string) $cat['id'] ) )->get_data();
+		$this->assertSame( array( $in['id'] ), array_column( $filtered['layers'][0]['features'], 'id' ) );
+		$paged = $this->rest( 'GET', $route, null, $query + array( 'per_page' => 2, 'page' => 2 ) )->get_data();
+		$this->assertSame( array( 3, 2, 1 ), array( $paged['total'], $paged['total_pages'], count( $paged['layers'][0]['features'] ) ) );
+		$this->assertSame( 400, $this->rest( 'GET', $route, null, array( 'bbox' => 'a,b,c,d' ) )->get_status() );
+		$this->assertSame( 400, $this->rest( 'GET', $route, null, array( 'bbox' => '9,48,8,50' ) )->get_status(), 'min must not exceed max' );
+		$this->assertSame( 400, $this->rest( 'GET', $route, null, array( 'bbox' => '8,48,9' ) )->get_status() );
+		$this->assertSame( 400, $this->rest( 'GET', $route, null, array( 'bbox' => '8,48,9,50', 'per_page' => 5000 ) )->get_status() );
+		$this->assertSame( 400, $this->rest( 'GET', $route, null )->get_status() );
+		$this->assertSame( 400, $this->rest( 'GET', $route, null, array( 'bbox' => '-200,0,10,10' ) )->get_status() );
+
+		// The inline payload carries no features in this mode, but the endpoint and all categories.
+		$payload = \SWMaps\WordPress\Integration\MapPayload::build( \SWMaps\WordPress\Services::instance()->maps()->get( $map_id ) );
+		$this->assertStringContainsString( $route, $payload['ajaxUrl'] );
+		$this->assertSame( array(), $payload['layers'][0]['features'] );
+		$this->assertSame( 'Huts', $payload['categories'][0]['title'] );
+		$preview = \SWMaps\WordPress\Integration\MapPayload::build( \SWMaps\WordPress\Services::instance()->maps()->get( $map_id ), true );
+		$this->assertNull( $preview['ajaxUrl'], 'draft previews are always inline' );
+		$this->assertNotEmpty( $preview['layers'][0]['features'] );
+
+		// Switching the mode off closes the endpoint again.
+		$this->as_role( 'administrator' );
+		$this->rest( 'PATCH', "/maps/{$map_id}", array( 'settings' => array( 'ajax' => false ) ) );
+		wp_set_current_user( 0 );
+		$this->assertSame( 404, $this->rest( 'GET', $route, null, $query )->get_status() );
+	}
+
+	public function test_pmtiles_provider_connection_test_reads_the_archive_header(): void {
+		$this->as_role( 'administrator' );
+		$created = $this->rest( 'POST', '/providers', array( 'type' => 'pmtiles', 'name' => 'Archive', 'public_config' => array( 'urlTemplate' => 'https://files.example.org/world.pmtiles', 'attribution' => '© Protomaps', 'maxZoom' => 12 ) ) );
+		$this->assertSame( 201, $created->get_status() );
+		$this->assertSame( 'pmtiles', $created->get_data()['type'] );
+		$this->assertSame( array( 'files.example.org' ), $created->get_data()['external_requests'] );
+		$id = $created->get_data()['id'];
+		$this->assertSame( 400, $this->rest( 'POST', '/providers', array( 'type' => 'pmtiles', 'name' => 'Bad', 'public_config' => array( 'urlTemplate' => 'https://files.example.org/{z}/{x}/{y}.png', 'attribution' => 'x' ) ) )->get_status() );
+
+		$seen = array();
+		$mock = static function ( $pre, $args ) use ( &$seen ) {
+			$seen = $args['headers'];
+			return array(
+				'headers'  => array( 'content-type' => 'application/octet-stream' ),
+				'body'     => "PMTiles\x03" . str_repeat( "\0", 8 ),
+				'response' => array( 'code' => 206, 'message' => 'Partial Content' ),
+			);
+		};
+		add_filter( 'pre_http_request', $mock, 10, 2 );
+		$ok = $this->rest( 'POST', "/providers/{$id}/test" )->get_data();
+		$this->assertTrue( $ok['ok'] );
+		$this->assertSame( 'bytes=0-7', $seen['Range'], 'only the header is requested' );
+		remove_filter( 'pre_http_request', $mock, 10 );
+
+		foreach ( array( "PMTiles\x02", '<html>', '' ) as $body ) {
+			$bad = static fn () => array(
+				'headers'  => array(),
+				'body'     => $body,
+				'response' => array( 'code' => 200, 'message' => 'OK' ),
+			);
+			add_filter( 'pre_http_request', $bad );
+			$this->assertFalse( $this->rest( 'POST', "/providers/{$id}/test" )->get_data()['ok'], 'rejects ' . wp_json_encode( $body ) );
+			remove_filter( 'pre_http_request', $bad );
+		}
+		$down = static fn () => new WP_Error( 'http_request_failed', 'down' );
+		add_filter( 'pre_http_request', $down );
+		$this->assertSame( 0, $this->rest( 'POST', "/providers/{$id}/test" )->get_data()['status'] );
+		remove_filter( 'pre_http_request', $down );
+	}
 }

@@ -310,6 +310,7 @@ describe('render data', () => {
       fullscreen: false,
       clickToLoad: false,
       cluster: false,
+      ajax: false,
     });
     expect(data.viewport.autoBounds).toBe(false);
     expect(data.consentCategory).toBeNull();

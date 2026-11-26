@@ -63,6 +63,7 @@ final class Plugin {
 			new Api\LayersController(),
 			new Api\ImportsController(),
 			new Api\CategoriesController(),
+			new Api\PublicController(),
 			new Api\FeaturesController(),
 			new Api\ProvidersController(),
 			new Api\SettingsController(),

@@ -87,3 +87,30 @@ export function safeLink(url: string | null | undefined): string | null {
 export function safeColor(value: unknown, fallback: string): string {
   return typeof value === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(value) ? value : fallback;
 }
+
+/** Mean earth radius in metres (identical to the PHP DistanceCalculator). */
+export const EARTH_RADIUS_M = 6371008.8;
+
+/** Great-circle (Haversine) distance in metres between two positions. */
+export function distanceMeters(a: Position, b: Position): number {
+  const rad = Math.PI / 180;
+  const dLat = (b[1] - a[1]) * rad;
+  const dLon = (b[0] - a[0]) * rad;
+  const h =
+    Math.sin(dLat / 2) ** 2 + Math.cos(a[1] * rad) * Math.cos(b[1] * rad) * Math.sin(dLon / 2) ** 2;
+  return 2 * EARTH_RADIUS_M * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+/** Length in metres of a LineString/MultiLineString geometry (0 for every other geometry type). */
+export function lineLengthMeters(geometry: { type: string; coordinates: unknown }): number {
+  const path = (positions: Position[]): number =>
+    positions.slice(1).reduce((sum, p, i) => sum + distanceMeters(positions[i] as Position, p), 0);
+  if (geometry.type === 'LineString') return path(flattenPositions(geometry.coordinates));
+  if (geometry.type === 'MultiLineString' && Array.isArray(geometry.coordinates)) {
+    return geometry.coordinates.reduce(
+      (sum: number, line) => sum + path(flattenPositions(line)),
+      0,
+    );
+  }
+  return 0;
+}

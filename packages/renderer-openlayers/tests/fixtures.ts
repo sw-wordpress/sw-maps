@@ -57,6 +57,7 @@ export function makeData(overrides: Partial<MapRenderData> = {}): MapRenderData 
       showList: true,
       clickToLoad: false,
       cluster: false,
+      ajax: false,
       providerId: 1,
     },
     provider: {
