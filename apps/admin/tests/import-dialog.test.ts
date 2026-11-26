@@ -189,6 +189,27 @@ describe('ImportDialog', () => {
     expect(api.imports.run.mock.calls[1]![0]).not.toHaveProperty('mapping');
   });
 
+  it('drops a validation result that arrives after the inputs changed', async () => {
+    const w = await open();
+    await pick(w, 'a.geojson', '{}');
+    let finish: (value: never) => void = () => undefined;
+    api.imports.run.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)) as never);
+    await click('[data-test=check]');
+    await pick(w, 'b.geojson', '{"other":1}');
+    finish(report() as never);
+    await flushPromises();
+    expect(el('[data-test=summary]')).toBeNull();
+    expect(el('[data-test=run]')?.hasAttribute('disabled')).toBe(true);
+    api.imports.run.mockReturnValueOnce(
+      new Promise((_, reject) => (finish = reject as never)) as never,
+    );
+    await click('[data-test=check]');
+    await pick(w, 'c.geojson', '{"third":1}');
+    finish(new Error('late') as never);
+    await flushPromises();
+    expect(el('[data-test=failure]')).toBeNull();
+  });
+
   it('sends columns chosen as additional fields and re-checks', async () => {
     const w = await open();
     await pick(w, 'a.csv', 'a');

@@ -32,7 +32,7 @@ import { Emitter } from './emitter';
 import { toOlGeometry } from './geometry';
 import { buildPopup } from './popup';
 import type { FeatureMeta } from './styles';
-import { createPmtilesSource } from './pmtiles';
+import { closePmtiles, createPmtilesSource } from './pmtiles';
 import { ruleStyle } from './styles';
 import { createClusterStyleFunction, createStyleFunction, layerInRange } from './styles';
 
@@ -370,6 +370,7 @@ export class OpenLayersRenderer implements MapRenderer {
     this.clusterSource = null;
     this.clusterLayer = null;
     this.vectorLayer = null;
+    closePmtiles(this.tileLayer?.getSource());
     this.tileLayer = null;
   }
 

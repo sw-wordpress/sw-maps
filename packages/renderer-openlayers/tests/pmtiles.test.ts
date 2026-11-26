@@ -11,7 +11,7 @@ vi.mock('pmtiles', () => ({
   TileType: { Unknown: 0, Mvt: 1, Png: 2, Jpeg: 3, Webp: 4, Avif: 5 },
 }));
 
-import { createPmtilesSource } from '../src/pmtiles';
+import { closePmtiles, createPmtilesSource } from '../src/pmtiles';
 import { OpenLayersRenderer } from '../src';
 import { makeData } from './fixtures';
 
@@ -87,6 +87,35 @@ describe('PMTiles source', () => {
     expect(getZxy).not.toHaveBeenCalled();
   });
 
+  it('starts no archive read after the source was closed (consent withdrawn)', async () => {
+    let releaseHeader: (value: { tileType: number }) => void = () => undefined;
+    getHeader.mockReturnValue(new Promise((resolve) => (releaseHeader = resolve)));
+    const source = createPmtilesSource(provider, vi.fn());
+    const { image, tile } = fakeTile();
+    const errors = vi.fn();
+    image.addEventListener('error', errors);
+    loaderOf(source)(tile, '0/0/0');
+    closePmtiles(source);
+    releaseHeader({ tileType: 2 });
+    await vi.waitFor(() => expect(errors).toHaveBeenCalledTimes(1));
+    expect(getZxy).not.toHaveBeenCalled();
+    // A read that finishes after closing is dropped, and tiles requested later never start one.
+    const late = createPmtilesSource(provider, vi.fn());
+    getZxy.mockImplementation(async () => {
+      closePmtiles(late);
+      return { data: new ArrayBuffer(1) };
+    });
+    const a = fakeTile();
+    loaderOf(late)(a.tile, '1/0/0');
+    await vi.waitFor(() => expect(getZxy).toHaveBeenCalledTimes(1));
+    expect(a.image.src).not.toBe('blob:x');
+    getZxy.mockClear();
+    loaderOf(late)(fakeTile().tile, '1/1/0');
+    await Promise.resolve();
+    expect(getZxy).not.toHaveBeenCalled();
+    closePmtiles(undefined);
+  });
+
   it('turns read failures into tile errors', async () => {
     getZxy.mockRejectedValue(new Error('range request failed'));
     const { image, tile } = fakeTile();
@@ -113,5 +142,6 @@ describe('renderer with a PMTiles provider', () => {
     });
     r.update(other);
     expect(target.querySelectorAll('.swmap__canvas')).toHaveLength(1);
+    r.destroy();
   });
 });

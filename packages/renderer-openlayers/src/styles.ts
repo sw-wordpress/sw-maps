@@ -98,7 +98,7 @@ export function createStyleFunction(
     if (type === 'Point' || type === 'MultiPoint') {
       const icon = resolveIcon(meta.properties, meta.style, meta.layer.style, meta.categoryStyle);
       const markerOpacity = numberStyle(
-        meta.style['opacity'] ?? meta.layer.style['opacity'],
+        meta.style['opacity'] ?? meta.categoryStyle['opacity'] ?? meta.layer.style['opacity'],
         0,
         1,
         1,
@@ -120,11 +120,24 @@ export function createStyleFunction(
       );
     }
 
-    const weight = numberStyle(meta.style['weight'] ?? meta.layer.style['weight'], 1, 20, 3);
-    const opacity = numberStyle(meta.style['opacity'] ?? meta.layer.style['opacity'], 0, 1, 1);
-    const dash = DASHES[String(meta.style['dash'] ?? meta.layer.style['dash'])];
+    const weight = numberStyle(
+      meta.style['weight'] ?? meta.categoryStyle['weight'] ?? meta.layer.style['weight'],
+      1,
+      20,
+      3,
+    );
+    const opacity = numberStyle(
+      meta.style['opacity'] ?? meta.categoryStyle['opacity'] ?? meta.layer.style['opacity'],
+      0,
+      1,
+      1,
+    );
+    const dash =
+      DASHES[String(meta.style['dash'] ?? meta.categoryStyle['dash'] ?? meta.layer.style['dash'])];
     const fillOpacity = numberStyle(
-      meta.style['fillOpacity'] ?? meta.layer.style['fillOpacity'],
+      meta.style['fillOpacity'] ??
+        meta.categoryStyle['fillOpacity'] ??
+        meta.layer.style['fillOpacity'],
       0,
       1,
       0.25,

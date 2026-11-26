@@ -466,6 +466,76 @@ describe('line and area styles', () => {
     expect([plain.getLineDash(), plain.getWidth()]).toEqual([null, 20]);
   });
 
+  it('applies every attribute of a matching layer rule, below the feature own style', () => {
+    const data = makeData();
+    data.categories = [{ id: 7, title: 'C', style: {} }];
+    data.layers[0]!.style = {
+      weight: 2,
+      rules: [
+        {
+          categoryId: 7,
+          style: { weight: 12, dash: 'dotted', opacity: 0.5, fillOpacity: 0.7, color: '#ff0000' },
+        },
+      ],
+    };
+    data.layers[0]!.features = [
+      {
+        id: 40,
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [8, 49],
+            [8.1, 49.1],
+          ],
+        },
+        properties: feature(40).properties,
+        style: {},
+        categories: [7],
+      },
+      {
+        id: 41,
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [8, 49],
+            [8.1, 49.1],
+          ],
+        },
+        properties: feature(41).properties,
+        style: { weight: 4 },
+        categories: [7],
+      },
+      {
+        id: 42,
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [8, 49],
+            [8.1, 49.1],
+          ],
+        },
+        properties: feature(42).properties,
+        style: {},
+        categories: [],
+      },
+    ];
+    const r = mounted(data);
+    const fn = (
+      r as unknown as { vectorLayer: { getStyleFunction(): StyleFn } }
+    ).vectorLayer.getStyleFunction();
+    const features = (
+      r as unknown as { source: { getFeatures(): Feature[] } }
+    ).source.getFeatures();
+    const stroke = (i: number) => fn(features[i]!, 1).getStroke();
+    expect([stroke(0).getWidth(), stroke(0).getLineDash(), stroke(0).getColor()]).toEqual([
+      12,
+      [2, 8],
+      'rgba(255, 0, 0, 0.5)',
+    ]);
+    expect(stroke(1).getWidth()).toBe(4);
+    expect(stroke(2).getWidth()).toBe(2);
+  });
+
   it('applies the opacity to markers and hides filtered features', () => {
     const { style } = styleOf({ opacity: 0.4 }, {}, 'Point');
     expect(style.getImage().getOpacity()).toBe(0.4);

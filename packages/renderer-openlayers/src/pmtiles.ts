@@ -14,6 +14,13 @@ const MIME: Partial<Record<TileType, string>> = {
   [TileType.Avif]: 'image/avif',
 };
 
+const closers = new WeakMap<XYZ, () => void>();
+
+/** Stops a PMTiles source: tiles that are still waiting for a read are dropped and no new range request starts. */
+export function closePmtiles(source: unknown): void {
+  closers.get(source as XYZ)?.();
+}
+
 /**
  * Raster tile source backed by one PMTiles archive (HTTP range requests, no tile server). Vector archives are not
  * rendered: `onUnsupported` is called once and no tile is drawn.
@@ -22,13 +29,16 @@ export function createPmtilesSource(provider: PublicProvider, onUnsupported: () 
   const archive = new PMTiles(provider.urlTemplate);
   let tileType: Promise<TileType> | null = null;
   let reported = false;
+  let closed = false;
   const typeOf = (): Promise<TileType> =>
     (tileType ??= archive.getHeader().then((h) => h.tileType));
 
   const load = async (tile: Tile, src: string): Promise<void> => {
     const image = (tile as ImageTile).getImage() as HTMLImageElement;
     const [z, x, y] = src.split('/').map(Number) as [number, number, number];
+    if (closed) throw new Error('Closed');
     const type = await typeOf();
+    if (closed) throw new Error('Closed');
     const mime = MIME[type];
     if (!mime) {
       if (!reported) {
@@ -38,6 +48,7 @@ export function createPmtilesSource(provider: PublicProvider, onUnsupported: () 
       throw new Error('Vector tiles are not supported.');
     }
     const result = await archive.getZxy(z, x, y);
+    if (closed) throw new Error('Closed');
     if (!result) {
       image.src = EMPTY_TILE;
       return;
@@ -49,7 +60,7 @@ export function createPmtilesSource(provider: PublicProvider, onUnsupported: () 
     image.src = url;
   };
 
-  return new XYZ({
+  const source = new XYZ({
     minZoom: provider.minZoom,
     maxZoom: provider.maxZoom,
     tileSize: provider.tileSize,
@@ -63,4 +74,8 @@ export function createPmtilesSource(provider: PublicProvider, onUnsupported: () 
       });
     },
   });
+  closers.set(source, () => {
+    closed = true;
+  });
+  return source;
 }

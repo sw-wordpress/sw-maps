@@ -141,11 +141,15 @@ function describe(error: unknown): string {
 async function check(keepMapping = false): Promise<void> {
   busy.value = true;
   failure.value = '';
+  // A result belongs to the inputs it was requested for: when they changed meanwhile it is dropped.
+  const requested = JSON.stringify(body(true));
   try {
     const result = await api().imports.run(body(true));
+    if (requested !== JSON.stringify(body(true))) return;
     report.value = result;
     if (!keepMapping) mapping.value = { ...result.mapping };
   } catch (error) {
+    if (requested !== JSON.stringify(body(true))) return;
     report.value = null;
     failure.value = describe(error);
   } finally {
