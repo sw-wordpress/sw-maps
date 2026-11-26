@@ -127,6 +127,16 @@ describe('SettingsView', () => {
   });
 });
 
+describe('SettingsView data deletion warning', () => {
+  it('warns about data loss only while deletion on uninstall is enabled', async () => {
+    const w = await mountView(SettingsView);
+    expect(w.find('[data-test=delete-warning]').exists()).toBe(false);
+    await w.find('[data-test=delete-data]').trigger('click');
+    expect(w.find('[data-test=delete-warning]').text()).toContain('Export them first.');
+    expect(w.find('[data-test=export-all]').exists()).toBe(true);
+  });
+});
+
 describe('StatusView', () => {
   it('shows versions, schema state and tables', async () => {
     const w = await mountView(StatusView);

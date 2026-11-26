@@ -361,6 +361,8 @@ const de: Messages = {
     maxFeatures: 'Standorte pro Layer',
     exportAll: 'Alle Karten exportieren',
     exportFailed: 'Der Export ist fehlgeschlagen.',
+    deleteWarning:
+      'Beim Deinstallieren werden alle Karten, Layer und Standorte endgültig gelöscht. Exportiere sie vorher.',
     geocoding: 'Geocoding',
     geocoderUrl: 'Geocoding-Server (Nominatim)',
     geocoderContact: 'Kontakt (E-Mail oder URL, für den öffentlichen Server erforderlich)',

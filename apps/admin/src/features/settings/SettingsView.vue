@@ -149,6 +149,15 @@ import DataState from '@/components/ui/DataState.vue';
           :label="t('settings.deleteData')"
           data-test="delete-data"
         />
+        <q-banner
+          v-if="form.delete_data_on_uninstall"
+          class="q-mt-sm"
+          rounded
+          dense
+          data-test="delete-warning"
+        >
+          {{ t('settings.deleteWarning') }}
+        </q-banner>
         <div class="q-mt-md">
           <q-btn
             type="submit"

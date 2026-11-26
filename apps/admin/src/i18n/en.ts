@@ -357,6 +357,8 @@ export default {
     maxFeatures: 'Locations per layer',
     exportAll: 'Export all maps',
     exportFailed: 'The export failed.',
+    deleteWarning:
+      'All maps, layers and locations are deleted for good when the plugin is uninstalled. Export them first.',
     geocoding: 'Geocoding',
     geocoderUrl: 'Geocoding server (Nominatim)',
     geocoderContact: 'Contact (email or URL, required for the public server)',

@@ -28,6 +28,7 @@
 - Geocoding (Nominatim, nur Admin/Editor per Aktion): Koordinaten zur Adresse und Adresse zur Position mit Bestätigung vor der Übernahme; Server, Kontakt und Allowlist in den Einstellungen, Schlüssel nur aus `wp-config.php`.
 - WP-CLI: `wp sw-maps status`, `maps list`, `import` und `export` (Exit-Codes, Rückfragen, JSON-Ausgabe), siehe `docs/cli.md`.
 - Diagnose im Systemstatus: Schemazustand, wirksame Grenzen und Erreichbarkeit der aktivierten Anbieter (auf Knopfdruck).
+- Löschwarnung mit Export-Hinweis bei „Daten beim Deinstallieren löschen“.
 
 ### Bugs
 
@@ -35,5 +36,6 @@
 
 ### Other topics
 
+- Sicherheits-Fixtures (übergroße/ungültige Geometrien, feindliche Importdateien, Pfadschutz) und Lebenszyklus-Tests (BackupIt-Kompatibilität); `docs/lifecycle.md`.
 - Repository-Grundgerüst nach SW-BackupIt-Vorbild: Composer (PSR-4, Mozart-Konfiguration), PHPStan Level 8, PHPCS (PSR-12/WPCS), PHPUnit 11, WordPress-Integrationstests (Einzelsite/Multisite), Vitest mit strikter Coverage-Prüfung (> 80 %), Playwright (WordPress in Docker, Mock-Modus), Makefile, Release-ZIP mit Verifikation, Bundle-Budget, GitHub Actions, SonarQube-Konfiguration.
 - Dokumentation: Plan, ADRs, Datenbankschema, REST-Verträge, Hooks, MVP-Abnahme, Benutzerhandbuch.
