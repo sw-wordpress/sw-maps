@@ -33,6 +33,14 @@ Authentifizierung: Cookie + REST-Nonce (`X-WP-Nonce`). Alle Endpunkte haben eine
 | GET/PATCH | `/settings` | `swmap_manage_system` | `Settings` |
 | GET | `/status` | `swmap_manage_system` | Systemstatus |
 
+## Import (M2)
+`POST /imports` (`swmap_manage_imports` plus Bearbeitungsrecht an der Karte `map_id`). Body: `map_id`, `format` (`geojson`|`gpx`|`csv`), `content` (Dateitext), `mode` (`new_layer` Standard, `append`, `upsert`, `replace`), `layer_id` (außer `new_layer`), `layer_title?`, `mapping?` (Ziel → Quellspalte; Ziele `title`, `description`, `address`, `link`, `external_id`), `options?` (CSV: `delimiter`, `decimal`, `lon_column`, `lat_column`), `dry_run?`, `skip_invalid?`, `confirm_replace?`.
+- `dry_run` validiert und liefert den Bericht (Vorschau, Spalten, Vorschlag der Feldzuordnung, Fehler- und Warnliste) ohne zu schreiben.
+- Ausführen schreibt in einer Transaktion. Ungültige Einträge lehnen den Import ab, außer `skip_invalid` ist gesetzt; `replace` verlangt `confirm_replace`. Der Upsert überschreibt nur Felder, die die Datei liefert (Bild und Symbol bleiben).
+- Dateiweite Ablehnung (Größe, Anzahl Features/Koordinaten, Verschachtelung, DOCTYPE/Entities, kaputtes Format): HTTP 422, Code `swmap_import_rejected`, `data.reason` (`too_large`, `too_many_features`, `too_many_coordinates`, `too_deep`, `malformed`, `forbidden`, `unsupported`, `invalid_option`). Vor der Ablehnung wird nichts geschrieben.
+- Bericht: `mode`, `layer_id`, `total`, `created`, `updated`, `skipped`, `error_count`, `errors[]`, `warnings[]`, `columns`, `mapping`, `media_relink_hint`, `imported`, `preview[]`. Medien (Bilder, Symbole) werden nicht importiert und müssen neu verknüpft werden.
+- Parser: GeoJSON (GeometryCollections werden zerlegt), GPX 1.0/1.1 (Wegpunkte, Routen, Tracks mit Segmenten als MultiLineString), CSV mit Kopfzeile. XML ohne Entities, DTD und Netzwerkzugriff. Limits: 5 MiB, `max_features_per_layer` Features, 200 000 Koordinaten, Tiefe 32.
+
 ## Schemas
 `Map`: `id, slug, title, description, status, viewport{center[lon,lat], zoom, minZoom, maxZoom, bounds?, autoBounds}, settings{height, aspectRatio?, scrollZoom, touch, drag, fullscreen, scale, provider_id}, layer_count, feature_count, created_at, updated_at`.
 `Layer`: `id, map_id, title, type, status, sort_order, visible, style, created_at, updated_at`.

@@ -13,6 +13,7 @@ use SWMaps\Core\Exception\ConflictException;
 use SWMaps\Core\Exception\InvalidGeometryException;
 use SWMaps\Core\Exception\NotFoundException;
 use SWMaps\Core\Exception\ValidationException;
+use SWMaps\Core\Import\ImportException;
 use SWMaps\WordPress\Services;
 
 abstract class BaseController {
@@ -76,6 +77,16 @@ abstract class BaseController {
 				array(
 					'status'  => 400,
 					'details' => $this->details( $e ),
+				)
+			);
+		}
+		if ( $e instanceof ImportException ) {
+			return new \WP_Error(
+				'swmap_import_rejected',
+				__( 'The file cannot be imported.', 'sw-maps' ),
+				array(
+					'status' => 422,
+					'reason' => $e->reason,
 				)
 			);
 		}

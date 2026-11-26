@@ -376,4 +376,54 @@ final class RestApiTest extends SwMapsTestCase {
 		$this->assertSame( \SWMaps\WordPress\Persistence\Schema::CURRENT, $this->rest( 'GET', '/status' )->get_data()['db_version'] );
 		delete_option( \SWMaps\WordPress\Settings::OPTION );
 	}
+	public function test_imports_validate_execute_and_reject(): void {
+		$map_id  = $this->create_map();
+		$geojson = (string) wp_json_encode(
+			array(
+				'type'     => 'FeatureCollection',
+				'features' => array(
+					array( 'type' => 'Feature', 'properties' => array( 'name' => 'A', 'id' => 'a1' ), 'geometry' => $this->point() ),
+					array( 'type' => 'Feature', 'properties' => array( 'name' => 'Track' ), 'geometry' => array( 'type' => 'LineString', 'coordinates' => array( array( 8, 49 ), array( 8.1, 49.1 ) ) ) ),
+				),
+			)
+		);
+		$base = array( 'map_id' => $map_id, 'format' => 'geojson', 'content' => $geojson, 'layer_title' => 'Imported' );
+
+		$dry = $this->rest( 'POST', '/imports', $base + array( 'dry_run' => true ) );
+		$this->assertSame( 200, $dry->get_status() );
+		$this->assertFalse( $dry->get_data()['imported'] );
+		$this->assertSame( array(), $this->rest( 'GET', "/maps/{$map_id}/layers" )->get_data() );
+
+		$done = $this->rest( 'POST', '/imports', $base );
+		$this->assertSame( 200, $done->get_status() );
+		$report = $done->get_data();
+		$this->assertTrue( $report['imported'] );
+		$this->assertSame( 2, $report['created'] );
+		$features = $this->rest( 'GET', "/layers/{$report['layer_id']}/features" )->get_data();
+		$this->assertCount( 2, $features );
+
+		// Upsert by external id updates in place.
+		$again = $this->rest( 'POST', '/imports', array( 'map_id' => $map_id, 'mode' => 'upsert', 'layer_id' => $report['layer_id'] ) + $base );
+		$this->assertSame( array( 1, 1 ), array( $again->get_data()['updated'], $again->get_data()['created'] ) );
+
+		// Hostile XML is rejected as a whole, nothing is written.
+		$xxe = '<?xml version="1.0"?><!DOCTYPE gpx [<!ENTITY x SYSTEM "file:///etc/passwd">]><gpx><wpt lat="1" lon="1"><name>&x;</name></wpt></gpx>';
+		$bad = $this->rest( 'POST', '/imports', array( 'map_id' => $map_id, 'format' => 'gpx', 'content' => $xxe ) );
+		$this->assertSame( 422, $bad->get_status() );
+		$this->assertSame( 'forbidden', $bad->as_error()->get_error_data()['reason'] );
+		$this->assertCount( 1, $this->rest( 'GET', "/maps/{$map_id}/layers" )->get_data() );
+
+		// Replacing needs the explicit confirmation.
+		$replace = array( 'map_id' => $map_id, 'mode' => 'replace', 'layer_id' => $report['layer_id'] ) + $base;
+		$this->assertSame( 400, $this->rest( 'POST', '/imports', $replace )->get_status() );
+		$this->assertSame( 200, $this->rest( 'POST', '/imports', $replace + array( 'confirm_replace' => true ) )->get_status() );
+
+		$this->assertSame( 404, $this->rest( 'POST', '/imports', array( 'map_id' => 999999, 'format' => 'geojson', 'content' => $geojson ) )->get_status() );
+		$this->assertSame( 400, $this->rest( 'POST', '/imports', array( 'format' => 'geojson', 'content' => $geojson ) )->get_status() );
+
+		wp_set_current_user( 0 );
+		$this->assertSame( 401, $this->rest( 'POST', '/imports', $base )->get_status() );
+		$this->as_role( 'editor' );
+		$this->assertSame( 403, $this->rest( 'POST', '/imports', $base )->get_status(), 'editors lack swmap_manage_imports' );
+	}
 }

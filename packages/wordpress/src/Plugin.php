@@ -61,6 +61,7 @@ final class Plugin {
 		return array(
 			new Api\MapsController(),
 			new Api\LayersController(),
+			new Api\ImportsController(),
 			new Api\FeaturesController(),
 			new Api\ProvidersController(),
 			new Api\SettingsController(),

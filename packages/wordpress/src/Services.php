@@ -17,6 +17,8 @@ use SWMaps\Core\Contracts\FeatureRepositoryInterface;
 use SWMaps\Core\Contracts\LayerRepositoryInterface;
 use SWMaps\Core\Contracts\MapRepositoryInterface;
 use SWMaps\Core\Contracts\ProviderRepositoryInterface;
+use SWMaps\Core\Import\ImportLimits;
+use SWMaps\Core\Import\ImportService;
 use SWMaps\WordPress\Persistence\SystemClock;
 use SWMaps\WordPress\Persistence\WpdbFeatures;
 use SWMaps\WordPress\Persistence\WpdbLayers;
@@ -74,6 +76,20 @@ final class Services {
 
 	public function providers(): ProviderService {
 		return $this->prov ??= new ProviderService( $this->provider_repo );
+	}
+
+	public function imports(): ImportService {
+		$max = Settings::get()['max_features_per_layer'];
+		return new ImportService(
+			$this->map_repo,
+			$this->layer_repo,
+			$this->feature_repo,
+			$this->tx,
+			$this->clock,
+			$this->events,
+			new ImportLimits( maxFeatures: $max ),
+			$max
+		);
 	}
 
 	public function map_repository(): MapRepositoryInterface {
