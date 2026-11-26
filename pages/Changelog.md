@@ -15,6 +15,7 @@
 
 - Oberfläche an SW BackupIt angelehnt: Navigationsleiste mit Einklappen und Dunkelmodus, Seitenköpfe, Karten, Kennzahlen-Kacheln, Statusanzeigen, responsiver Karteneditor.
 - Import-Assistent im Karteneditor und REST `POST /imports`: GeoJSON, GPX und CSV mit Vorschau, Feldzuordnung, Validierungsbericht und den Modi neuer Layer, Ergänzen, Upsert nach externer ID und bestätigtes Ersetzen; sichere Parser mit Größen- und Anzahlgrenzen, XML ohne Entities/DTD; Streckenlänge (Haversine) und vereinfachte Darstellungsgeometrien im Core.
+- Marker-Clustering im Viewer (pro Karte abschaltbar): Gruppen mit Anzahl, Klick zoomt auf die enthaltenen Marker; Linien und Flächen werden nicht gruppiert.
 
 ### Bugs
 

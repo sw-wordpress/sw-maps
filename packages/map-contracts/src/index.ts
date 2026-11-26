@@ -81,6 +81,8 @@ export interface MapSettingsData {
   scale: boolean;
   showList: boolean;
   clickToLoad: boolean;
+  /** Viewer only: group nearby markers into clickable clusters. */
+  cluster: boolean;
   providerId: number | null;
 }
 

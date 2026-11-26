@@ -196,6 +196,7 @@ const de: Messages = {
     scale: 'Maßstab',
     showList: 'Standortliste',
     clickToLoad: 'Click-to-load',
+    cluster: 'Nahe Marker gruppieren',
   },
   feature: {
     title: 'Titel',

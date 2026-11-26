@@ -30,6 +30,110 @@ function mounted(data = makeData(), popups = true): OpenLayersRenderer {
   return r;
 }
 
+interface ClusterInternals {
+  map: {
+    forEachFeatureAtPixel: unknown;
+    getLayers(): { getLength(): number };
+    getView(): { fit: unknown };
+  };
+  clusterLayer: { getStyleFunction(): (f: Feature, r: number) => unknown } | null;
+  vectorLayer: { getStyleFunction(): (f: Feature, r: number) => unknown };
+  onMapClick(e: unknown): void;
+}
+
+describe('clustering', () => {
+  const clusterData = () => {
+    const data = makeData();
+    data.settings = { ...data.settings, cluster: true };
+    data.layers[0]!.features = [
+      feature(1, 8.4, 49),
+      feature(2, 8.4001, 49.0001),
+      feature(3, 8.5, 49.1),
+      {
+        id: 4,
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [8, 49],
+            [8.1, 49.1],
+          ],
+        },
+        properties: feature(1).properties,
+        style: {},
+      },
+    ];
+    return data;
+  };
+  const internals = (r: OpenLayersRenderer) => r as unknown as ClusterInternals;
+  const group = (...ids: number[]) =>
+    new Feature({
+      features: ids.map((id) => {
+        const f = new Feature(new Point(fromLonLat([8.4, 49])));
+        f.set('swmapId', id);
+        return f;
+      }),
+    });
+
+  it('adds a cluster layer only when enabled and keeps lines in the plain layer', () => {
+    expect(internals(mounted()).clusterLayer).toBeNull();
+    const r = mounted(clusterData());
+    const i = internals(r);
+    expect(i.clusterLayer).not.toBeNull();
+    expect(i.map.getLayers().getLength()).toBe(3);
+    const point = new Feature(new Point(fromLonLat([8.4, 49])));
+    point.set('swmapId', 1);
+    expect(i.vectorLayer.getStyleFunction()(point, 1)).toBeUndefined();
+    const line = r['source' as keyof typeof r] as unknown as { getFeatures(): Feature[] };
+    const lineFeature = line.getFeatures().find((f) => f.get('swmapId') === 4)!;
+    expect(i.vectorLayer.getStyleFunction()(lineFeature, 1)).toBeDefined();
+  });
+
+  it('draws groups as a numbered circle and single markers with their own style', () => {
+    const i = internals(mounted(clusterData()));
+    const style = i.clusterLayer!.getStyleFunction()(group(1, 2, 3), 1) as {
+      getText(): { getText(): string };
+    };
+    expect(style.getText().getText()).toBe('3');
+    expect(i.clusterLayer!.getStyleFunction()(group(1, 2, 3), 1)).toBe(style);
+    const single = i.clusterLayer!.getStyleFunction()(group(1), 1) as {
+      getImage(): unknown;
+      getText(): unknown;
+    };
+    expect(single.getImage()).toBeDefined();
+    expect(single.getText()).toBeNull();
+  });
+
+  it('zooms into a clicked group and selects a clicked single marker', () => {
+    const r = mounted(clusterData());
+    const i = internals(r);
+    const fit = vi.fn();
+    i.map.getView().fit = fit as never;
+    const events: Array<number | null> = [];
+    r.on('select', (id) => events.push(id));
+    i.map.forEachFeatureAtPixel = (() => group(1, 2)) as never;
+    i.onMapClick({ pixel: [0, 0] });
+    expect(fit).toHaveBeenCalledTimes(1);
+    expect(events).toEqual([]);
+    i.map.forEachFeatureAtPixel = (() => group(3)) as never;
+    i.onMapClick({ pixel: [0, 0] });
+    expect(events).toEqual([3]);
+    i.map.forEachFeatureAtPixel = (() => new Feature({ features: [] })) as never;
+    i.onMapClick({ pixel: [0, 0] });
+    expect(events).toEqual([3, null]);
+  });
+
+  it('rebuilds when clustering is switched off and on', () => {
+    const r = mounted(clusterData());
+    const off = clusterData();
+    off.settings = { ...off.settings, cluster: false };
+    r.update(off);
+    expect(internals(r).clusterLayer).toBeNull();
+    r.update(clusterData());
+    expect(internals(r).clusterLayer).not.toBeNull();
+    expect(target.querySelectorAll('.swmap__canvas')).toHaveLength(1);
+  });
+});
+
 describe('OpenLayersRenderer', () => {
   it('requires mount before use', () => {
     const r = new OpenLayersRenderer();

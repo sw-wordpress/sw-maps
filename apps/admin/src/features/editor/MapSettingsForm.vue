@@ -62,6 +62,7 @@ const toggles = [
   'scale',
   'showList',
   'clickToLoad',
+  'cluster',
 ] as const;
 
 function commitText(field: 'title' | 'description' | 'slug'): void {

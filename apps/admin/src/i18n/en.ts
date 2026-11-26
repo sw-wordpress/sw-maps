@@ -192,6 +192,7 @@ export default {
     scale: 'Scale',
     showList: 'Location list',
     clickToLoad: 'Click to load',
+    cluster: 'Group nearby markers',
   },
   feature: {
     title: 'Title',

@@ -267,6 +267,7 @@ describe('render data', () => {
       drag: true,
       fullscreen: false,
       clickToLoad: false,
+      cluster: false,
     });
     expect(data.viewport.autoBounds).toBe(false);
     expect(data.consentCategory).toBeNull();

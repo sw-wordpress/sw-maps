@@ -424,6 +424,7 @@ export function buildRenderData(
       zoomControls: true,
       fullscreen: false,
       clickToLoad: false,
+      cluster: false,
     },
     provider: toPublicProvider(provider),
     layers,

@@ -56,6 +56,7 @@ export function makeMap(overrides: Partial<MapData> = {}): MapData {
       scale: true,
       showList: true,
       clickToLoad: false,
+      cluster: true,
       providerId: null,
     },
     layer_count: 1,

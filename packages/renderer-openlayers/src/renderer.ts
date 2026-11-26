@@ -5,14 +5,18 @@ import Overlay from 'ol/Overlay.js';
 import TileLayer from 'ol/layer/Tile.js';
 import VectorLayer from 'ol/layer/Vector.js';
 import VectorSource from 'ol/source/Vector.js';
+import ClusterSource from 'ol/source/Cluster.js';
 import XYZ from 'ol/source/XYZ.js';
 import ScaleLine from 'ol/control/ScaleLine.js';
 import Zoom from 'ol/control/Zoom.js';
 import DragPan from 'ol/interaction/DragPan.js';
 import { defaults as defaultInteractions } from 'ol/interaction/defaults.js';
+import { createEmpty, extend } from 'ol/extent.js';
 import { fromLonLat, toLonLat, transformExtent } from 'ol/proj.js';
 import type MapBrowserEvent from 'ol/MapBrowserEvent.js';
 import type { Coordinate } from 'ol/coordinate.js';
+import type Point from 'ol/geom/Point.js';
+import type { StyleFunction } from 'ol/style/Style.js';
 import { boundsOf, flattenPositions } from '@sw-maps/map-contracts';
 import type {
   BoundsTuple,
@@ -28,7 +32,7 @@ import { Emitter } from './emitter';
 import { toOlGeometry } from './geometry';
 import { buildPopup } from './popup';
 import type { FeatureMeta } from './styles';
-import { createStyleFunction } from './styles';
+import { createClusterStyleFunction, createStyleFunction } from './styles';
 
 export interface RendererConfig {
   /** Viewer: popups on selection. Editor: selection is shown by the properties panel instead. */
@@ -37,12 +41,15 @@ export interface RendererConfig {
 
 const FEATURE_ID = 'swmapId';
 const AUTO_BOUNDS_MAX_ZOOM = 16;
+const CLUSTER_DISTANCE = 40;
 
 export class OpenLayersRenderer implements MapRenderer {
   protected map: OlMap | null = null;
   protected data: MapRenderData | null = null;
   protected readonly source = new VectorSource();
   protected vectorLayer: VectorLayer | null = null;
+  private clusterLayer: VectorLayer | null = null;
+  private clusterSource: ClusterSource | null = null;
   protected tileLayer: TileLayer<XYZ> | null = null;
   protected readonly events = new Emitter<RendererEventMap>();
   protected selectedId: number | null = null;
@@ -123,6 +130,7 @@ export class OpenLayersRenderer implements MapRenderer {
     if (id !== null && !this.metas.has(id)) id = null;
     this.selectedId = id;
     this.vectorLayer?.changed();
+    this.clusterLayer?.changed();
     if (id === null) {
       this.closePopup();
     } else {
@@ -166,6 +174,15 @@ export class OpenLayersRenderer implements MapRenderer {
   protected onMapClick(event: MapBrowserEvent): void {
     const map = this.requireMap();
     const hit = map.forEachFeatureAtPixel(event.pixel, (f) => f as Feature, { hitTolerance: 8 });
+    const members = hit?.get('features') as Feature[] | undefined;
+    if (members && members.length > 1) {
+      this.expandCluster(members);
+      return;
+    }
+    if (members) {
+      this.selectFeature((members[0]?.get(FEATURE_ID) as number | undefined) ?? null);
+      return;
+    }
     const id = hit ? ((hit.get(FEATURE_ID) as number | undefined) ?? null) : null;
     this.selectFeature(id);
   }
@@ -216,13 +233,35 @@ export class OpenLayersRenderer implements MapRenderer {
       source: this.createTileSource(data) ?? undefined,
       visible: provider !== null,
     });
+    const featureStyle = createStyleFunction(this.metaOf, () => this.selectedId);
     this.vectorLayer = new VectorLayer({
       source: this.source,
-      style: createStyleFunction(this.metaOf, () => this.selectedId),
+      style: settings.cluster
+        ? (feature, resolution) =>
+            feature.getGeometry()?.getType() === 'Point'
+              ? undefined
+              : (featureStyle as StyleFunction)(feature, resolution)
+        : featureStyle,
     });
+    const layers: Array<TileLayer<XYZ> | VectorLayer> = [this.tileLayer, this.vectorLayer];
+    if (settings.cluster) {
+      this.clusterSource = new ClusterSource({
+        source: this.source,
+        distance: CLUSTER_DISTANCE,
+        geometryFunction: (feature) => {
+          const geometry = feature.getGeometry();
+          return geometry?.getType() === 'Point' ? (geometry as Point) : null;
+        },
+      });
+      this.clusterLayer = new VectorLayer({
+        source: this.clusterSource,
+        style: createClusterStyleFunction(featureStyle),
+      });
+      layers.push(this.clusterLayer);
+    }
     this.map = new OlMap({
       target: canvas,
-      layers: [this.tileLayer, this.vectorLayer],
+      layers,
       view,
       controls,
       interactions,
@@ -266,6 +305,9 @@ export class OpenLayersRenderer implements MapRenderer {
       this.map.dispose();
       this.map = null;
     }
+    this.clusterSource?.dispose();
+    this.clusterSource = null;
+    this.clusterLayer = null;
     this.vectorLayer = null;
     this.tileLayer = null;
   }
@@ -284,6 +326,7 @@ export class OpenLayersRenderer implements MapRenderer {
       s.scrollZoom,
       s.touch,
       s.drag,
+      s.cluster,
       data.provider === null,
     ]);
   }
@@ -417,6 +460,21 @@ export class OpenLayersRenderer implements MapRenderer {
     });
   }
 
+  /** A click on a group zooms to its members; at the maximum zoom coincident markers stay grouped (use the list). */
+  private expandCluster(members: Feature[]): void {
+    const extent = createEmpty();
+    for (const member of members) {
+      const geometry = member.getGeometry();
+      if (geometry) extend(extent, geometry.getExtent());
+    }
+    const view = this.requireMap().getView();
+    view.fit(extent, {
+      padding: [64, 64, 64, 64],
+      maxZoom: view.getMaxZoom(),
+      duration: this.duration(),
+    });
+  }
+
   private fitToFeaturesIfAuto(): void {
     const data = this.data;
     if (!data?.viewport.autoBounds) return;
@@ -476,5 +534,6 @@ export class OpenLayersRenderer implements MapRenderer {
     if (this.selectedId !== null && !this.metas.has(this.selectedId)) this.selectFeature(null);
     else if (this.popupFor !== null) this.openPopup(this.popupFor);
     this.vectorLayer?.changed();
+    this.clusterLayer?.changed();
   }
 }

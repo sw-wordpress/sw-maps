@@ -1,4 +1,4 @@
-import { Circle as CircleStyle, Fill, Icon, Stroke, Style } from 'ol/style.js';
+import { Circle as CircleStyle, Fill, Icon, Stroke, Style, Text } from 'ol/style.js';
 import type { StyleLike } from 'ol/style/Style.js';
 import type FeatureLike from 'ol/Feature.js';
 import { safeColor } from '@sw-maps/map-contracts';
@@ -83,5 +83,42 @@ export function createStyleFunction(
           image: new CircleStyle({ radius: 5, fill: new Fill({ color }) }),
         }),
     );
+  };
+}
+
+/**
+ * Style of a cluster layer: a single marker keeps its own style, a group is a circle with the number of markers
+ * (the number, not only the colour, tells groups from markers).
+ */
+export function createClusterStyleFunction(single: StyleLike): StyleLike {
+  const cache = new Map<number, Style>();
+  return (feature, resolution) => {
+    const members = (feature.get('features') ?? []) as FeatureLike[];
+    if (members.length === 1) {
+      const inner = members[0] as FeatureLike;
+      return typeof single === 'function' ? single(inner, resolution) : undefined;
+    }
+    let style = cache.get(members.length);
+    if (!style) {
+      const radius = Math.min(
+        26,
+        13 + String(members.length).length * 3 + Math.log2(members.length),
+      );
+      style = new Style({
+        image: new CircleStyle({
+          radius,
+          fill: new Fill({ color: '#1d4ed8' }),
+          stroke: new Stroke({ color: '#ffffff', width: 3 }),
+        }),
+        text: new Text({
+          text: String(members.length),
+          fill: new Fill({ color: '#ffffff' }),
+          font: '600 13px sans-serif',
+        }),
+        zIndex: 5,
+      });
+      cache.set(members.length, style);
+    }
+    return style;
   };
 }
