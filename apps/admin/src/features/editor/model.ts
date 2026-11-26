@@ -1,4 +1,5 @@
 import type {
+  CategoryData,
   FeatureData,
   FeatureProperties,
   Geometry,
@@ -39,7 +40,14 @@ function comparable(doc: EditorDoc): unknown {
   return [
     { title, description, status, slug, viewport, settings },
     doc.layers.map((l) => [l.id, l.title, l.status, l.sort_order, l.visible, l.style]),
-    doc.features.map((f) => [f.id, f.layer_id, f.geometry, f.properties, f.style]),
+    doc.features.map((f) => [
+      f.id,
+      f.layer_id,
+      f.geometry,
+      f.properties,
+      f.style,
+      f.categories ?? [],
+    ]),
   ];
 }
 
@@ -119,6 +127,7 @@ export function addFeature(
     geometry,
     properties: { ...EMPTY_PROPERTIES, ...properties },
     style: {},
+    categories: [],
     updated_at: '',
   });
   return next;
@@ -134,13 +143,14 @@ export function setFeatureGeometry(doc: EditorDoc, id: number, geometry: Geometr
 export function updateFeature(
   doc: EditorDoc,
   id: number,
-  patch: { properties?: Partial<FeatureProperties>; style?: StyleMap },
+  patch: { properties?: Partial<FeatureProperties>; style?: StyleMap; categories?: number[] },
 ): EditorDoc {
   const next = cloneDoc(doc);
   const feature = next.features.find((f) => f.id === id);
   if (feature) {
     if (patch.properties) Object.assign(feature.properties, patch.properties);
     if (patch.style) feature.style = { ...patch.style };
+    if (patch.categories) feature.categories = [...patch.categories];
   }
   return next;
 }
@@ -257,7 +267,12 @@ export function diff(original: EditorDoc, working: EditorDoc): Op[] {
       ops.push({ kind: 'feature-delete', id: f.id });
   }
   for (const f of working.features) {
-    const body = { geometry: f.geometry, properties: f.properties, style: f.style };
+    const body = {
+      geometry: f.geometry,
+      properties: f.properties,
+      style: f.style,
+      categories: f.categories ?? [],
+    };
     if (isNew(f.id)) {
       ops.push({
         kind: 'feature-create',
@@ -270,7 +285,10 @@ export function diff(original: EditorDoc, working: EditorDoc): Op[] {
     const before = original.features.find((o) => o.id === f.id);
     if (
       before &&
-      !same([before.geometry, before.properties, before.style], [f.geometry, f.properties, f.style])
+      !same(
+        [before.geometry, before.properties, before.style, before.categories ?? []],
+        [f.geometry, f.properties, f.style, f.categories ?? []],
+      )
     ) {
       ops.push({ kind: 'feature-update', id: f.id, patch: body });
     }
@@ -401,6 +419,7 @@ export function buildRenderData(
   doc: EditorDoc,
   provider: ProviderData | null,
   strings: ViewerStrings,
+  categories: CategoryData[] = [],
 ): MapRenderData {
   const layers = doc.layers
     .filter((l) => l.visible)
@@ -410,7 +429,13 @@ export function buildRenderData(
       style: l.style,
       features: doc.features
         .filter((f) => f.layer_id === l.id)
-        .map((f) => ({ id: f.id, geometry: f.geometry, properties: f.properties, style: f.style })),
+        .map((f) => ({
+          id: f.id,
+          geometry: f.geometry,
+          properties: f.properties,
+          style: f.style,
+          categories: f.categories ?? [],
+        })),
     }));
   return {
     id: doc.map.id,
@@ -428,6 +453,7 @@ export function buildRenderData(
     },
     provider: toPublicProvider(provider),
     layers,
+    categories: categories.map((c) => ({ id: c.id, title: c.title, style: c.style })),
     consentCategory: null,
     strings,
   };

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { computed, ref, shallowRef } from 'vue';
 import type {
+  CategoryData,
   EditTool,
   FeatureData,
   FeatureProperties,
@@ -75,6 +76,7 @@ export const useEditorStore = defineStore('editor', () => {
   const activeLayer = computed(
     () => doc.value?.layers.find((l) => l.id === activeLayerId.value) ?? null,
   );
+  const categories = ref<CategoryData[]>([]);
   const provider = computed(() => {
     const id = doc.value?.map.settings.providerId;
     return (
@@ -85,7 +87,7 @@ export const useEditorStore = defineStore('editor', () => {
   });
 
   function renderData(strings: ViewerStrings): MapRenderData | null {
-    return doc.value ? buildRenderData(doc.value, provider.value, strings) : null;
+    return doc.value ? buildRenderData(doc.value, provider.value, strings, categories.value) : null;
   }
 
   async function fetchDoc(mapId: number): Promise<EditorDoc> {
@@ -104,14 +106,18 @@ export const useEditorStore = defineStore('editor', () => {
       original.value = null;
     }
     try {
-      const [fetched, provs] = await Promise.all([
+      const [fetched, provs, cats] = await Promise.all([
         fetchDoc(mapId),
         api()
           .providers.list()
           .catch(() => [] as ProviderData[]),
+        api()
+          .categories.list()
+          .catch(() => [] as CategoryData[]),
       ]);
       if (token !== loadToken) return; // a newer load() superseded this one
       providers.value = provs;
+      categories.value = cats;
       original.value = fetched;
       doc.value = cloneDoc(fetched);
       history.clear();
@@ -181,9 +187,29 @@ export const useEditorStore = defineStore('editor', () => {
 
   function patchFeature(
     id: number,
-    patch: { properties?: Partial<FeatureProperties>; style?: StyleMap },
+    patch: { properties?: Partial<FeatureProperties>; style?: StyleMap; categories?: number[] },
   ): void {
     commit(updateFeature(current(), id, patch));
+  }
+
+  /** Categories are site wide and saved immediately (not part of the map's working copy). */
+  async function saveCategory(id: number | null, body: Record<string, unknown>): Promise<void> {
+    const saved =
+      id === null ? await api().categories.create(body) : await api().categories.update(id, body);
+    categories.value = [...categories.value.filter((c) => c.id !== saved.id), saved].sort((a, b) =>
+      a.title.localeCompare(b.title),
+    );
+  }
+
+  async function removeCategory(id: number): Promise<void> {
+    await api().categories.remove(id);
+    categories.value = categories.value.filter((c) => c.id !== id);
+    // The server removed the assignments: forget them locally too, without marking the map as changed.
+    for (const target of [doc.value, original.value]) {
+      for (const f of target?.features ?? []) {
+        if (f.categories) f.categories = f.categories.filter((c) => c !== id);
+      }
+    }
   }
 
   function deleteFeature(id: number): void {
@@ -304,6 +330,9 @@ export const useEditorStore = defineStore('editor', () => {
     moveFeature,
     setPointCoordinates,
     patchFeature,
+    categories,
+    saveCategory,
+    removeCategory,
     deleteFeature,
     select,
     undo,

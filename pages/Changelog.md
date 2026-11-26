@@ -17,6 +17,7 @@
 - Import-Assistent im Karteneditor und REST `POST /imports`: GeoJSON, GPX und CSV mit Vorschau, Feldzuordnung, Validierungsbericht und den Modi neuer Layer, Ergänzen, Upsert nach externer ID und bestätigtes Ersetzen; sichere Parser mit Größen- und Anzahlgrenzen, XML ohne Entities/DTD; Streckenlänge (Haversine) und vereinfachte Darstellungsgeometrien im Core.
 - Marker-Clustering im Viewer (pro Karte abschaltbar): Gruppen mit Anzahl, Klick zoomt auf die enthaltenen Marker; Linien und Flächen werden nicht gruppiert.
 - Kategorien für Standorte (REST `/categories`): Standardfarbe und -symbol pro Kategorie, Filter-Legende und Suche im Viewer, die Liste und Karte gemeinsam filtern.
+- Stile im Editor: Linienstärke, Strichmuster, Deckkraft und Flächenfüllung; Kategorien zuweisen und verwalten; Kaskade Layer → Kategorie → Standort für Farbe und Symbol.
 
 ### Bugs
 

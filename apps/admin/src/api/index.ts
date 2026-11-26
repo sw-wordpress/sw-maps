@@ -1,4 +1,10 @@
-import type { FeatureData, LayerData, MapData, ProviderData } from '@sw-maps/map-contracts';
+import type {
+  CategoryData,
+  FeatureData,
+  LayerData,
+  MapData,
+  ProviderData,
+} from '@sw-maps/map-contracts';
 import { getConfig } from '@/config';
 import type { Paged, RequestOptions } from './client';
 import { ApiClient } from './client';
@@ -86,6 +92,13 @@ export function createApi(client: ApiClient) {
       update: (id: number, body: Body) =>
         client.request<FeatureData>('PATCH', `features/${id}`, { body }),
       remove: (id: number) => client.request<void>('DELETE', `features/${id}`),
+    },
+    categories: {
+      list: () => client.request<CategoryData[]>('GET', 'categories'),
+      create: (body: Body) => client.request<CategoryData>('POST', 'categories', { body }),
+      update: (id: number, body: Body) =>
+        client.request<CategoryData>('PATCH', `categories/${id}`, { body }),
+      remove: (id: number) => client.request<void>('DELETE', `categories/${id}`),
     },
     providers: {
       list: () => client.request<ProviderData[]>('GET', 'providers'),

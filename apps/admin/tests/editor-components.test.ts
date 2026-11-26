@@ -4,7 +4,7 @@ import EditorToolbar from '@/features/editor/EditorToolbar.vue';
 import LayerPanel from '@/features/editor/LayerPanel.vue';
 import FeatureForm from '@/features/editor/FeatureForm.vue';
 import MapSettingsForm from '@/features/editor/MapSettingsForm.vue';
-import { configure, makeFeature, makeLayer, makeMap, makeProvider } from './helpers';
+import { configure, makeCategory, makeFeature, makeLayer, makeMap, makeProvider } from './helpers';
 
 vi.mock('@/utils/media', () => ({
   pickImage: vi.fn(async () => ({
@@ -151,6 +151,78 @@ describe('FeatureForm', () => {
       properties: { ...makeFeature().properties, title: 'Rathaus', link: 'https://example.org' },
       style: { color: '#336699' },
     });
+
+  it('assigns categories and opens the management dialog', async () => {
+    const w = mount(FeatureForm, {
+      props: {
+        feature: { ...feature(), categories: [20] },
+        categories: [makeCategory(), makeCategory({ id: 22, title: 'Lakes' })],
+        canManageCategories: true,
+      },
+      attachTo: document.body,
+    });
+    const select = w
+      .findAllComponents({ name: 'QSelect' })
+      .find((c) => c.vm.$attrs['data-test'] === 'categories')!;
+    select.vm.$emit('update:modelValue', [20, 22]);
+    expect(w.emitted('patch')).toEqual([[{ categories: [20, 22] }]]);
+    await w.find('[data-test=manage-categories]').trigger('click');
+    expect(w.emitted('manageCategories')).toHaveLength(1);
+    const plain = mount(FeatureForm, { props: { feature: feature() } });
+    expect(plain.find('[data-test=categories]').exists()).toBe(false);
+  });
+
+  it('edits width, pattern and opacity of lines and the fill of areas only', async () => {
+    const line = makeFeature({
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [8, 49],
+          [8.1, 49.1],
+        ],
+      },
+      style: { weight: 6 },
+    });
+    const w = mount(FeatureForm, { props: { feature: line } });
+    expect(w.find('input[data-test=weight]').exists()).toBe(true);
+    expect(w.find('[data-test=fill-opacity]').exists()).toBe(false);
+    expect(w.find('[data-test=lon]').exists()).toBe(false);
+    expect(w.find<HTMLInputElement>('input[data-test=weight]').element.value).toBe('6');
+    await blur(w, 'input[data-test=weight]', '99');
+    await blur(w, 'input[data-test=opacity]', '0.4');
+    w.findAllComponents({ name: 'QSelect' })
+      .find((c) => c.vm.$attrs['data-test'] === 'dash')!
+      .vm.$emit('update:modelValue', 'dashed');
+    expect(w.emitted('patch')).toEqual([
+      [{ style: { weight: 20 } }],
+      [{ style: { weight: 6, opacity: 0.4 } }],
+      [{ style: { weight: 6, dash: 'dashed' } }],
+    ]);
+    const area = mount(FeatureForm, {
+      props: {
+        feature: makeFeature({
+          geometry: {
+            type: 'Polygon',
+            coordinates: [
+              [
+                [8, 49],
+                [8.1, 49],
+                [8.1, 49.1],
+                [8, 49],
+              ],
+            ],
+          },
+        }),
+      },
+    });
+    expect(area.find<HTMLInputElement>('input[data-test=fill-opacity]').element.value).toBe('0.25');
+    await blur(area, 'input[data-test=fill-opacity]', '0.6');
+    expect(area.emitted('patch')).toEqual([[{ style: { fillOpacity: 0.6 } }]]);
+    const points = mount(FeatureForm, {
+      props: { feature: makeFeature({ geometry: { type: 'MultiPoint', coordinates: [[8, 49]] } }) },
+    });
+    expect(points.find('input[data-test=weight]').exists()).toBe(false);
+  });
 
   it('shows the current values and the coordinates of a point', () => {
     const w = mount(FeatureForm, { props: { feature: feature() } });

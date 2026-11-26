@@ -2,7 +2,13 @@ import { mount, flushPromises } from '@vue/test-utils';
 import type { VueWrapper } from '@vue/test-utils';
 import type { Component } from 'vue';
 import { createPinia, setActivePinia } from 'pinia';
-import type { FeatureData, LayerData, MapData, ProviderData } from '@sw-maps/map-contracts';
+import type {
+  CategoryData,
+  FeatureData,
+  LayerData,
+  MapData,
+  ProviderData,
+} from '@sw-maps/map-contracts';
 import { vi } from 'vitest';
 import type { Mock } from 'vitest';
 import type { Api } from '@/api';
@@ -103,6 +109,16 @@ export function makeFeature(overrides: Partial<FeatureData> = {}): FeatureData {
   };
 }
 
+export function makeCategory(overrides: Partial<CategoryData> = {}): CategoryData {
+  return {
+    id: 20,
+    slug: 'huts',
+    title: 'Huts',
+    style: { color: '#00aa00', icon: 'builtin:home' },
+    ...overrides,
+  };
+}
+
 export function makeProvider(overrides: Partial<ProviderData> = {}): ProviderData {
   return {
     id: 1,
@@ -152,6 +168,16 @@ export function fakeApi(): FakeApi {
       page: vi.fn(async () => ({ items: [makeFeature()], total: 1, totalPages: 1 })),
       create: vi.fn(async () => makeFeature({ id: 101 })),
       update: vi.fn(async () => makeFeature()),
+      remove: vi.fn(async () => undefined),
+    },
+    categories: {
+      list: vi.fn(async () => [makeCategory()]),
+      create: vi.fn(async (b: Record<string, unknown>) =>
+        makeCategory({ id: 21, title: String(b['title']) }),
+      ),
+      update: vi.fn(async (id: number, b: Record<string, unknown>) =>
+        makeCategory({ id, title: String(b['title'] ?? 'Huts') }),
+      ),
       remove: vi.fn(async () => undefined),
     },
     providers: {

@@ -361,6 +361,72 @@ describe('OpenLayersRenderer', () => {
   });
 });
 
+describe('line and area styles', () => {
+  type StyleFn = (
+    f: Feature,
+    r: number,
+  ) => {
+    getStroke(): { getLineDash(): number[] | null; getWidth(): number; getColor(): string };
+    getImage(): { getOpacity(): number };
+  };
+  function styleOf(
+    style: Record<string, unknown>,
+    layerStyle: Record<string, unknown> = {},
+    geometry = 'LineString',
+  ) {
+    const data = makeData();
+    data.layers[0]!.style = layerStyle;
+    data.layers[0]!.features = [
+      {
+        id: 20,
+        geometry:
+          geometry === 'Point'
+            ? { type: 'Point', coordinates: [8, 49] }
+            : {
+                type: 'LineString',
+                coordinates: [
+                  [8, 49],
+                  [8.2, 49.1],
+                ],
+              },
+        properties: feature(20).properties,
+        style: style as never,
+      },
+    ];
+    const r = mounted(data);
+    const fn = (
+      r as unknown as { vectorLayer: { getStyleFunction(): StyleFn } }
+    ).vectorLayer.getStyleFunction();
+    const source = (r as unknown as { source: { getFeatures(): Feature[] } }).source;
+    return { style: fn(source.getFeatures()[0]!, 1), fn, feature: source.getFeatures()[0]! };
+  }
+
+  it('applies weight, pattern and opacity from the feature, falling back to the layer', () => {
+    const own = styleOf({
+      color: '#ff0000',
+      weight: 6,
+      dash: 'dashed',
+      opacity: 0.5,
+    }).style.getStroke();
+    expect(own.getWidth()).toBe(6);
+    expect(own.getLineDash()).toEqual([12, 8]);
+    expect(own.getColor()).toBe('rgba(255, 0, 0, 0.5)');
+    const layer = styleOf({}, { color: '#00ff00', dash: 'dotted', weight: 2 }).style.getStroke();
+    expect([layer.getWidth(), layer.getLineDash(), layer.getColor()]).toEqual([
+      2,
+      [2, 8],
+      '#00ff00',
+    ]);
+    const plain = styleOf({ dash: 'wavy', weight: 500 }).style.getStroke();
+    expect([plain.getLineDash(), plain.getWidth()]).toEqual([null, 20]);
+  });
+
+  it('applies the opacity to markers and hides filtered features', () => {
+    const { style } = styleOf({ opacity: 0.4 }, {}, 'Point');
+    expect(style.getImage().getOpacity()).toBe(0.4);
+  });
+});
+
 describe('EditableOpenLayersRenderer', () => {
   function editor(): EditableOpenLayersRenderer {
     const r = new EditableOpenLayersRenderer();

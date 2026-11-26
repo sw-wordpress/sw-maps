@@ -121,6 +121,42 @@ describe('editor store', () => {
     expect(store.renderData(viewerStrings((k) => k))?.layers).toHaveLength(1);
   });
 
+  it('loads categories and keeps category management out of the dirty state', async () => {
+    api.features.page.mockResolvedValue({
+      items: [makeFeature({ categories: [20, 22] })],
+      total: 1,
+      totalPages: 1,
+    } as never);
+    const store = await loaded();
+    expect(store.categories.map((c) => c.title)).toEqual(['Huts']);
+    expect(store.renderData(viewerStrings((k) => k))?.categories?.[0]?.title).toBe('Huts');
+    await store.saveCategory(null, { title: 'Aaa' });
+    await store.saveCategory(20, { title: 'Zzz' });
+    expect(store.categories.map((c) => c.title)).toEqual(['Aaa', 'Zzz']);
+    await store.removeCategory(20);
+    expect(api.categories.remove).toHaveBeenCalledWith(20);
+    expect(store.categories.map((c) => c.id)).toEqual([21]);
+    expect(store.doc?.features[0]?.categories).toEqual([22]);
+    expect(store.dirty).toBe(false);
+  });
+
+  it('assigns categories through the working copy and saves them with the feature', async () => {
+    const store = await loaded();
+    store.patchFeature(100, { categories: [20] });
+    expect(store.dirty).toBe(true);
+    await store.save();
+    expect(api.features.update).toHaveBeenCalledWith(
+      100,
+      expect.objectContaining({ categories: [20] }),
+    );
+  });
+
+  it('tolerates a failing category list', async () => {
+    api.categories.list.mockRejectedValueOnce(new ApiError('rest_forbidden', 'no', 403) as never);
+    const store = await loaded();
+    expect(store.categories).toEqual([]);
+  });
+
   it('tolerates a failing provider list (no permission)', async () => {
     api.providers.list.mockRejectedValueOnce(new ApiError('rest_forbidden', 'no', 403) as never);
     const store = await loaded();

@@ -14,6 +14,7 @@ import EditorToolbar from './EditorToolbar.vue';
 import FeatureForm from './FeatureForm.vue';
 import LayerPanel from './LayerPanel.vue';
 import MapSettingsForm from './MapSettingsForm.vue';
+import CategoryDialog from './CategoryDialog.vue';
 import ImportDialog from '@/features/imports/ImportDialog.vue';
 
 const props = defineProps<{ id: string }>();
@@ -25,6 +26,8 @@ const tab = ref<'map' | 'feature'>('map');
 const canvas = ref<InstanceType<typeof EditorCanvas> | null>(null);
 const failed = ref(false);
 const importOpen = ref(false);
+const categoriesOpen = ref(false);
+const canManageCategories = hasCapability(getConfig(), 'swmap_manage_layers');
 const canImport = hasCapability(getConfig(), 'swmap_manage_imports');
 
 const renderData = computed(() => store.renderData(viewerStrings(t)));
@@ -115,6 +118,13 @@ import DataState from '@/components/ui/DataState.vue';
         <q-tooltip v-if="store.dirty">{{ t('import.saveFirst') }}</q-tooltip>
       </q-btn>
     </PageHeader>
+    <CategoryDialog
+      v-if="canManageCategories"
+      v-model="categoriesOpen"
+      :categories="store.categories"
+      :save="store.saveCategory"
+      :remove="store.removeCategory"
+    />
     <ImportDialog
       v-if="canImport"
       v-model="importOpen"
@@ -174,6 +184,9 @@ import DataState from '@/components/ui/DataState.vue';
           <FeatureForm
             v-if="store.selectedFeature"
             :feature="store.selectedFeature"
+            :categories="store.categories"
+            :can-manage-categories="canManageCategories"
+            @manage-categories="categoriesOpen = true"
             @patch="store.patchFeature(store.selectedFeature.id, $event)"
             @coordinates="
               (lon, lat) => store.setPointCoordinates(store.selectedFeature!.id, lon, lat)

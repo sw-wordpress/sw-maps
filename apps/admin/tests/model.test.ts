@@ -119,6 +119,24 @@ describe('History', () => {
 });
 
 describe('diff and save plan', () => {
+  it('detects category changes and sends them with the feature', () => {
+    const original = base();
+    const working = updateFeature(original, 100, { categories: [3, 4] });
+    expect(docEquals(original, working)).toBe(false);
+    const ops = diff(original, working);
+    expect(ops).toHaveLength(1);
+    expect(ops[0]).toMatchObject({
+      kind: 'feature-update',
+      id: 100,
+      patch: { categories: [3, 4] },
+    });
+    const created = addFeature(original, -5, 10, { type: 'Point', coordinates: [1, 1] });
+    expect(diff(original, created)[0]).toMatchObject({
+      kind: 'feature-create',
+      body: { categories: [] },
+    });
+  });
+
   it('is empty without changes', () => {
     expect(diff(base(), base())).toEqual([]);
   });
