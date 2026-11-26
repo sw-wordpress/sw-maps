@@ -26,6 +26,7 @@
 - Export: GeoJSON, CSV (Punkte) und versionierte Plugin-Datei (ohne Zugangsdaten und Medien) je Karte oder für alle Karten; Plugin-Datei importieren (neue Entwurfskarten, Kategorien per Slug).
 - SSRF-Schutz für serverseitige Anfragen (Verbindungstests): nur http(s), private und reservierte Netze gesperrt (auch per Redirect), Admin-Allowlist `allowed_hosts` in den Einstellungen (REST).
 - Geocoding (Nominatim, nur Admin/Editor per Aktion): Koordinaten zur Adresse und Adresse zur Position mit Bestätigung vor der Übernahme; Server, Kontakt und Allowlist in den Einstellungen, Schlüssel nur aus `wp-config.php`.
+- WP-CLI: `wp sw-maps status`, `maps list`, `import` und `export` (Exit-Codes, Rückfragen, JSON-Ausgabe), siehe `docs/cli.md`.
 
 ### Bugs
 

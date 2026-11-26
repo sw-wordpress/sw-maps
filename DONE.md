@@ -1,3 +1,3 @@
 
-- [x] M3-05: `POST /geocoding/search` capability-geschützt; Schlüssel nur aus `wp-config`, nie im Browser
-  - Ergebnis: `POST /geocoding/search` und `/reverse` mit `swmap_edit_maps`; Schlüssel nur aus `SWMAP_GEOCODER_KEY` (wird nur serverseitig an den Dienst gesendet, nie ausgeliefert); stabile Fehlercodes. Tests: `NominatimGeocoderTest`, `RestApiTest`, `geocoding.test.ts`.
+- [x] M3-03: WP-CLI: `status`, `maps list`, `import`, `export`; Bestätigung/`--yes` bei destruktiven Befehlen, Exit-Codes, maschinenlesbare Ausgabe
+  - Ergebnis: `Cli\Command` (`status`, `import`, `export`) und `Cli\MapsCommand` (`maps list`), registriert nur unter WP-CLI; Exit-Codes 0/1/2, `--yes`/Rückfrage bei Ersetzen und Überschreiben, JSON-Ausgabe, `--dry-run`. Doku: `docs/cli.md`. Tests: `CliTest` (WP-CLI-Attrappe `WpCliStub.php`).

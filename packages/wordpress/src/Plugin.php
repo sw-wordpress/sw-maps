@@ -34,6 +34,7 @@ final class Plugin {
 		add_action( 'init', array( Integration\Block::class, 'register' ) );
 		Integration\Privacy::register();
 		Integration\Consent::register();
+		Cli\Registrar::register();
 		if ( is_admin() ) {
 			( new Admin\AdminPage() )->register();
 		}
