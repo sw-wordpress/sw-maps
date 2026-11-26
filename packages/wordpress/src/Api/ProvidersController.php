@@ -148,10 +148,11 @@ final class ProvidersController extends BaseController {
 		$response = wp_safe_remote_get(
 			$provider->urlTemplate,
 			array(
-				'timeout'     => 5,
-				'redirection' => 2,
-				'headers'     => array( 'Range' => 'bytes=0-7' ),
-				'user-agent'  => 'SW-Maps/' . SWMAPS_VERSION . '; ' . home_url(),
+				'timeout'             => 5,
+				'redirection'         => 2,
+				'limit_response_size' => 64, // A host that ignores Range must not stream the whole archive.
+				'headers'             => array( 'Range' => 'bytes=0-7' ),
+				'user-agent'          => 'SW-Maps/' . SWMAPS_VERSION . '; ' . home_url(),
 			)
 		);
 		if ( is_wp_error( $response ) ) {

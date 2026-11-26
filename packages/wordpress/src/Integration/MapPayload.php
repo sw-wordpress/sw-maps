@@ -48,7 +48,8 @@ final class MapPayload {
 		return array(
 			'id'              => $map->id,
 			'title'           => $map->title,
-			'viewport'        => $map->viewport->toArray(),
+			// Without inline features there is nothing to fit to: the configured start view applies.
+			'viewport'        => $ajax ? array_merge( $map->viewport->toArray(), array( 'autoBounds' => false ) ) : $map->viewport->toArray(),
 			'settings'        => $map->settings->toArray(),
 			'provider'        => null === $provider ? null : $provider->toPublicArray(),
 			'layers'          => $layers,

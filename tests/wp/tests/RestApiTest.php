@@ -12,7 +12,10 @@ require_once __DIR__ . '/SwMapsTestCase.php';
 final class RestApiTest extends SwMapsTestCase {
 
 	private function point( float $lon = 8.4, float $lat = 49.0 ): array {
-		return array( 'type' => 'Point', 'coordinates' => array( $lon, $lat ) );
+		return array(
+			'type'        => 'Point',
+			'coordinates' => array( $lon, $lat ),
+		);
 	}
 
 	public function test_anonymous_gets_401_and_subscriber_403_on_every_route(): void {
@@ -73,7 +76,14 @@ final class RestApiTest extends SwMapsTestCase {
 
 	public function test_map_crud_and_defaults_from_settings(): void {
 		$this->as_role( 'administrator' );
-		$created = $this->rest( 'POST', '/maps', array( 'title' => 'Wandern', 'status' => 'published' ) );
+		$created = $this->rest(
+			'POST',
+			'/maps',
+			array(
+				'title'  => 'Wandern',
+				'status' => 'published',
+			)
+		);
 		$this->assertSame( 201, $created->get_status() );
 		$map = $created->get_data();
 		$this->assertSame( 'draft', $map['status'], 'new maps always start as draft' );
@@ -82,7 +92,18 @@ final class RestApiTest extends SwMapsTestCase {
 		$this->assertFalse( $map['settings']['scrollZoom'] );
 		$this->assertArrayHasKey( 'Location', $created->get_headers() );
 
-		$patched = $this->rest( 'PATCH', "/maps/{$map['id']}", array( 'title' => 'Neu', 'viewport' => array( 'zoom' => 9, 'center' => array( 9.1, 48.7 ) ), 'settings' => array( 'height' => 650 ) ) )->get_data();
+		$patched = $this->rest(
+			'PATCH',
+			"/maps/{$map['id']}",
+			array(
+				'title'    => 'Neu',
+				'viewport' => array(
+					'zoom'   => 9,
+					'center' => array( 9.1, 48.7 ),
+				),
+				'settings' => array( 'height' => 650 ),
+			)
+		)->get_data();
 		$this->assertSame( array( 'Neu', 9.0, 650 ), array( $patched['title'], $patched['viewport']['zoom'], $patched['settings']['height'] ) );
 		$this->assertSame( 204, $this->rest( 'DELETE', "/maps/{$map['id']}" )->get_status() );
 		$this->assertSame( 404, $this->rest( 'GET', "/maps/{$map['id']}" )->get_status() );
@@ -139,7 +160,16 @@ final class RestApiTest extends SwMapsTestCase {
 
 		$id    = $this->create_map();
 		$layer = $this->rest( 'POST', "/maps/{$id}/layers", array( 'title' => 'L' ) )->get_data();
-		$bad   = $this->rest( 'POST', "/layers/{$layer['id']}/features", array( 'geometry' => array( 'type' => 'Point', 'coordinates' => array( 999, 0 ) ) ) );
+		$bad   = $this->rest(
+			'POST',
+			"/layers/{$layer['id']}/features",
+			array(
+				'geometry' => array(
+					'type'        => 'Point',
+					'coordinates' => array( 999, 0 ),
+				),
+			)
+		);
 		$this->assertSame( 400, $bad->get_status() );
 		$this->assertSame( 'swmap_invalid_geometry', $bad->get_data()['code'] );
 
@@ -153,7 +183,15 @@ final class RestApiTest extends SwMapsTestCase {
 		for ( $i = 1; $i <= 3; $i++ ) {
 			$this->rest( 'POST', '/maps', array( 'title' => "Map $i" ) );
 		}
-		$r = $this->rest( 'GET', '/maps', null, array( 'per_page' => 2, 'page' => 2 ) );
+		$r = $this->rest(
+			'GET',
+			'/maps',
+			null,
+			array(
+				'per_page' => 2,
+				'page'     => 2,
+			)
+		);
 		$this->assertCount( 1, $r->get_data() );
 		$this->assertSame( '3', (string) $r->get_headers()['X-WP-Total'] );
 		$this->assertSame( '2', (string) $r->get_headers()['X-WP-TotalPages'] );
@@ -165,8 +203,25 @@ final class RestApiTest extends SwMapsTestCase {
 	public function test_layers_features_flow_and_cascade(): void {
 		global $wpdb;
 		$id    = $this->create_map();
-		$layer = $this->rest( 'POST', "/maps/{$id}/layers", array( 'title' => 'Orte', 'style' => array( 'color' => '#336699' ) ) )->get_data();
-		$feat  = $this->rest( 'POST', "/layers/{$layer['id']}/features", array( 'geometry' => $this->point(), 'properties' => array( 'title' => 'Rathaus', 'link' => 'https://example.org' ) ) );
+		$layer = $this->rest(
+			'POST',
+			"/maps/{$id}/layers",
+			array(
+				'title' => 'Orte',
+				'style' => array( 'color' => '#336699' ),
+			)
+		)->get_data();
+		$feat  = $this->rest(
+			'POST',
+			"/layers/{$layer['id']}/features",
+			array(
+				'geometry'   => $this->point(),
+				'properties' => array(
+					'title' => 'Rathaus',
+					'link'  => 'https://example.org',
+				),
+			)
+		);
 		$this->assertSame( 201, $feat->get_status() );
 		$feature = $feat->get_data();
 		$moved   = $this->rest( 'PATCH', "/features/{$feature['id']}", array( 'geometry' => $this->point( 8.5, 49.1 ) ) )->get_data();
@@ -193,14 +248,31 @@ final class RestApiTest extends SwMapsTestCase {
 
 	public function test_admin_app_payload_with_null_external_id_is_accepted(): void {
 		$id    = $this->create_map();
-		$layer = $this->rest( 'POST', "/maps/{$id}/layers", array( 'title' => 'L', 'status' => 'published', 'sort_order' => 0, 'visible' => true, 'style' => array() ) );
+		$layer = $this->rest(
+			'POST',
+			"/maps/{$id}/layers",
+			array(
+				'title'      => 'L',
+				'status'     => 'published',
+				'sort_order' => 0,
+				'visible'    => true,
+				'style'      => array(),
+			)
+		);
 		$this->assertSame( 201, $layer->get_status() );
 		$feature = $this->rest(
 			'POST',
 			'/layers/' . $layer->get_data()['id'] . '/features',
 			array(
 				'geometry'    => $this->point(),
-				'properties'  => array( 'title' => 'A', 'description' => '', 'address' => '', 'image_id' => null, 'link' => null, 'icon' => 'builtin:pin' ),
+				'properties'  => array(
+					'title'       => 'A',
+					'description' => '',
+					'address'     => '',
+					'image_id'    => null,
+					'link'        => null,
+					'icon'        => 'builtin:pin',
+				),
 				'style'       => array(),
 				'external_id' => null,
 			)
@@ -231,7 +303,17 @@ final class RestApiTest extends SwMapsTestCase {
 		$id    = $this->create_map();
 		$layer = $this->rest( 'POST', "/maps/{$id}/layers", array( 'title' => 'L' ) )->get_data();
 		$png   = self::factory()->attachment->create_upload_object( DIR_TESTDATA . '/images/canola.jpg' );
-		$feat  = $this->rest( 'POST', "/layers/{$layer['id']}/features", array( 'geometry' => $this->point(), 'properties' => array( 'image_id' => $png, 'icon' => 'media:' . $png ) ) )->get_data();
+		$feat  = $this->rest(
+			'POST',
+			"/layers/{$layer['id']}/features",
+			array(
+				'geometry'   => $this->point(),
+				'properties' => array(
+					'image_id' => $png,
+					'icon'     => 'media:' . $png,
+				),
+			)
+		)->get_data();
 		$this->assertStringContainsString( 'canola', (string) $feat['properties']['icon_url'] );
 		$this->assertStringContainsString( 'canola', (string) $feat['properties']['image_url'] );
 		$list = $this->rest( 'GET', "/layers/{$layer['id']}/features" )->get_data();
@@ -286,7 +368,10 @@ final class RestApiTest extends SwMapsTestCase {
 			array(
 				'name'            => 'Own tiles',
 				'secret_constant' => 'SWMAP_TEST_SECRET',
-				'public_config'   => array( 'urlTemplate' => 'https://tiles.example.org/{z}/{x}/{y}.png', 'attribution' => '© Own' ),
+				'public_config'   => array(
+					'urlTemplate' => 'https://tiles.example.org/{z}/{x}/{y}.png',
+					'attribution' => '© Own',
+				),
 			)
 		);
 		$this->assertSame( 201, $created->get_status() );
@@ -300,7 +385,20 @@ final class RestApiTest extends SwMapsTestCase {
 		$this->assertStringNotContainsString( 'super-secret-value', (string) $stored );
 		$this->assertStringContainsString( 'SWMAP_TEST_SECRET', (string) $stored );
 
-		$this->assertSame( 400, $this->rest( 'POST', '/providers', array( 'name' => 'Bad', 'public_config' => array( 'urlTemplate' => 'javascript:x', 'attribution' => 'x' ) ) )->get_status() );
+		$this->assertSame(
+			400,
+			$this->rest(
+				'POST',
+				'/providers',
+				array(
+					'name'          => 'Bad',
+					'public_config' => array(
+						'urlTemplate' => 'javascript:x',
+						'attribution' => 'x',
+					),
+				)
+			)->get_status()
+		);
 		$this->assertSame( 400, $this->rest( 'PATCH', "/providers/{$data['id']}", array( 'secret_constant' => 'lowercase' ) )->get_status() );
 		$this->assertSame( 204, $this->rest( 'DELETE', "/providers/{$data['id']}" )->get_status() );
 	}
@@ -308,13 +406,34 @@ final class RestApiTest extends SwMapsTestCase {
 	public function test_core_credentials_can_never_be_used_as_provider_secrets(): void {
 		$this->as_role( 'administrator' );
 		foreach ( array( 'DB_PASSWORD', 'AUTH_KEY', 'ABSPATH' ) as $constant ) {
-			$response = $this->rest( 'POST', '/providers', array( 'name' => 'Leak', 'secret_constant' => $constant, 'public_config' => array( 'urlTemplate' => 'https://attacker.example/{z}/{x}/{y}?v={secret}', 'attribution' => 'x' ) ) );
+			$response = $this->rest(
+				'POST',
+				'/providers',
+				array(
+					'name'            => 'Leak',
+					'secret_constant' => $constant,
+					'public_config'   => array(
+						'urlTemplate' => 'https://attacker.example/{z}/{x}/{y}?v={secret}',
+						'attribution' => 'x',
+					),
+				)
+			);
 			$this->assertSame( 400, $response->get_status(), $constant );
 		}
 		// A row written before the rule existed is still never resolved by the connection test.
 		global $wpdb;
 		// A public IP literal passes wp_safe_remote_get()'s URL validation without DNS, so the request reaches the filter.
-		$created = $this->rest( 'POST', '/providers', array( 'name' => 'Legacy', 'public_config' => array( 'urlTemplate' => 'https://93.184.216.34/{z}/{x}/{y}?v={secret}', 'attribution' => 'x' ) ) )->get_data();
+		$created = $this->rest(
+			'POST',
+			'/providers',
+			array(
+				'name'          => 'Legacy',
+				'public_config' => array(
+					'urlTemplate' => 'https://93.184.216.34/{z}/{x}/{y}?v={secret}',
+					'attribution' => 'x',
+				),
+			)
+		)->get_data();
 		$wpdb->update( SWMaps\WordPress\Persistence\Schema::table( 'providers' ), array( 'secret_constant' => 'DB_PASSWORD' ), array( 'id' => $created['id'] ) );
 		$requested = array();
 		$spy       = static function ( $pre, array $args, string $url ) use ( &$requested ) {
@@ -332,14 +451,17 @@ final class RestApiTest extends SwMapsTestCase {
 
 	public function test_provider_connection_test_reports_success_and_failure(): void {
 		$this->as_role( 'administrator' );
-		$id = Services::instance()->providers()->list()[0]->id;
+		$id   = Services::instance()->providers()->list()[0]->id;
 		$mock = static function ( $pre, array $args, string $url ) {
 			unset( $pre, $args );
 			if ( str_contains( $url, 'tile.openstreetmap.org/0/0/0.png' ) ) {
 				return array(
 					'headers'  => array( 'content-type' => 'image/png' ),
 					'body'     => 'x',
-					'response' => array( 'code' => 200, 'message' => 'OK' ),
+					'response' => array(
+						'code'    => 200,
+						'message' => 'OK',
+					),
 				);
 			}
 			return new WP_Error( 'http_request_failed', 'down' );
@@ -347,8 +469,18 @@ final class RestApiTest extends SwMapsTestCase {
 		add_filter( 'pre_http_request', $mock, 10, 3 );
 		$ok = $this->rest( 'POST', "/providers/{$id}/test" )->get_data();
 		$this->assertTrue( $ok['ok'] );
-		$broken = $this->rest( 'POST', '/providers', array( 'name' => 'Broken', 'public_config' => array( 'urlTemplate' => 'https://broken.example.org/{z}/{x}/{y}.png', 'attribution' => 'x' ) ) )->get_data();
-		$fail = $this->rest( 'POST', "/providers/{$broken['id']}/test" )->get_data();
+		$broken = $this->rest(
+			'POST',
+			'/providers',
+			array(
+				'name'          => 'Broken',
+				'public_config' => array(
+					'urlTemplate' => 'https://broken.example.org/{z}/{x}/{y}.png',
+					'attribution' => 'x',
+				),
+			)
+		)->get_data();
+		$fail   = $this->rest( 'POST', "/providers/{$broken['id']}/test" )->get_data();
 		$this->assertFalse( $fail['ok'] );
 		$this->assertSame( 0, $fail['status'] );
 		remove_filter( 'pre_http_request', $mock, 10 );
@@ -356,7 +488,10 @@ final class RestApiTest extends SwMapsTestCase {
 		$html = static fn () => array(
 			'headers'  => array( 'content-type' => 'text/html' ),
 			'body'     => '<html>',
-			'response' => array( 'code' => 200, 'message' => 'OK' ),
+			'response' => array(
+				'code'    => 200,
+				'message' => 'OK',
+			),
 		);
 		add_filter( 'pre_http_request', $html );
 		$this->assertFalse( $this->rest( 'POST', "/providers/{$id}/test" )->get_data()['ok'] );
@@ -366,7 +501,15 @@ final class RestApiTest extends SwMapsTestCase {
 	public function test_settings_and_status(): void {
 		$this->as_role( 'administrator' );
 		$this->assertFalse( $this->rest( 'GET', '/settings' )->get_data()['delete_data_on_uninstall'] );
-		$updated = $this->rest( 'PATCH', '/settings', array( 'delete_data_on_uninstall' => true, 'default_height' => 500, 'unknown' => 1 ) )->get_data();
+		$updated = $this->rest(
+			'PATCH',
+			'/settings',
+			array(
+				'delete_data_on_uninstall' => true,
+				'default_height'           => 500,
+				'unknown'                  => 1,
+			)
+		)->get_data();
 		$this->assertTrue( $updated['delete_data_on_uninstall'] );
 		$this->assertSame( 500, $updated['default_height'] );
 		$this->assertArrayNotHasKey( 'unknown', $updated );
@@ -382,12 +525,31 @@ final class RestApiTest extends SwMapsTestCase {
 			array(
 				'type'     => 'FeatureCollection',
 				'features' => array(
-					array( 'type' => 'Feature', 'properties' => array( 'name' => 'A', 'id' => 'a1' ), 'geometry' => $this->point() ),
-					array( 'type' => 'Feature', 'properties' => array( 'name' => 'Track' ), 'geometry' => array( 'type' => 'LineString', 'coordinates' => array( array( 8, 49 ), array( 8.1, 49.1 ) ) ) ),
+					array(
+						'type'       => 'Feature',
+						'properties' => array(
+							'name' => 'A',
+							'id'   => 'a1',
+						),
+						'geometry'   => $this->point(),
+					),
+					array(
+						'type'       => 'Feature',
+						'properties' => array( 'name' => 'Track' ),
+						'geometry'   => array(
+							'type'        => 'LineString',
+							'coordinates' => array( array( 8, 49 ), array( 8.1, 49.1 ) ),
+						),
+					),
 				),
 			)
 		);
-		$base = array( 'map_id' => $map_id, 'format' => 'geojson', 'content' => $geojson, 'layer_title' => 'Imported' );
+		$base    = array(
+			'map_id'      => $map_id,
+			'format'      => 'geojson',
+			'content'     => $geojson,
+			'layer_title' => 'Imported',
+		);
 
 		$dry = $this->rest( 'POST', '/imports', $base + array( 'dry_run' => true ) );
 		$this->assertSame( 200, $dry->get_status() );
@@ -403,23 +565,64 @@ final class RestApiTest extends SwMapsTestCase {
 		$this->assertCount( 2, $features );
 
 		// Upsert by external id updates in place.
-		$again = $this->rest( 'POST', '/imports', array( 'map_id' => $map_id, 'mode' => 'upsert', 'layer_id' => $report['layer_id'] ) + $base );
+		$again = $this->rest(
+			'POST',
+			'/imports',
+			array(
+				'map_id'   => $map_id,
+				'mode'     => 'upsert',
+				'layer_id' => $report['layer_id'],
+			) + $base
+		);
 		$this->assertSame( array( 1, 1 ), array( $again->get_data()['updated'], $again->get_data()['created'] ) );
 
 		// Hostile XML is rejected as a whole, nothing is written.
 		$xxe = '<?xml version="1.0"?><!DOCTYPE gpx [<!ENTITY x SYSTEM "file:///etc/passwd">]><gpx><wpt lat="1" lon="1"><name>&x;</name></wpt></gpx>';
-		$bad = $this->rest( 'POST', '/imports', array( 'map_id' => $map_id, 'format' => 'gpx', 'content' => $xxe ) );
+		$bad = $this->rest(
+			'POST',
+			'/imports',
+			array(
+				'map_id'  => $map_id,
+				'format'  => 'gpx',
+				'content' => $xxe,
+			)
+		);
 		$this->assertSame( 422, $bad->get_status() );
 		$this->assertSame( 'forbidden', $bad->as_error()->get_error_data()['reason'] );
 		$this->assertCount( 1, $this->rest( 'GET', "/maps/{$map_id}/layers" )->get_data() );
 
 		// Replacing needs the explicit confirmation.
-		$replace = array( 'map_id' => $map_id, 'mode' => 'replace', 'layer_id' => $report['layer_id'] ) + $base;
+		$replace = array(
+			'map_id'   => $map_id,
+			'mode'     => 'replace',
+			'layer_id' => $report['layer_id'],
+		) + $base;
 		$this->assertSame( 400, $this->rest( 'POST', '/imports', $replace )->get_status() );
 		$this->assertSame( 200, $this->rest( 'POST', '/imports', $replace + array( 'confirm_replace' => true ) )->get_status() );
 
-		$this->assertSame( 404, $this->rest( 'POST', '/imports', array( 'map_id' => 999999, 'format' => 'geojson', 'content' => $geojson ) )->get_status() );
-		$this->assertSame( 400, $this->rest( 'POST', '/imports', array( 'format' => 'geojson', 'content' => $geojson ) )->get_status() );
+		$this->assertSame(
+			404,
+			$this->rest(
+				'POST',
+				'/imports',
+				array(
+					'map_id'  => 999999,
+					'format'  => 'geojson',
+					'content' => $geojson,
+				)
+			)->get_status()
+		);
+		$this->assertSame(
+			400,
+			$this->rest(
+				'POST',
+				'/imports',
+				array(
+					'format'  => 'geojson',
+					'content' => $geojson,
+				)
+			)->get_status()
+		);
 
 		wp_set_current_user( 0 );
 		$this->assertSame( 401, $this->rest( 'POST', '/imports', $base )->get_status() );
@@ -430,13 +633,31 @@ final class RestApiTest extends SwMapsTestCase {
 	public function test_categories_crud_assignment_and_public_payload(): void {
 		$map_id = $this->create_map();
 		$layer  = $this->rest( 'POST', "/maps/{$map_id}/layers", array( 'title' => 'L' ) )->get_data();
-		$cat    = $this->rest( 'POST', '/categories', array( 'title' => 'Huts', 'style' => array( 'color' => '#00aa00', 'icon' => 'builtin:home' ) ) );
+		$cat    = $this->rest(
+			'POST',
+			'/categories',
+			array(
+				'title' => 'Huts',
+				'style' => array(
+					'color' => '#00aa00',
+					'icon'  => 'builtin:home',
+				),
+			)
+		);
 		$this->assertSame( 201, $cat->get_status() );
 		$cat_id = $cat->get_data()['id'];
 		$this->assertSame( 'huts', $cat->get_data()['slug'] );
 		$unused = $this->rest( 'POST', '/categories', array( 'title' => 'Unused' ) )->get_data();
 
-		$feature = $this->rest( 'POST', "/layers/{$layer['id']}/features", array( 'geometry' => $this->point(), 'properties' => array( 'title' => 'A' ), 'categories' => array( $cat_id ) ) );
+		$feature = $this->rest(
+			'POST',
+			"/layers/{$layer['id']}/features",
+			array(
+				'geometry'   => $this->point(),
+				'properties' => array( 'title' => 'A' ),
+				'categories' => array( $cat_id ),
+			)
+		);
 		$this->assertSame( 201, $feature->get_status() );
 		$this->assertSame( array( $cat_id ), $feature->get_data()['categories'] );
 		$fid = $feature->get_data()['id'];
@@ -487,13 +708,48 @@ final class RestApiTest extends SwMapsTestCase {
 		for ( $i = 0; $i < 800; $i++ ) {
 			$points[] = array( 8 + $i * 0.0001, 49 + ( 0 === $i % 2 ? 0.0 : 0.000001 ) );
 		}
-		$created = $this->rest( 'POST', "/layers/{$layer['id']}/features", array( 'geometry' => array( 'type' => 'LineString', 'coordinates' => $points ), 'properties' => array( 'title' => 'Long', 'fields' => array( array( 'label' => 'Length', 'value' => '8 km' ) ) ) ) );
+		$created = $this->rest(
+			'POST',
+			"/layers/{$layer['id']}/features",
+			array(
+				'geometry'   => array(
+					'type'        => 'LineString',
+					'coordinates' => $points,
+				),
+				'properties' => array(
+					'title'  => 'Long',
+					'fields' => array(
+						array(
+							'label' => 'Length',
+							'value' => '8 km',
+						),
+					),
+				),
+			)
+		);
 		$this->assertSame( 201, $created->get_status() );
-		$this->assertSame( array( array( 'label' => 'Length', 'value' => '8 km' ) ), $created->get_data()['properties']['fields'] );
-		$small = $this->rest( 'POST', "/layers/{$layer['id']}/features", array( 'geometry' => array( 'type' => 'LineString', 'coordinates' => array_slice( $points, 0, 10 ) ) ) )->get_data();
+		$this->assertSame(
+			array(
+				array(
+					'label' => 'Length',
+					'value' => '8 km',
+				),
+			),
+			$created->get_data()['properties']['fields']
+		);
+		$small = $this->rest(
+			'POST',
+			"/layers/{$layer['id']}/features",
+			array(
+				'geometry' => array(
+					'type'        => 'LineString',
+					'coordinates' => array_slice( $points, 0, 10 ),
+				),
+			)
+		)->get_data();
 		$this->rest( 'PATCH', "/maps/{$map_id}", array( 'status' => 'published' ) );
 
-		$payload = \SWMaps\WordPress\Integration\MapPayload::build( \SWMaps\WordPress\Services::instance()->maps()->get( $map_id ) );
+		$payload   = \SWMaps\WordPress\Integration\MapPayload::build( \SWMaps\WordPress\Services::instance()->maps()->get( $map_id ) );
 		$long_out  = $payload['layers'][0]['features'][0];
 		$small_out = $payload['layers'][0]['features'][1];
 		$this->assertTrue( $long_out['simplified'] );
@@ -519,13 +775,36 @@ final class RestApiTest extends SwMapsTestCase {
 	public function test_public_features_endpoint_serves_the_visible_area_of_published_ajax_maps_only(): void {
 		$map_id = $this->create_map();
 		$this->rest( 'PATCH', "/maps/{$map_id}", array( 'settings' => array( 'ajax' => true ) ) );
-		$layer  = $this->rest( 'POST', "/maps/{$map_id}/layers", array( 'title' => 'L' ) )->get_data();
-		$draft  = $this->rest( 'POST', "/maps/{$map_id}/layers", array( 'title' => 'Draft', 'status' => 'draft' ) )->get_data();
-		$cat    = $this->rest( 'POST', '/categories', array( 'title' => 'Huts' ) )->get_data();
-		$in     = $this->rest( 'POST', "/layers/{$layer['id']}/features", array( 'geometry' => $this->point( 8.4, 49.0 ), 'categories' => array( $cat['id'] ) ) )->get_data();
+		$layer = $this->rest( 'POST', "/maps/{$map_id}/layers", array( 'title' => 'L' ) )->get_data();
+		$draft = $this->rest(
+			'POST',
+			"/maps/{$map_id}/layers",
+			array(
+				'title'  => 'Draft',
+				'status' => 'draft',
+			)
+		)->get_data();
+		$cat   = $this->rest( 'POST', '/categories', array( 'title' => 'Huts' ) )->get_data();
+		$in    = $this->rest(
+			'POST',
+			"/layers/{$layer['id']}/features",
+			array(
+				'geometry'   => $this->point( 8.4, 49.0 ),
+				'categories' => array( $cat['id'] ),
+			)
+		)->get_data();
 		$this->rest( 'POST', "/layers/{$layer['id']}/features", array( 'geometry' => $this->point( 8.5, 49.1 ) ) );
 		$this->rest( 'POST', "/layers/{$layer['id']}/features", array( 'geometry' => $this->point( 2.0, 10.0 ) ) );
-		$this->rest( 'POST', "/layers/{$layer['id']}/features", array( 'geometry' => array( 'type' => 'LineString', 'coordinates' => array( array( 7, 48 ), array( 9, 50 ) ) ) ) );
+		$this->rest(
+			'POST',
+			"/layers/{$layer['id']}/features",
+			array(
+				'geometry' => array(
+					'type'        => 'LineString',
+					'coordinates' => array( array( 7, 48 ), array( 9, 50 ) ),
+				),
+			)
+		);
 		$this->rest( 'POST', "/layers/{$draft['id']}/features", array( 'geometry' => $this->point( 8.4, 49.0 ) ) );
 		$route = "/public/maps/{$map_id}/features";
 		$query = array( 'bbox' => '8,48.9,9,49.5' );
@@ -548,12 +827,31 @@ final class RestApiTest extends SwMapsTestCase {
 
 		$filtered = $this->rest( 'GET', $route, null, $query + array( 'categories' => (string) $cat['id'] ) )->get_data();
 		$this->assertSame( array( $in['id'] ), array_column( $filtered['layers'][0]['features'], 'id' ) );
-		$paged = $this->rest( 'GET', $route, null, $query + array( 'per_page' => 2, 'page' => 2 ) )->get_data();
+		$paged = $this->rest(
+			'GET',
+			$route,
+			null,
+			$query + array(
+				'per_page' => 2,
+				'page'     => 2,
+			)
+		)->get_data();
 		$this->assertSame( array( 3, 2, 1 ), array( $paged['total'], $paged['total_pages'], count( $paged['layers'][0]['features'] ) ) );
 		$this->assertSame( 400, $this->rest( 'GET', $route, null, array( 'bbox' => 'a,b,c,d' ) )->get_status() );
 		$this->assertSame( 400, $this->rest( 'GET', $route, null, array( 'bbox' => '9,48,8,50' ) )->get_status(), 'min must not exceed max' );
 		$this->assertSame( 400, $this->rest( 'GET', $route, null, array( 'bbox' => '8,48,9' ) )->get_status() );
-		$this->assertSame( 400, $this->rest( 'GET', $route, null, array( 'bbox' => '8,48,9,50', 'per_page' => 5000 ) )->get_status() );
+		$this->assertSame(
+			400,
+			$this->rest(
+				'GET',
+				$route,
+				null,
+				array(
+					'bbox'     => '8,48,9,50',
+					'per_page' => 5000,
+				)
+			)->get_status()
+		);
 		$this->assertSame( 400, $this->rest( 'GET', $route, null )->get_status() );
 		$this->assertSame( 400, $this->rest( 'GET', $route, null, array( 'bbox' => '-200,0,10,10' ) )->get_status() );
 
@@ -565,6 +863,7 @@ final class RestApiTest extends SwMapsTestCase {
 		$preview = \SWMaps\WordPress\Integration\MapPayload::build( \SWMaps\WordPress\Services::instance()->maps()->get( $map_id ), true );
 		$this->assertNull( $preview['ajaxUrl'], 'draft previews are always inline' );
 		$this->assertNotEmpty( $preview['layers'][0]['features'] );
+		$this->assertFalse( $payload['viewport']['autoBounds'], 'AJAX maps use the configured start view' );
 
 		// Switching the mode off closes the endpoint again.
 		$this->as_role( 'administrator' );
@@ -575,33 +874,67 @@ final class RestApiTest extends SwMapsTestCase {
 
 	public function test_pmtiles_provider_connection_test_reads_the_archive_header(): void {
 		$this->as_role( 'administrator' );
-		$created = $this->rest( 'POST', '/providers', array( 'type' => 'pmtiles', 'name' => 'Archive', 'public_config' => array( 'urlTemplate' => 'https://files.example.org/world.pmtiles', 'attribution' => '© Protomaps', 'maxZoom' => 12 ) ) );
+		$created = $this->rest(
+			'POST',
+			'/providers',
+			array(
+				'type'          => 'pmtiles',
+				'name'          => 'Archive',
+				'public_config' => array(
+					'urlTemplate' => 'https://files.example.org/world.pmtiles',
+					'attribution' => '© Protomaps',
+					'maxZoom'     => 12,
+				),
+			)
+		);
 		$this->assertSame( 201, $created->get_status() );
 		$this->assertSame( 'pmtiles', $created->get_data()['type'] );
 		$this->assertSame( array( 'files.example.org' ), $created->get_data()['external_requests'] );
 		$id = $created->get_data()['id'];
-		$this->assertSame( 400, $this->rest( 'POST', '/providers', array( 'type' => 'pmtiles', 'name' => 'Bad', 'public_config' => array( 'urlTemplate' => 'https://files.example.org/{z}/{x}/{y}.png', 'attribution' => 'x' ) ) )->get_status() );
+		$this->assertSame(
+			400,
+			$this->rest(
+				'POST',
+				'/providers',
+				array(
+					'type'          => 'pmtiles',
+					'name'          => 'Bad',
+					'public_config' => array(
+						'urlTemplate' => 'https://files.example.org/{z}/{x}/{y}.png',
+						'attribution' => 'x',
+					),
+				)
+			)->get_status()
+		);
 
 		$seen = array();
 		$mock = static function ( $pre, $args ) use ( &$seen ) {
-			$seen = $args['headers'];
+			$seen                        = $args['headers'];
+			$GLOBALS['swmap_test_limit'] = $args['limit_response_size'] ?? null;
 			return array(
 				'headers'  => array( 'content-type' => 'application/octet-stream' ),
 				'body'     => "PMTiles\x03" . str_repeat( "\0", 8 ),
-				'response' => array( 'code' => 206, 'message' => 'Partial Content' ),
+				'response' => array(
+					'code'    => 206,
+					'message' => 'Partial Content',
+				),
 			);
 		};
 		add_filter( 'pre_http_request', $mock, 10, 2 );
 		$ok = $this->rest( 'POST', "/providers/{$id}/test" )->get_data();
 		$this->assertTrue( $ok['ok'] );
 		$this->assertSame( 'bytes=0-7', $seen['Range'], 'only the header is requested' );
+		$this->assertLessThanOrEqual( 64, $GLOBALS['swmap_test_limit'], 'the response size is capped' );
 		remove_filter( 'pre_http_request', $mock, 10 );
 
 		foreach ( array( "PMTiles\x02", '<html>', '' ) as $body ) {
 			$bad = static fn () => array(
 				'headers'  => array(),
 				'body'     => $body,
-				'response' => array( 'code' => 200, 'message' => 'OK' ),
+				'response' => array(
+					'code'    => 200,
+					'message' => 'OK',
+				),
 			);
 			add_filter( 'pre_http_request', $bad );
 			$this->assertFalse( $this->rest( 'POST', "/providers/{$id}/test" )->get_data()['ok'], 'rejects ' . wp_json_encode( $body ) );
