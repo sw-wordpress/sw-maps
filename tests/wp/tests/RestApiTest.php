@@ -426,4 +426,53 @@ final class RestApiTest extends SwMapsTestCase {
 		$this->as_role( 'editor' );
 		$this->assertSame( 403, $this->rest( 'POST', '/imports', $base )->get_status(), 'editors lack swmap_manage_imports' );
 	}
+
+	public function test_categories_crud_assignment_and_public_payload(): void {
+		$map_id = $this->create_map();
+		$layer  = $this->rest( 'POST', "/maps/{$map_id}/layers", array( 'title' => 'L' ) )->get_data();
+		$cat    = $this->rest( 'POST', '/categories', array( 'title' => 'Huts', 'style' => array( 'color' => '#00aa00', 'icon' => 'builtin:home' ) ) );
+		$this->assertSame( 201, $cat->get_status() );
+		$cat_id = $cat->get_data()['id'];
+		$this->assertSame( 'huts', $cat->get_data()['slug'] );
+		$unused = $this->rest( 'POST', '/categories', array( 'title' => 'Unused' ) )->get_data();
+
+		$feature = $this->rest( 'POST', "/layers/{$layer['id']}/features", array( 'geometry' => $this->point(), 'properties' => array( 'title' => 'A' ), 'categories' => array( $cat_id ) ) );
+		$this->assertSame( 201, $feature->get_status() );
+		$this->assertSame( array( $cat_id ), $feature->get_data()['categories'] );
+		$fid = $feature->get_data()['id'];
+		$this->assertSame( array( $cat_id ), $this->rest( 'GET', "/features/{$fid}" )->get_data()['categories'] );
+		$listed = $this->rest( 'GET', "/layers/{$layer['id']}/features" )->get_data();
+		$this->assertSame( array( $cat_id ), $listed[0]['categories'] );
+		$this->assertSame( 400, $this->rest( 'PATCH', "/features/{$fid}", array( 'categories' => array( 99999 ) ) )->get_status() );
+		$this->assertSame( array( $cat_id ), $this->rest( 'PATCH', "/features/{$fid}", array( 'properties' => array( 'title' => 'B' ) ) )->get_data()['categories'] );
+
+		// The public payload contains only categories that are in use.
+		$this->rest( 'PATCH', "/maps/{$map_id}", array( 'status' => 'published' ) );
+		$payload = \SWMaps\WordPress\Integration\MapPayload::build( \SWMaps\WordPress\Services::instance()->maps()->get( $map_id ) );
+		$this->assertCount( 1, $payload['categories'] );
+		$this->assertSame( 'Huts', $payload['categories'][0]['title'] );
+		$this->assertSame( array( $cat_id ), $payload['layers'][0]['features'][0]['categories'] );
+		$html = \SWMaps\WordPress\Integration\Renderer::render( $map_id );
+		$this->assertStringContainsString( 'data-categories="' . $cat_id . '"', $html );
+		$this->assertStringContainsString( 'data-search="b"', $html );
+
+		$patched = $this->rest( 'PATCH', "/categories/{$cat_id}", array( 'title' => 'Mountain huts' ) );
+		$this->assertSame( 'Mountain huts', $patched->get_data()['title'] );
+		$this->assertCount( 2, $this->rest( 'GET', '/categories' )->get_data() );
+		$this->assertSame( 204, $this->rest( 'DELETE', "/categories/{$cat_id}" )->get_status() );
+		$this->assertSame( array(), $this->rest( 'GET', "/features/{$fid}" )->get_data()['categories'] );
+		$this->assertSame( 404, $this->rest( 'DELETE', "/categories/{$cat_id}" )->get_status() );
+		$this->assertSame( 400, $this->rest( 'POST', '/categories', array() )->get_status() );
+		$this->assertSame( $unused['id'], $this->rest( 'GET', '/categories' )->get_data()[0]['id'] );
+
+		// Editors have both capabilities; subscribers have neither.
+		$this->as_role( 'editor' );
+		$this->assertSame( 200, $this->rest( 'GET', '/categories' )->get_status() );
+		$this->assertSame( 201, $this->rest( 'POST', '/categories', array( 'title' => 'x' ) )->get_status() );
+		$this->as_role( 'subscriber' );
+		$this->assertSame( 403, $this->rest( 'GET', '/categories' )->get_status() );
+		$this->assertSame( 403, $this->rest( 'POST', '/categories', array( 'title' => 'x' ) )->get_status() );
+		wp_set_current_user( 0 );
+		$this->assertSame( 401, $this->rest( 'GET', '/categories' )->get_status() );
+	}
 }

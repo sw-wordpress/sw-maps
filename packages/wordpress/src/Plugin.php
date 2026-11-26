@@ -62,6 +62,7 @@ final class Plugin {
 			new Api\MapsController(),
 			new Api\LayersController(),
 			new Api\ImportsController(),
+			new Api\CategoriesController(),
 			new Api\FeaturesController(),
 			new Api\ProvidersController(),
 			new Api\SettingsController(),

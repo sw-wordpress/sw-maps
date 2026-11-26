@@ -205,6 +205,45 @@
   border: 1px solid currentcolor;
   border-radius: 4px;
 }
+.swmap__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  align-items: center;
+  margin: 0 0 0.5em;
+}
+.swmap__search {
+  min-height: 2.5rem;
+  padding: 0.25em 0.75em;
+  font: inherit;
+  border: 1px solid #8c8f94;
+  border-radius: 4px;
+}
+.swmap__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em;
+}
+.swmap__chip {
+  display: inline-flex;
+  gap: 0.4em;
+  align-items: center;
+  min-height: 2.5rem;
+  padding: 0.25em 0.75em;
+  font: inherit;
+  cursor: pointer;
+  background: #fff;
+  border: 1px solid #8c8f94;
+  border-radius: 999px;
+}
+.swmap__chip[aria-pressed='true'] {
+  font-weight: 600;
+  background: #eef4fb;
+  border: 2px solid #0b4a8f;
+}
+.swmap__empty {
+  margin: 0.5em 0;
+}
 @media (prefers-reduced-motion: reduce) {
   .swmap * {
     animation: none !important;

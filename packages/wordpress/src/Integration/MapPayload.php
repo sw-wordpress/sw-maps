@@ -50,6 +50,7 @@ final class MapPayload {
 			'settings'        => $map->settings->toArray(),
 			'provider'        => null === $provider ? null : $provider->toPublicArray(),
 			'layers'          => $layers,
+			'categories'      => self::categories( $layers ),
 			'consentCategory' => Consent::category(),
 			'strings'         => self::strings(),
 		);
@@ -66,7 +67,39 @@ final class MapPayload {
 				'icon_url'  => str_starts_with( $feature->properties->icon, 'media:' ) ? self::attachment_url( (int) substr( $feature->properties->icon, 6 ), 'thumbnail' ) : null,
 			),
 			'style'      => (object) $feature->style,
+			'categories' => $feature->categoryIds,
 		);
+	}
+
+	/**
+	 * Only the categories that are used by the visible features (an explicit allowlist of fields).
+	 *
+	 * @param list<array<string, mixed>> $layers Public layers.
+	 * @return list<array<string, mixed>>
+	 */
+	private static function categories( array $layers ): array {
+		$used = array();
+		foreach ( $layers as $layer ) {
+			foreach ( $layer['features'] as $feature ) {
+				foreach ( $feature['categories'] as $id ) {
+					$used[ (int) $id ] = true;
+				}
+			}
+		}
+		$out = array();
+		if ( array() === $used ) {
+			return $out;
+		}
+		foreach ( Services::instance()->category_repository()->all() as $category ) {
+			if ( isset( $used[ $category->id ] ) ) {
+				$out[] = array(
+					'id'    => $category->id,
+					'title' => $category->title,
+					'style' => (object) $category->style,
+				);
+			}
+		}
+		return $out;
 	}
 
 	/**
@@ -109,6 +142,9 @@ final class MapPayload {
 			'attributionLabel' => __( 'Map attribution', 'sw-maps' ),
 			'openLink'         => __( 'Open link', 'sw-maps' ),
 			'closePopup'       => __( 'Close', 'sw-maps' ),
+			'search'           => __( 'Search locations', 'sw-maps' ),
+			'filterByCategory' => __( 'Filter by category', 'sw-maps' ),
+			'noResults'        => __( 'No locations found.', 'sw-maps' ),
 		);
 	}
 }

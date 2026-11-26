@@ -12,6 +12,9 @@ export const strings: ViewerStrings = {
   attributionLabel: 'Map attribution',
   openLink: 'Open link',
   closePopup: 'Close',
+  search: 'Search locations',
+  filterByCategory: 'Filter by category',
+  noResults: 'No locations found.',
 };
 
 export function feature(id: number, lon = 8.4, lat = 49, title = `Place ${id}`): PublicFeature {

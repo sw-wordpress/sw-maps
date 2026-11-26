@@ -124,7 +124,8 @@ final class Renderer {
 			foreach ( $layer['features'] as $feature ) {
 				$p      = $feature['properties'];
 				$title  = '' !== $p['title'] ? $p['title'] : __( 'Location', 'sw-maps' );
-				$items .= '<li data-feature-id="' . (int) $feature['id'] . '"><span class="swmap__item-title">' . esc_html( $title ) . '</span>';
+				$search = mb_strtolower( trim( $title . ' ' . $p['address'] . ' ' . $p['description'] ) );
+				$items .= '<li data-feature-id="' . (int) $feature['id'] . '" data-categories="' . esc_attr( implode( ',', array_map( 'intval', $feature['categories'] ) ) ) . '" data-search="' . esc_attr( $search ) . '"><span class="swmap__item-title">' . esc_html( $title ) . '</span>';
 				if ( '' !== $p['address'] ) {
 					$items .= '<span class="swmap__item-address">' . esc_html( $p['address'] ) . '</span>';
 				}

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SWMaps\Core\Application;
 
+use SWMaps\Core\Contracts\CategoryRepositoryInterface;
 use SWMaps\Core\Contracts\ClockInterface;
 use SWMaps\Core\Contracts\EventsInterface;
 use SWMaps\Core\Contracts\FeatureRepositoryInterface;
@@ -25,6 +26,7 @@ final class FeatureService
         private readonly FeatureRepositoryInterface $features,
         private readonly ClockInterface $clock,
         private readonly EventsInterface $events,
+        private readonly ?CategoryRepositoryInterface $categories = null,
         private readonly GeometryValidator $validator = new GeometryValidator()
     ) {
     }
@@ -59,7 +61,8 @@ final class FeatureService
             Geometry::fromArray($geometry, $this->validator),
             FeatureProperties::fromArray($properties),
             Input::style($input, 'style') ?? [],
-            $this->clock->now()
+            $this->clock->now(),
+            $this->categoryIds($input) ?? []
         );
         $saved = $this->features->save($feature);
         $this->events->layerUpdated($layerId, $layer->mapId);
@@ -77,7 +80,8 @@ final class FeatureService
             $geometry === null ? null : Geometry::fromArray($geometry, $this->validator),
             $properties === null ? null : FeatureProperties::fromArray($properties, $feature->properties),
             Input::style($patch, 'style'),
-            $this->clock->now()
+            $this->clock->now(),
+            $this->categoryIds($patch)
         );
         $saved = $this->features->save($updated);
         $this->notify($feature->layerId);
@@ -90,6 +94,35 @@ final class FeatureService
         $feature = $this->get($id);
         $this->features->delete($id);
         $this->notify($feature->layerId);
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @return list<int>|null null when the key is absent (assignments stay unchanged)
+     */
+    private function categoryIds(array $data): ?array
+    {
+        if (!array_key_exists('categories', $data)) {
+            return null;
+        }
+        $ids = $data['categories'];
+        if (!is_array($ids) || !array_is_list($ids) || count($ids) > 50) {
+            throw ValidationException::field('categories', 'Must be a list of category ids.');
+        }
+        $clean = [];
+        foreach ($ids as $id) {
+            if (!is_int($id) || $id < 1) {
+                throw ValidationException::field('categories', 'Must be a list of category ids.');
+            }
+            $clean[$id] = $id;
+        }
+        $ids = array_values($clean);
+        if ($ids !== [] && ($this->categories === null || count($this->categories->existing($ids)) !== count($ids))) {
+            throw ValidationException::field('categories', 'Unknown category.');
+        }
+        sort($ids);
+
+        return $ids;
     }
 
     private function notify(int $layerId): void

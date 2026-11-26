@@ -317,5 +317,8 @@ export default {
     attributionLabel: 'Map attribution',
     openLink: 'Open link',
     closePopup: 'Close',
+    search: 'Search locations',
+    filterByCategory: 'Filter by category',
+    noResults: 'No locations found.',
   },
 };

@@ -36,6 +36,14 @@ export interface FeatureProperties {
   icon_url?: string | null;
 }
 
+export interface CategoryData {
+  id: number;
+  slug: string;
+  title: string;
+  /** `color` (hex) and `icon` (`builtin:<name>`) are the defaults for the locations of the category. */
+  style: StyleMap;
+}
+
 export interface FeatureData {
   id: number;
   layer_id: number;
@@ -43,6 +51,7 @@ export interface FeatureData {
   geometry: Geometry;
   properties: FeatureProperties;
   style: StyleMap;
+  categories?: number[];
   updated_at: string;
 }
 
@@ -141,12 +150,22 @@ export interface ViewerStrings {
   attributionLabel: string;
   openLink: string;
   closePopup: string;
+  search: string;
+  filterByCategory: string;
+  noResults: string;
 }
 
 export interface PublicFeature {
   id: number;
   geometry: Geometry;
   properties: FeatureProperties;
+  style: StyleMap;
+  categories?: number[];
+}
+
+export interface PublicCategory {
+  id: number;
+  title: string;
   style: StyleMap;
 }
 
@@ -165,6 +184,7 @@ export interface MapRenderData {
   settings: MapSettingsData;
   provider: PublicProvider | null;
   layers: PublicLayer[];
+  categories?: PublicCategory[];
   /** WP Consent API category that must be granted before tiles are requested; null = no gating. */
   consentCategory: string | null;
   strings: ViewerStrings;

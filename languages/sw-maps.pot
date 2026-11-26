@@ -120,49 +120,61 @@ msgstr ""
 msgid "Draft"
 msgstr ""
 
-#: packages/wordpress/src/Integration/MapPayload.php:101
+#: packages/wordpress/src/Integration/MapPayload.php:134
 msgid "Zoom in"
 msgstr ""
 
-#: packages/wordpress/src/Integration/MapPayload.php:102
+#: packages/wordpress/src/Integration/MapPayload.php:135
 msgid "Zoom out"
 msgstr ""
 
-#: packages/wordpress/src/Integration/MapPayload.php:103
+#: packages/wordpress/src/Integration/MapPayload.php:136
 msgid "Fullscreen"
 msgstr ""
 
-#: packages/wordpress/src/Integration/MapPayload.php:104
+#: packages/wordpress/src/Integration/MapPayload.php:137
 msgid "Exit fullscreen"
 msgstr ""
 
-#: packages/wordpress/src/Integration/MapPayload.php:105
+#: packages/wordpress/src/Integration/MapPayload.php:138
 msgid "Load map"
 msgstr ""
 
-#: packages/wordpress/src/Integration/MapPayload.php:106
+#: packages/wordpress/src/Integration/MapPayload.php:139
 msgid "The map is shown after you accept the cookies required for it."
 msgstr ""
 
-#: packages/wordpress/src/Integration/MapPayload.php:107
+#: packages/wordpress/src/Integration/MapPayload.php:140
 msgid "Loading the map contacts the map provider and transmits your IP address."
 msgstr ""
 
-#: packages/wordpress/src/Integration/MapPayload.php:108
+#: packages/wordpress/src/Integration/MapPayload.php:141
 msgid "The map could not be displayed."
 msgstr ""
 
-#: packages/wordpress/src/Integration/MapPayload.php:109
+#: packages/wordpress/src/Integration/MapPayload.php:142
 msgid "Map attribution"
 msgstr ""
 
-#: packages/wordpress/src/Integration/MapPayload.php:110
-#: packages/wordpress/src/Integration/Renderer.php:132
+#: packages/wordpress/src/Integration/MapPayload.php:143
+#: packages/wordpress/src/Integration/Renderer.php:133
 msgid "Open link"
 msgstr ""
 
-#: packages/wordpress/src/Integration/MapPayload.php:111
+#: packages/wordpress/src/Integration/MapPayload.php:144
 msgid "Close"
+msgstr ""
+
+#: packages/wordpress/src/Integration/MapPayload.php:145
+msgid "Search locations"
+msgstr ""
+
+#: packages/wordpress/src/Integration/MapPayload.php:146
+msgid "Filter by category"
+msgstr ""
+
+#: packages/wordpress/src/Integration/MapPayload.php:147
+msgid "No locations found."
 msgstr ""
 
 #: packages/wordpress/src/Integration/Privacy.php:36
@@ -191,11 +203,11 @@ msgstr ""
 msgid "Location"
 msgstr ""
 
-#: packages/wordpress/src/Integration/Renderer.php:134
+#: packages/wordpress/src/Integration/Renderer.php:135
 msgid "Show on map"
 msgstr ""
 
-#: packages/wordpress/src/Integration/Renderer.php:137
+#: packages/wordpress/src/Integration/Renderer.php:138
 msgid "Locations"
 msgstr ""
 

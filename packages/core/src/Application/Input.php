@@ -104,7 +104,7 @@ final class Input
             if (!is_scalar($v) && $v !== null) {
                 throw ValidationException::field($key, 'Style values must be scalars.');
             }
-            if (is_string($v) && (strlen($v) > 64 || preg_match('/^[#a-zA-Z0-9 .,()%_-]*$/', $v) !== 1)) {
+            if (is_string($v) && (strlen($v) > 64 || preg_match('/^[#a-zA-Z0-9 .,()%_:-]*$/', $v) !== 1)) {
                 throw ValidationException::field($key, 'Invalid style value.');
             }
             $out[$k] = $v;

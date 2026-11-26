@@ -322,6 +322,9 @@ const de: Messages = {
     attributionLabel: 'Kartenquelle',
     openLink: 'Link öffnen',
     closePopup: 'Schließen',
+    search: 'Standorte suchen',
+    filterByCategory: 'Nach Kategorie filtern',
+    noResults: 'Keine Standorte gefunden.',
   },
 };
 

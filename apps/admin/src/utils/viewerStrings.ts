@@ -14,5 +14,8 @@ export function viewerStrings(t: (key: string) => string): ViewerStrings {
     attributionLabel: t('viewer.attributionLabel'),
     openLink: t('viewer.openLink'),
     closePopup: t('viewer.closePopup'),
+    search: t('viewer.search'),
+    filterByCategory: t('viewer.filterByCategory'),
+    noResults: t('viewer.noResults'),
   };
 }

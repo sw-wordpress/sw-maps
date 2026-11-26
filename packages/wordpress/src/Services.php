@@ -9,10 +9,12 @@ declare(strict_types=1);
 
 namespace SWMaps\WordPress;
 
+use SWMaps\Core\Application\CategoryService;
 use SWMaps\Core\Application\FeatureService;
 use SWMaps\Core\Application\LayerService;
 use SWMaps\Core\Application\MapService;
 use SWMaps\Core\Application\ProviderService;
+use SWMaps\Core\Contracts\CategoryRepositoryInterface;
 use SWMaps\Core\Contracts\FeatureRepositoryInterface;
 use SWMaps\Core\Contracts\LayerRepositoryInterface;
 use SWMaps\Core\Contracts\MapRepositoryInterface;
@@ -20,6 +22,7 @@ use SWMaps\Core\Contracts\ProviderRepositoryInterface;
 use SWMaps\Core\Import\ImportLimits;
 use SWMaps\Core\Import\ImportService;
 use SWMaps\WordPress\Persistence\SystemClock;
+use SWMaps\WordPress\Persistence\WpdbCategories;
 use SWMaps\WordPress\Persistence\WpdbFeatures;
 use SWMaps\WordPress\Persistence\WpdbLayers;
 use SWMaps\WordPress\Persistence\WpdbMaps;
@@ -34,11 +37,13 @@ final class Services {
 	private ?LayerService $layers     = null;
 	private ?FeatureService $features = null;
 	private ?ProviderService $prov    = null;
+	private ?CategoryService $cats    = null;
 
 	private readonly MapRepositoryInterface $map_repo;
 	private readonly LayerRepositoryInterface $layer_repo;
 	private readonly FeatureRepositoryInterface $feature_repo;
 	private readonly ProviderRepositoryInterface $provider_repo;
+	private readonly CategoryRepositoryInterface $category_repo;
 	private readonly WpdbTransaction $tx;
 	private readonly Events $events;
 	private readonly SystemClock $clock;
@@ -48,6 +53,7 @@ final class Services {
 		$this->layer_repo    = new WpdbLayers();
 		$this->feature_repo  = new WpdbFeatures();
 		$this->provider_repo = new WpdbProviders();
+		$this->category_repo = new WpdbCategories();
 		$this->tx            = new WpdbTransaction();
 		$this->events        = new Events();
 		$this->clock         = new SystemClock();
@@ -71,7 +77,15 @@ final class Services {
 	}
 
 	public function features(): FeatureService {
-		return $this->features ??= new FeatureService( $this->layer_repo, $this->feature_repo, $this->clock, $this->events );
+		return $this->features ??= new FeatureService( $this->layer_repo, $this->feature_repo, $this->clock, $this->events, $this->category_repo );
+	}
+
+	public function categories(): CategoryService {
+		return $this->cats ??= new CategoryService( $this->category_repo, $this->tx );
+	}
+
+	public function category_repository(): CategoryRepositoryInterface {
+		return $this->category_repo;
 	}
 
 	public function providers(): ProviderService {

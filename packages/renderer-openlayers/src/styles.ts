@@ -10,6 +10,8 @@ export interface FeatureMeta {
   layer: PublicLayer;
   properties: FeatureProperties;
   style: StyleMap;
+  /** Style of the first category of the feature (defaults for colour and icon). */
+  categoryStyle: StyleMap;
 }
 
 export function hexToRgba(hex: string, alpha: number): string {
@@ -30,6 +32,7 @@ function numberStyle(value: unknown, min: number, max: number, fallback: number)
 export function createStyleFunction(
   metaOf: (feature: FeatureLike) => FeatureMeta | undefined,
   selectedId: () => number | null,
+  isVisible: (id: number) => boolean = () => true,
 ): StyleLike {
   const cache = new Map<string, Style>();
   const remember = (key: string, make: () => Style): Style => {
@@ -44,13 +47,16 @@ export function createStyleFunction(
   return (feature) => {
     const meta = metaOf(feature as FeatureLike);
     const geometry = feature.getGeometry();
-    if (!meta || !geometry) return undefined;
+    if (!meta || !geometry || !isVisible(meta.id)) return undefined;
     const selected = selectedId() === meta.id;
-    const color = safeColor(meta.style['color'] ?? meta.layer.style['color'], DEFAULT_COLOR);
+    const color = safeColor(
+      meta.style['color'] ?? meta.categoryStyle['color'] ?? meta.layer.style['color'],
+      DEFAULT_COLOR,
+    );
     const type = geometry.getType();
 
     if (type === 'Point' || type === 'MultiPoint') {
-      const icon = resolveIcon(meta.properties, meta.style, meta.layer.style);
+      const icon = resolveIcon(meta.properties, meta.style, meta.layer.style, meta.categoryStyle);
       return remember(
         `p|${icon.src}|${selected}`,
         () =>

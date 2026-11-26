@@ -113,50 +113,62 @@ msgstr "Zeigt eine mit SW Maps erstellte Karte an."
 msgid "Draft"
 msgstr "Entwurf"
 
-#: packages/wordpress/src/Integration/MapPayload.php:101
+#: packages/wordpress/src/Integration/MapPayload.php:134
 msgid "Zoom in"
 msgstr "Vergrößern"
 
-#: packages/wordpress/src/Integration/MapPayload.php:102
+#: packages/wordpress/src/Integration/MapPayload.php:135
 msgid "Zoom out"
 msgstr "Verkleinern"
 
-#: packages/wordpress/src/Integration/MapPayload.php:103
+#: packages/wordpress/src/Integration/MapPayload.php:136
 msgid "Fullscreen"
 msgstr "Vollbild"
 
-#: packages/wordpress/src/Integration/MapPayload.php:104
+#: packages/wordpress/src/Integration/MapPayload.php:137
 msgid "Exit fullscreen"
 msgstr "Vollbild beenden"
 
-#: packages/wordpress/src/Integration/MapPayload.php:105
+#: packages/wordpress/src/Integration/MapPayload.php:138
 msgid "Load map"
 msgstr "Karte laden"
 
-#: packages/wordpress/src/Integration/MapPayload.php:106
+#: packages/wordpress/src/Integration/MapPayload.php:139
 msgid "The map is shown after you accept the cookies required for it."
 msgstr "Die Karte wird angezeigt, sobald Sie die dafür nötigen Cookies akzeptieren."
 
-#: packages/wordpress/src/Integration/MapPayload.php:107
+#: packages/wordpress/src/Integration/MapPayload.php:140
 msgid "Loading the map contacts the map provider and transmits your IP address."
 msgstr "Beim Laden der Karte wird der Kartenanbieter kontaktiert und Ihre IP-Adresse übertragen."
 
-#: packages/wordpress/src/Integration/MapPayload.php:108
+#: packages/wordpress/src/Integration/MapPayload.php:141
 msgid "The map could not be displayed."
 msgstr "Die Karte konnte nicht angezeigt werden."
 
-#: packages/wordpress/src/Integration/MapPayload.php:109
+#: packages/wordpress/src/Integration/MapPayload.php:142
 msgid "Map attribution"
 msgstr "Kartenquelle"
 
-#: packages/wordpress/src/Integration/MapPayload.php:110
-#: packages/wordpress/src/Integration/Renderer.php:132
+#: packages/wordpress/src/Integration/MapPayload.php:143
+#: packages/wordpress/src/Integration/Renderer.php:133
 msgid "Open link"
 msgstr "Link öffnen"
 
-#: packages/wordpress/src/Integration/MapPayload.php:111
+#: packages/wordpress/src/Integration/MapPayload.php:144
 msgid "Close"
 msgstr "Schließen"
+
+#: packages/wordpress/src/Integration/MapPayload.php:145
+msgid "Search locations"
+msgstr "Standorte suchen"
+
+#: packages/wordpress/src/Integration/MapPayload.php:146
+msgid "Filter by category"
+msgstr "Nach Kategorie filtern"
+
+#: packages/wordpress/src/Integration/MapPayload.php:147
+msgid "No locations found."
+msgstr "Keine Standorte gefunden."
 
 #: packages/wordpress/src/Integration/Privacy.php:36
 msgid "This text is a suggestion. Check it against your configuration and have it reviewed."
@@ -184,11 +196,11 @@ msgstr "Entwurfsvorschau: Diese Karte ist nicht veröffentlicht."
 msgid "Location"
 msgstr "Standort"
 
-#: packages/wordpress/src/Integration/Renderer.php:134
+#: packages/wordpress/src/Integration/Renderer.php:135
 msgid "Show on map"
 msgstr "Auf der Karte zeigen"
 
-#: packages/wordpress/src/Integration/Renderer.php:137
+#: packages/wordpress/src/Integration/Renderer.php:138
 msgid "Locations"
 msgstr "Standorte"
 

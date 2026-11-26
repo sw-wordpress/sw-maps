@@ -30,8 +30,12 @@ Authentifizierung: Cookie + REST-Nonce (`X-WP-Nonce`). Alle Endpunkte haben eine
 | GET | `/providers` | `swmap_edit_maps` (Karteneditoren erhalten nur `id, type, name, public_config, enabled`; mit `swmap_manage_system` zusätzlich `secret_constant`, `secret_defined`, `external_requests`) | Liste `Provider` |
 | POST | `/providers`, GET/PATCH/DELETE `/providers/{id}` | `swmap_manage_system` | `Provider` |
 | POST | `/providers/{id}/test` | `swmap_manage_system` | `{ ok, status, message }` |
+| GET/POST | `/categories` | lesen: `swmap_edit_maps`; anlegen: `swmap_manage_layers` | Liste/`Category` (201) |
+| PATCH/DELETE | `/categories/{id}` | `swmap_manage_layers` | `Category` / 204 |
 | GET/PATCH | `/settings` | `swmap_manage_system` | `Settings` |
 | GET | `/status` | `swmap_manage_system` | Systemstatus |
+
+Kategorien sind seitenweit (`id`, `slug`, `title`, `style` mit `color` und `icon`); Standorte tragen `categories` (Liste von IDs, beim Schreiben ersetzend; ohne Schlüssel unverändert). Löschen einer Kategorie entfernt die Zuordnungen. Das öffentliche Payload enthält nur Kategorien, die auf der Karte verwendet werden. Der Viewer zeigt sie als Filter-Legende mit Symbol und Farbe (nicht nur Farbe).
 
 ## Import (M2)
 `POST /imports` (`swmap_manage_imports` plus Bearbeitungsrecht an der Karte `map_id`). Body: `map_id`, `format` (`geojson`|`gpx`|`csv`), `content` (Dateitext), `mode` (`new_layer` Standard, `append`, `upsert`, `replace`), `layer_id` (außer `new_layer`), `layer_title?`, `mapping?` (Ziel → Quellspalte; Ziele `title`, `description`, `address`, `link`, `external_id`), `options?` (CSV: `delimiter`, `decimal`, `lon_column`, `lat_column`), `dry_run?`, `skip_invalid?`, `confirm_replace?`.

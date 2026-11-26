@@ -50,6 +50,7 @@ export class OpenLayersRenderer implements MapRenderer {
   protected vectorLayer: VectorLayer | null = null;
   private clusterLayer: VectorLayer | null = null;
   private clusterSource: ClusterSource | null = null;
+  private visibleIds: Set<number> | null = null;
   protected tileLayer: TileLayer<XYZ> | null = null;
   protected readonly events = new Emitter<RendererEventMap>();
   protected selectedId: number | null = null;
@@ -161,6 +162,18 @@ export class OpenLayersRenderer implements MapRenderer {
     return this.map;
   }
 
+  protected isVisible = (id: number): boolean =>
+    this.visibleIds === null || this.visibleIds.has(id);
+
+  /** Shows only the given features (search/filter of the viewer); null shows all. Hidden features are deselected. */
+  setVisibleIds(ids: Iterable<number> | null): void {
+    this.visibleIds = ids === null ? null : new Set(ids);
+    if (this.selectedId !== null && !this.isVisible(this.selectedId)) this.selectFeature(null);
+    this.clusterSource?.refresh();
+    this.vectorLayer?.changed();
+    this.clusterLayer?.changed();
+  }
+
   protected metaOf = (feature: unknown): FeatureMeta | undefined => {
     const id = (feature as Feature).get(FEATURE_ID) as number | undefined;
     return id === undefined ? undefined : this.metas.get(id);
@@ -233,7 +246,7 @@ export class OpenLayersRenderer implements MapRenderer {
       source: this.createTileSource(data) ?? undefined,
       visible: provider !== null,
     });
-    const featureStyle = createStyleFunction(this.metaOf, () => this.selectedId);
+    const featureStyle = createStyleFunction(this.metaOf, () => this.selectedId, this.isVisible);
     this.vectorLayer = new VectorLayer({
       source: this.source,
       style: settings.cluster
@@ -250,7 +263,8 @@ export class OpenLayersRenderer implements MapRenderer {
         distance: CLUSTER_DISTANCE,
         geometryFunction: (feature) => {
           const geometry = feature.getGeometry();
-          return geometry?.getType() === 'Point' ? (geometry as Point) : null;
+          const id = feature.get(FEATURE_ID) as number;
+          return geometry?.getType() === 'Point' && this.isVisible(id) ? (geometry as Point) : null;
         },
       });
       this.clusterLayer = new VectorLayer({
@@ -500,11 +514,19 @@ export class OpenLayersRenderer implements MapRenderer {
     const data = this.data;
     if (!data) return;
     const wanted = new Map<number, { meta: FeatureMeta; signature: string; geometry: unknown }>();
+    const categories = new Map((data.categories ?? []).map((c) => [c.id, c.style]));
     for (const layer of data.layers) {
       for (const f of layer.features) {
+        const categoryStyle = categories.get(f.categories?.[0] ?? -1) ?? {};
         wanted.set(f.id, {
-          meta: { id: f.id, layer, properties: f.properties, style: f.style },
-          signature: JSON.stringify([f.geometry, f.properties, f.style, layer.style]),
+          meta: { id: f.id, layer, properties: f.properties, style: f.style, categoryStyle },
+          signature: JSON.stringify([
+            f.geometry,
+            f.properties,
+            f.style,
+            layer.style,
+            categoryStyle,
+          ]),
           geometry: f.geometry,
         });
       }
