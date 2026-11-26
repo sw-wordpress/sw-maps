@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { computed, ref, shallowRef } from 'vue';
+import { computed, ref, shallowRef, watch } from 'vue';
 import type {
   CategoryData,
   EditTool,
@@ -62,6 +62,17 @@ export const useEditorStore = defineStore('editor', () => {
   const tool = ref<EditTool>('select');
   /** Feature that receives the next drawn geometry as an additional part (multi geometries). */
   const appendTo = ref<number | null>(null);
+  // Leaving the drawing mode that was started for the part (any tool change) cancels the pending append.
+  watch(
+    tool,
+    (next) => {
+      if (appendTo.value === null) return;
+      const type = doc.value?.features.find((f) => f.id === appendTo.value)?.geometry.type;
+      if (type === undefined || next !== partTool(type)) appendTo.value = null;
+    },
+    { flush: 'sync' },
+  );
+
   const loading = ref(false);
   const saving = ref(false);
   const saveError = ref<unknown>(null);
@@ -130,6 +141,7 @@ export const useEditorStore = defineStore('editor', () => {
       selectedFeatureId.value = null;
       activeLayerId.value = fetched.layers[0]?.id ?? null;
       tool.value = 'select';
+      appendTo.value = null;
     } finally {
       loading.value = false;
     }

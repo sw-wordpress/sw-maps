@@ -1,3 +1,4 @@
+import { nextTick } from 'vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises } from '@vue/test-utils';
 import { ApiError } from '@/api/client';
@@ -162,6 +163,23 @@ describe('editor store', () => {
     expect(store.doc?.features[0]?.geometry.type).toBe('MultiPoint');
     store.drawn({ type: 'Point', coordinates: [5, 5] });
     expect(store.doc?.features).toHaveLength(2);
+  });
+
+  it('cancels a pending part when the tool changes or another map is loaded', async () => {
+    const store = await loaded();
+    store.startAddPart(100);
+    store.tool = 'select';
+    await nextTick();
+    expect(store.appendTo).toBeNull();
+    store.drawn({ type: 'Point', coordinates: [2, 2] });
+    expect(store.doc?.features).toHaveLength(2);
+    store.startAddPart(100);
+    store.tool = 'line';
+    await nextTick();
+    expect(store.appendTo).toBeNull();
+    store.startAddPart(100);
+    await store.load(1);
+    expect(store.appendTo).toBeNull();
   });
 
   it('removes a deleted category from the undo history too', async () => {
