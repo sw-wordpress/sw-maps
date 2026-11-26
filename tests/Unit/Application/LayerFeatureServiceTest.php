@@ -37,6 +37,15 @@ final class LayerFeatureServiceTest extends TestCase
         self::assertContains('layer:' . $a->id . ':' . $this->mapId, $this->f->events->log);
     }
 
+    public function testFeaturesReportTheirLineLength(): void
+    {
+        $layer = $this->f->layerService->create($this->mapId, ['title' => 'T']);
+        $line = $this->f->featureService->create($layer->id, ['geometry' => ['type' => 'LineString', 'coordinates' => [[0, 0], [0, 1]]]]);
+        $point = $this->f->featureService->create($layer->id, ['geometry' => ['type' => 'Point', 'coordinates' => [0, 0]]]);
+        self::assertEqualsWithDelta(111195.0, $line->toArray()['length_m'], 100.0);
+        self::assertSame(0.0, $point->toArray()['length_m']);
+    }
+
     public function testBoundsQueryWrapsAroundTheAntimeridian(): void
     {
         $layer = $this->f->layerService->create($this->mapId, ['title' => 'W']);

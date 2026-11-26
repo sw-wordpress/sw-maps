@@ -61,6 +61,8 @@ export interface FeatureData {
   properties: FeatureProperties;
   style: StyleMap;
   categories?: number[];
+  /** Length in metres of lines (Haversine), 0 for other shapes; read only. */
+  length_m?: number;
   updated_at: string;
 }
 

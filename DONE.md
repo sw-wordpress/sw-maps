@@ -165,7 +165,7 @@ Erledigte Aufgaben aus [TODO.md](TODO.md) (Foundation = M0, MVP = M1; Details de
 - [x] M2-07: Popup, Tooltip oder Detail-Seitenleiste; strukturierte Zusatzfelder
   - Ergebnis: Popup mit strukturierten Zusatzfeldern (Bezeichnung/Wert, bis 10, reiner Text), auch aus CSV-Spalten importierbar. Zusätzlich Hover-Tooltip mit dem Titel (Zeigergeräte). Eine Detail-Seitenleiste gibt es nicht.
 - [x] M2-08: Streckenlänge sphärisch (Haversine), Unit-Tests
-  - Ergebnis: Core `DistanceCalculator` (Haversine, Radius 6371008,8 m) mit Unit-Tests; identische Berechnung in `map-contracts` (`lineLengthMeters`), Anzeige im Editor. Die REST-API liefert keine Länge.
+  - Ergebnis: Core `DistanceCalculator` (Haversine, Radius 6371008,8 m) mit Unit-Tests; identische Berechnung in `map-contracts` (`lineLengthMeters`), Anzeige im Editor. Die REST-API liefert `length_m` (nur lesend).
 - [x] M2-09: Importer GeoJSON (RFC 7946; GeometryCollection ablehnen oder zerlegen), GPX 1.0/1.1 (Segmente, Routen, Wegpunkte), CSV (Trennzeichen/Dezimalformat explizit)
   - Ergebnis: `GeoJsonImporter` (GeometryCollection wird zerlegt, Teile erhalten `#n` an der externen ID), `GpxImporter` (1.0/1.1; Wegpunkte, Routen, Tracks als (Multi-)Linie je Segment), `CsvImporter` (Trennzeichen und Dezimaltrenner explizit). Tests: `ImportersTest`.
 - [x] M2-10: Sichere Parser: XML ohne Entities/DTD/Netzwerk; Limits für Dateigröße, Feature-/Koordinatenanzahl, Verschachtelung; XXE-Fixtures

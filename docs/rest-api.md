@@ -35,6 +35,8 @@ Authentifizierung: Cookie + REST-Nonce (`X-WP-Nonce`). Alle Endpunkte haben eine
 | GET/PATCH | `/settings` | `swmap_manage_system` | `Settings` |
 | GET | `/status` | `swmap_manage_system` | Systemstatus |
 
+Standorte enthalten `length_m` (Länge von Linien in Metern, Haversine; 0 sonst; nur lesend).
+
 Kategorien sind seitenweit (`id`, `slug`, `title`, `style` mit `color` und `icon`); Standorte tragen `categories` (Liste von IDs, beim Schreiben ersetzend; ohne Schlüssel unverändert). Löschen einer Kategorie entfernt die Zuordnungen. Das öffentliche Payload enthält nur Kategorien, die auf der Karte verwendet werden. Der Viewer zeigt sie als Filter-Legende mit Symbol und Farbe (nicht nur Farbe).
 
 Öffentlich (ohne Anmeldung, nur veröffentlichte Karten mit aktivierter Einstellung `ajax`, sonst 404): `GET /public/maps/{id}/features?bbox=minLon,minLat,maxLon,maxLat&zoom=&categories=1,2&page=&per_page=` (Standard 200, maximal 500 je Seite) (`minLon` > `maxLon` steht für einen Ausschnitt über die Datumsgrenze) liefert `{ layers: [{ id, features }], total, page, total_pages }` nur für sichtbare, veröffentlichte Layer. Der Viewer fragt entprellt (250 ms) und bricht die vorherige Anfrage ab; Linien und Flächen werden passend zum Zoom vereinfacht (Feld `simplified`). Im AJAX-Modus enthält das Inline-Payload keine Standorte (`ajaxUrl` stattdessen) und die Standortliste entfällt; Entwurfsvorschauen bleiben inline.

@@ -59,6 +59,7 @@ final class Feature
             'properties' => $this->properties->toArray(),
             'style' => $this->style === [] ? new \stdClass() : $this->style,
             'categories' => $this->categoryIds,
+            'length_m' => round((new \SWMaps\Core\Geo\DistanceCalculator())->lengthOf($this->geometry), 1),
             'updated_at' => $this->updatedAt->format('Y-m-d\TH:i:s\Z'),
         ];
     }
