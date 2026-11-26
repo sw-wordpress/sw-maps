@@ -96,7 +96,16 @@ final class ImportersTest extends TestCase
         $result = (new GeoJsonImporter())->parse($json, new ImportLimits(maxErrors: 3));
         self::assertCount(3, $result->errors);
         self::assertSame(10, $result->errorCount);
-        self::assertSame(['index' => 1, 'message' => 'Feature has no geometry.'], $result->errors[0]->toArray());
+        self::assertSame(['index' => 1, 'code' => 'no_geometry', 'message' => 'Feature has no geometry.', 'params' => []], $result->errors[0]->toArray());
+    }
+
+    public function testSplitGeometryCollectionMembersCarryTheirPartNumber(): void
+    {
+        $json = '{"type":"Feature","id":"a1","properties":{},"geometry":{"type":"GeometryCollection","geometries":['
+            . '{"type":"Point","coordinates":[1,1]},{"type":"Point","coordinates":[2,2]},{"type":"LineString","coordinates":[[1,1],[2,2]]}]}}';
+        $result = (new GeoJsonImporter())->parse($json, new ImportLimits());
+        self::assertSame([0, 1, 2], array_map(static fn ($f): int => $f->part, $result->features));
+        self::assertSame(['collection_split'], array_map(static fn ($w): string => $w->code, $result->warnings));
     }
 
     public function testGpxWaypointRouteAndTrackSegments(): void

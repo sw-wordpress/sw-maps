@@ -103,8 +103,11 @@ final class MapServiceTest extends TestCase
         $m = $this->f->mapService->create(['title' => 'Orig'], 1);
         $this->f->mapService->update($m->id, ['status' => 'published']);
         $l = $this->f->layerService->create($m->id, ['title' => 'L']);
-        $this->f->featureService->create($l->id, ['geometry' => ['type' => 'Point', 'coordinates' => [1, 2]], 'properties' => ['title' => 'P'], 'external_id' => 'x']);
+        $category = $this->f->categoryService->create(['title' => 'Huts']);
+        $this->f->featureService->create($l->id, ['geometry' => ['type' => 'Point', 'coordinates' => [1, 2]], 'properties' => ['title' => 'P'], 'external_id' => 'x', 'categories' => [$category->id]]);
         $copy = $this->f->mapService->duplicate($m->id, 9);
+        $copied = $this->f->features->forLayers([$this->f->layers->forMap($copy->id)[0]->id]);
+        self::assertSame([$category->id], $copied[0]->categoryIds, 'category assignments are copied');
         self::assertSame(MapStatus::Draft, $copy->status);
         self::assertSame(9, $copy->createdBy);
         self::assertSame('Orig (copy)', $copy->title);

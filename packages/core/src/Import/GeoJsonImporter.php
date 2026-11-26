@@ -47,13 +47,13 @@ final class GeoJsonImporter implements ImporterInterface
     private function feature(mixed $item, int $index, ParseCollector $collector): void
     {
         if (!is_array($item) || ($item['type'] ?? null) !== 'Feature') {
-            $collector->error($index, 'Entry is not a GeoJSON Feature.');
+            $collector->error($index, 'not_a_feature', 'Entry is not a GeoJSON Feature.');
 
             return;
         }
         $geometry = $item['geometry'] ?? null;
         if (!is_array($geometry)) {
-            $collector->error($index, 'Feature has no geometry.');
+            $collector->error($index, 'no_geometry', 'Feature has no geometry.');
 
             return;
         }
@@ -68,30 +68,30 @@ final class GeoJsonImporter implements ImporterInterface
      * @param array<mixed> $geometry
      * @param array<string, string> $attributes
      */
-    private function geometry(array $geometry, array $attributes, int $index, ParseCollector $collector): void
+    private function geometry(array $geometry, array $attributes, int $index, ParseCollector $collector, int &$part = 0): void
     {
         if (($geometry['type'] ?? null) === 'GeometryCollection') {
             $members = $geometry['geometries'] ?? null;
             if (!is_array($members) || $members === []) {
-                $collector->error($index, 'GeometryCollection has no members.');
+                $collector->error($index, 'collection_empty', 'GeometryCollection has no members.');
 
                 return;
             }
-            $collector->warn($index, 'GeometryCollection was split into separate features.');
+            $collector->warn($index, 'collection_split', 'GeometryCollection was split into separate features.');
             foreach ($members as $member) {
                 if (!is_array($member) || ($member['type'] ?? null) === 'GeometryCollection') {
-                    $collector->error($index, 'Nested GeometryCollections are not supported.');
+                    $collector->error($index, 'collection_nested', 'Nested GeometryCollections are not supported.');
                     continue;
                 }
-                $this->geometry($member, $attributes, $index, $collector);
+                $this->geometry($member, $attributes, $index, $collector, $part);
             }
 
             return;
         }
         try {
-            $collector->add(Geometry::fromArray($geometry), $attributes, $index);
+            $collector->add(Geometry::fromArray($geometry), $attributes, $index, $part++);
         } catch (InvalidGeometryException $e) {
-            $collector->error($index, $e->getMessage());
+            $collector->error($index, 'geometry_invalid', $e->getMessage());
         }
     }
 

@@ -456,6 +456,10 @@ final class RestApiTest extends SwMapsTestCase {
 		$this->assertStringContainsString( 'data-categories="' . $cat_id . '"', $html );
 		$this->assertStringContainsString( 'data-search="b"', $html );
 
+		$copy_id    = $this->rest( 'POST', "/maps/{$map_id}/duplicate" )->get_data()['id'];
+		$copy_layer = $this->rest( 'GET', "/maps/{$copy_id}/layers" )->get_data()[0];
+		$this->assertSame( array( $cat_id ), $this->rest( 'GET', "/layers/{$copy_layer['id']}/features" )->get_data()[0]['categories'], 'duplicating a map keeps the category assignments' );
+
 		$patched = $this->rest( 'PATCH', "/categories/{$cat_id}", array( 'title' => 'Mountain huts' ) );
 		$this->assertSame( 'Mountain huts', $patched->get_data()['title'] );
 		$this->assertCount( 2, $this->rest( 'GET', '/categories' )->get_data() );

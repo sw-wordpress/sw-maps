@@ -66,13 +66,13 @@ final class CsvImporter implements ImporterInterface
                 continue;
             }
             if (count($fields) !== count($names)) {
-                $collector->error($row, 'Column count does not match the header.');
+                $collector->error($row, 'csv_columns', 'Column count does not match the header.');
                 continue;
             }
             $x = $this->number((string) $fields[$lon], $decimal);
             $y = $this->number((string) $fields[$lat], $decimal);
             if ($x === null || $y === null) {
-                $collector->error($row, 'Longitude or latitude is not a number in the selected format.');
+                $collector->error($row, 'csv_number', 'Longitude or latitude is not a number in the selected format.');
                 continue;
             }
             $attributes = [];
@@ -84,7 +84,7 @@ final class CsvImporter implements ImporterInterface
             try {
                 $collector->add(Geometry::point($x, $y), $attributes, $row);
             } catch (InvalidGeometryException $e) {
-                $collector->error($row, $e->getMessage());
+                $collector->error($row, 'geometry_invalid', $e->getMessage());
             }
         }
 

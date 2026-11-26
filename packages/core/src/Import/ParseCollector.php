@@ -25,7 +25,7 @@ final class ParseCollector
     }
 
     /** @param array<string, string> $attributes */
-    public function add(Geometry $geometry, array $attributes, int $index): void
+    public function add(Geometry $geometry, array $attributes, int $index, int $part = 0): void
     {
         if (count($this->features) >= $this->limits->maxFeatures) {
             throw new ImportException(ImportException::TOO_MANY_FEATURES, sprintf('The file contains more than %d features.', $this->limits->maxFeatures));
@@ -37,21 +37,23 @@ final class ParseCollector
         foreach (array_keys($attributes) as $name) {
             $this->columns[(string) $name] = true;
         }
-        $this->features[] = new ParsedFeature($geometry, $attributes, $index);
+        $this->features[] = new ParsedFeature($geometry, $attributes, $index, $part);
     }
 
-    public function error(int $index, string $message): void
+    /** @param array<string, string> $params */
+    public function error(int $index, string $code, string $message, array $params = []): void
     {
         ++$this->errorCount;
         if (count($this->errors) < $this->limits->maxErrors) {
-            $this->errors[] = new ParseIssue($index, $message);
+            $this->errors[] = new ParseIssue($index, $code, $message, $params);
         }
     }
 
-    public function warn(int $index, string $message): void
+    /** @param array<string, string> $params */
+    public function warn(int $index, string $code, string $message, array $params = []): void
     {
         if (count($this->warnings) < $this->limits->maxErrors) {
-            $this->warnings[] = new ParseIssue($index, $message);
+            $this->warnings[] = new ParseIssue($index, $code, $message, $params);
         }
     }
 

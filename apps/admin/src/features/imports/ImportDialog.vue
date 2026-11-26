@@ -3,14 +3,14 @@ import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { LayerData } from '@sw-maps/map-contracts';
 import { api } from '@/api';
-import type { ImportReport } from '@/api';
+import type { ImportIssue, ImportReport } from '@/api';
 import { isApiError } from '@/api/client';
 import { useNotify } from '@/composables/useNotify';
 import { errorMessage } from '@/utils/errors';
 
 const props = defineProps<{ modelValue: boolean; mapId: number; layers: LayerData[] }>();
 const emit = defineEmits<{ 'update:modelValue': [value: boolean]; imported: [layerId: number] }>();
-const { t } = useI18n();
+const { t, te } = useI18n();
 const notify = useNotify();
 
 type Format = 'geojson' | 'gpx' | 'csv';
@@ -81,6 +81,7 @@ watch(
 /** The file is read in the browser and sent as text; the format is guessed from the extension. */
 async function onFile(picked: File | null): Promise<void> {
   report.value = null;
+  mapping.value = {};
   failure.value = '';
   if (!picked) {
     content.value = '';
@@ -112,6 +113,12 @@ function body(dryRun: boolean): Record<string, unknown> {
     payload['confirm_replace'] = confirmReplace.value;
   }
   return payload;
+}
+
+/** Translated text of an import issue; unknown codes fall back to the server message. */
+function issueText(issue: ImportIssue): string {
+  const key = `import.issue.${issue.code}`;
+  return te(key) ? t(key, issue.params) : issue.message;
 }
 
 function describe(error: unknown): string {
@@ -294,7 +301,7 @@ async function run(): Promise<void> {
           <div v-if="report.errors.length > 0" data-test="errors">
             <div class="text-subtitle2">{{ t('import.errors') }}</div>
             <ul class="swmap-import-list">
-              <li v-for="(e, i) in report.errors" :key="i">#{{ e.index }}: {{ e.message }}</li>
+              <li v-for="(e, i) in report.errors" :key="i">#{{ e.index }}: {{ issueText(e) }}</li>
             </ul>
             <q-checkbox
               v-model="skipInvalid"
@@ -305,7 +312,7 @@ async function run(): Promise<void> {
           <div v-if="report.warnings.length > 0" data-test="warnings">
             <div class="text-subtitle2">{{ t('import.warnings') }}</div>
             <ul class="swmap-import-list">
-              <li v-for="(w, i) in report.warnings" :key="i">#{{ w.index }}: {{ w.message }}</li>
+              <li v-for="(w, i) in report.warnings" :key="i">#{{ w.index }}: {{ issueText(w) }}</li>
             </ul>
           </div>
           <q-banner v-if="report.media_relink_hint" rounded dense data-test="media-hint">

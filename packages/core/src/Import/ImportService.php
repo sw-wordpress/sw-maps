@@ -215,7 +215,7 @@ final class ImportService
 
     /**
      * @param array<string, string> $mapping
-     * @return array{0: list<array{geometry: \SWMaps\Core\Domain\Geometry, properties: FeatureProperties, external_id: ?string}>, 1: list<array{index: int, message: string}>, 2: list<array{index: int, message: string}>}
+     * @return array{0: list<array{geometry: \SWMaps\Core\Domain\Geometry, properties: FeatureProperties, external_id: ?string}>, 1: list<array{index: int, code: string, message: string, params: array<string, string>}>, 2: list<array{index: int, code: string, message: string, params: array<string, string>}>}
      */
     private function prepare(ParseResult $parsed, array $mapping): array
     {
@@ -227,8 +227,18 @@ final class ImportService
             $fields = FieldMapper::apply($feature->attributes, $mapping);
             $external = $fields['external_id'] ?? null;
             unset($fields['external_id']);
+            // Members of a split GeometryCollection share the source id: keep them distinct and stable.
+            if ($external !== null && $feature->part > 0) {
+                $external .= '#' . ($feature->part + 1);
+            }
             if ($external !== null && (mb_strlen($external) > 190 || isset($seen[$external]))) {
-                $errors[] = ['index' => $feature->index, 'message' => isset($seen[$external]) ? 'Duplicate external ID in the file.' : 'External ID is too long.'];
+                $duplicate = isset($seen[$external]);
+                $errors[] = [
+                    'index' => $feature->index,
+                    'code' => $duplicate ? 'duplicate_external_id' : 'external_id_too_long',
+                    'message' => $duplicate ? 'Duplicate external ID in the file.' : 'External ID is too long.',
+                    'params' => [],
+                ];
                 continue;
             }
             $properties = $this->properties($fields, $feature->index, $warnings);
@@ -245,7 +255,7 @@ final class ImportService
      * Invalid optional fields are dropped with a warning instead of rejecting the entry.
      *
      * @param array<string, string> $fields
-     * @param list<array{index: int, message: string}> $warnings
+     * @param list<array{index: int, code: string, message: string, params: array<string, string>}> $warnings
      */
     private function properties(array $fields, int $index, array &$warnings): FeatureProperties
     {
@@ -256,7 +266,12 @@ final class ImportService
                 foreach (array_keys($e->errors()) as $key) {
                     $field = str_replace('properties.', '', $key);
                     unset($fields[$field]);
-                    $warnings[] = ['index' => $index, 'message' => sprintf('Field "%s" is invalid and was left empty.', $field)];
+                    $warnings[] = [
+                        'index' => $index,
+                        'code' => 'field_invalid',
+                        'message' => sprintf('Field "%s" is invalid and was left empty.', $field),
+                        'params' => ['field' => $field],
+                    ];
                 }
             }
         }

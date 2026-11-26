@@ -117,16 +117,24 @@ describe('ImportDialog', () => {
     api.imports.run.mockResolvedValue(
       report({
         error_count: 1,
-        errors: [{ index: 2, message: 'Feature has no geometry.' }],
-        warnings: [{ index: 1, message: 'Field "link" is invalid and was left empty.' }],
+        errors: [
+          { index: 2, code: 'no_geometry', message: 'Feature has no geometry.', params: {} },
+        ],
+        warnings: [
+          { index: 1, code: 'field_invalid', message: 'x', params: { field: 'link' } },
+          { index: 3, code: 'brand_new_code', message: 'Server fallback text', params: {} },
+        ],
         media_relink_hint: true,
       }) as never,
     );
     const w = await open();
     await pick(w, 'a.geojson', '{}');
     await click('[data-test=check]');
-    expect(el('[data-test=errors]')?.textContent).toContain('Feature has no geometry.');
-    expect(el('[data-test=warnings]')?.textContent).toContain('link');
+    expect(el('[data-test=errors]')?.textContent).toContain('No geometry.');
+    expect(el('[data-test=warnings]')?.textContent).toContain(
+      'Field "link" is invalid and was left empty.',
+    );
+    expect(el('[data-test=warnings]')?.textContent).toContain('Server fallback text');
     expect(el('[data-test=media-hint]')).not.toBeNull();
     expect(el('[data-test=run]')?.hasAttribute('disabled')).toBe(true);
     await click('[data-test=skip-invalid] .q-checkbox__inner');
@@ -152,6 +160,15 @@ describe('ImportDialog', () => {
       confirm_replace: true,
       layer_id: 10,
     });
+  });
+
+  it('forgets the field mapping when another file is chosen', async () => {
+    const w = await open();
+    await pick(w, 'a.geojson', '{}');
+    await click('[data-test=check]');
+    await pick(w, 'b.geojson', '{}');
+    await click('[data-test=check]');
+    expect(api.imports.run.mock.calls[1]![0]).not.toHaveProperty('mapping');
   });
 
   it('re-checks with the changed field mapping', async () => {

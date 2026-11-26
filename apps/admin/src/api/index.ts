@@ -39,7 +39,10 @@ export interface ConnectionTest {
 
 export interface ImportIssue {
   index: number;
+  /** Stable code; the client shows the translated text and falls back to `message`. */
+  code: string;
   message: string;
+  params: Record<string, string>;
 }
 
 export interface ImportReport {

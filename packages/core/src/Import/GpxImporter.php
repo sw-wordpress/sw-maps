@@ -59,7 +59,7 @@ final class GpxImporter implements ImporterInterface
     {
         $point = $this->position($wpt);
         if ($point === null) {
-            $collector->error($index, 'Waypoint has no valid lat/lon.');
+            $collector->error($index, 'gpx_waypoint', 'Waypoint has no valid lat/lon.');
 
             return;
         }
@@ -70,7 +70,7 @@ final class GpxImporter implements ImporterInterface
     {
         $points = $this->positions($rte, 'rtept');
         if ($points === null || count($points) < 2) {
-            $collector->error($index, 'Route needs at least two valid points.');
+            $collector->error($index, 'gpx_route', 'Route needs at least two valid points.');
 
             return;
         }
@@ -86,7 +86,7 @@ final class GpxImporter implements ImporterInterface
             }
             $points = $this->positions($child, 'trkpt');
             if ($points === null) {
-                $collector->error($index, 'Track segment contains an invalid lat/lon.');
+                $collector->error($index, 'gpx_segment', 'Track segment contains an invalid lat/lon.');
 
                 return;
             }
@@ -95,7 +95,7 @@ final class GpxImporter implements ImporterInterface
             }
         }
         if ($segments === []) {
-            $collector->error($index, 'Track has no segment with at least two points.');
+            $collector->error($index, 'gpx_track', 'Track has no segment with at least two points.');
 
             return;
         }
@@ -116,7 +116,7 @@ final class GpxImporter implements ImporterInterface
         try {
             $collector->add(Geometry::create($type, $coordinates), $attributes, $index);
         } catch (InvalidGeometryException $e) {
-            $collector->error($index, $e->getMessage());
+            $collector->error($index, 'geometry_invalid', $e->getMessage());
         }
     }
 

@@ -48,6 +48,7 @@ final class ImportServiceTest extends TestCase
         self::assertSame([2, 0, 0], [$report['created'], $report['updated'], $report['error_count']]);
         self::assertTrue($report['media_relink_hint']);
         self::assertCount(1, $report['warnings']);
+        self::assertSame(['code' => 'field_invalid', 'params' => ['field' => 'link']], array_intersect_key($report['warnings'][0], ['code' => 1, 'params' => 1]));
         $layers = $this->f->layers->forMap($this->mapId);
         self::assertSame('Huts', $layers[0]->title);
         $features = $this->f->features->forLayers([$layers[0]->id]);
@@ -145,6 +146,19 @@ final class ImportServiceTest extends TestCase
         $report = $this->service()->run($this->mapId, ['format' => 'geojson', 'content' => $content, 'dry_run' => true]);
         self::assertSame(2, $report['error_count']);
         self::assertSame('Duplicate external ID in the file.', $report['errors'][0]['message']);
+        self::assertSame(['duplicate_external_id', 'external_id_too_long'], array_column($report['errors'], 'code'));
+    }
+
+    public function testSplitCollectionMembersGetDistinctExternalIds(): void
+    {
+        $content = '{"type":"FeatureCollection","features":[{"type":"Feature","properties":{"id":"a1","name":"X"},"geometry":{"type":"GeometryCollection","geometries":['
+            . '{"type":"Point","coordinates":[1,1]},{"type":"Point","coordinates":[2,2]}]}}]}';
+        $report = $this->service()->run($this->mapId, ['format' => 'geojson', 'content' => $content]);
+        self::assertSame([2, 0], [$report['created'], $report['error_count']]);
+        $ids = array_map(static fn (Feature $f): ?string => $f->externalId, array_values($this->f->features->items));
+        self::assertSame(['a1', 'a1#2'], $ids);
+        $again = $this->service()->run($this->mapId, ['format' => 'geojson', 'content' => $content, 'mode' => 'upsert', 'layer_id' => $report['layer_id']]);
+        self::assertSame([2, 0], [$again['updated'], $again['created']], 'a re-import updates both parts');
     }
 
     public function testReplaceNeedsConfirmationAndDeletesOldContent(): void
