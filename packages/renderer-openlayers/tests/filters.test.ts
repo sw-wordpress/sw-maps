@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { MapRenderData } from '@sw-maps/map-contracts';
+import Feature from 'ol/Feature.js';
+import Point from 'ol/geom/Point.js';
+import type { MapRenderData, StyleMap } from '@sw-maps/map-contracts';
 import { MapViewer, OpenLayersRenderer } from '../src';
-import { layerInRange } from '../src/styles';
+import { layerInRange, ruleStyle } from '../src/styles';
 import { buildFilterBar, matchingIds } from '../src/filters';
 import { resolveIcon } from '../src/markers';
 import { feature, makeData } from './fixtures';
@@ -234,5 +236,90 @@ describe('layer zoom limits and draw order', () => {
     const top = (internals.metas.get(50) as { order: number }).order;
     const bottom = (internals.metas.get(1) as { order: number }).order;
     expect(top).toBeGreaterThan(bottom);
+  });
+});
+
+describe('layer style rules', () => {
+  it('picks the first rule that matches a category of the feature', () => {
+    const style: StyleMap = {
+      rules: [
+        { categoryId: 5, style: { color: '#111111' } },
+        { categoryId: 6, style: { color: '#222222', weight: 7 } },
+        { categoryId: 6, style: { color: '#333333' } },
+      ],
+    };
+    expect(ruleStyle(style, [6, 5])).toEqual({ color: '#111111' });
+    expect(ruleStyle(style, [6])).toEqual({ color: '#222222', weight: 7 });
+    expect(ruleStyle(style, [9])).toEqual({});
+    expect(ruleStyle({}, [5])).toEqual({});
+    expect(ruleStyle({ rules: 'x' as never }, [5])).toEqual({});
+    expect(ruleStyle({ rules: [{ categoryId: 5, style: null }] as never }, [5])).toEqual({});
+  });
+
+  it('lets a rule override the category and the feature override the rule', () => {
+    document.body.innerHTML = '<div class="swmap__stage"></div>';
+    const data = dataWithCategories();
+    data.layers[0]!.style = { rules: [{ categoryId: 10, style: { color: '#ff0000' } }] };
+    data.layers[0]!.features[1]!.style = { color: '#0000ff' };
+    const r = new OpenLayersRenderer({ popups: true });
+    r.mount(document.querySelector<HTMLElement>('.swmap__stage')!, { data });
+    const metas = (
+      r as unknown as { metas: Map<number, { categoryStyle: Record<string, unknown> }> }
+    ).metas;
+    expect(metas.get(1)!.categoryStyle['color']).toBe('#ff0000');
+    expect(metas.get(1)!.categoryStyle['icon']).toBe('builtin:home');
+    expect(metas.get(2)!.categoryStyle['color']).toBe('#0000cc');
+  });
+});
+
+describe('tooltip', () => {
+  it('shows the title of a hovered marker, hides it elsewhere and for open popups', () => {
+    document.body.innerHTML = '<div class="swmap__stage"></div>';
+    const r = new OpenLayersRenderer({ popups: true });
+    r.mount(document.querySelector<HTMLElement>('.swmap__stage')!, { data: dataWithCategories() });
+    const map = (
+      r as unknown as {
+        map: {
+          forEachFeatureAtPixel: unknown;
+          dispatchEvent(e: unknown): void;
+          getOverlays(): {
+            getArray(): Array<{ getPosition(): unknown; getElement(): HTMLElement | undefined }>;
+          };
+        };
+      }
+    ).map;
+    const tooltip = () =>
+      map
+        .getOverlays()
+        .getArray()
+        .find((o) => o.getElement()?.className === 'swmap-tooltip')!;
+    const hover = (hit: unknown) => {
+      map.forEachFeatureAtPixel = (() => hit) as never;
+      map.dispatchEvent({
+        type: 'pointermove',
+        pixel: [1, 1],
+        coordinate: [10, 20],
+        dragging: false,
+      });
+    };
+    const marker = (id: number) => {
+      const f = new Feature(new Point([0, 0]));
+      f.set('swmapId', id);
+      return f;
+    };
+    hover(marker(1));
+    expect(tooltip().getElement()!.textContent).toBe('Alpha hut');
+    expect(tooltip().getPosition()).toEqual([10, 20]);
+    hover(new Feature({ features: [marker(2)] }));
+    expect(tooltip().getElement()!.textContent).toBe('Beta lake');
+    hover(new Feature({ features: [marker(1), marker(2)] }));
+    expect(tooltip().getPosition()).toBeUndefined();
+    hover(marker(1));
+    r.selectFeature(1);
+    hover(marker(1));
+    expect(tooltip().getPosition()).toBeUndefined();
+    hover(undefined);
+    expect(tooltip().getPosition()).toBeUndefined();
+    map.dispatchEvent({ type: 'pointermove', pixel: [1, 1], coordinate: [1, 1], dragging: true });
   });
 });

@@ -46,6 +46,21 @@ export function layerInRange(style: StyleMap, zoom: number | null): boolean {
   return true;
 }
 
+/**
+ * Style of the first layer rule (`style.rules`: category id + style) that matches one of the feature's categories.
+ * Rules override the category style and are overridden by the feature's own style.
+ */
+export function ruleStyle(layerStyle: StyleMap, categories: readonly number[]): StyleMap {
+  const rules = (layerStyle as Record<string, unknown>)['rules'];
+  if (!Array.isArray(rules)) return {};
+  for (const rule of rules as Array<{ categoryId?: unknown; style?: unknown }>) {
+    if (typeof rule.categoryId === 'number' && categories.includes(rule.categoryId)) {
+      return typeof rule.style === 'object' && rule.style !== null ? (rule.style as StyleMap) : {};
+    }
+  }
+  return {};
+}
+
 /** Creates the OpenLayers style function. `selectedId` is read lazily so selection needs no style rebuild. */
 export function createStyleFunction(
   metaOf: (feature: FeatureLike) => FeatureMeta | undefined,

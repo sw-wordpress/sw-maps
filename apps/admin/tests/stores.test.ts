@@ -140,6 +140,45 @@ describe('editor store', () => {
     expect(store.dirty).toBe(false);
   });
 
+  it('adds a drawn part to the pending feature as a multi geometry', async () => {
+    const store = await loaded();
+    store.startAddPart(999);
+    expect(store.appendTo).toBeNull();
+    store.startAddPart(100);
+    expect(store.appendTo).toBe(100);
+    expect(store.tool).toBe('point');
+    store.drawn({ type: 'Point', coordinates: [9, 50] });
+    expect(store.doc?.features).toHaveLength(1);
+    expect(store.doc?.features[0]?.geometry.type).toBe('MultiPoint');
+    expect([store.appendTo, store.tool]).toEqual([null, 'select']);
+    store.startAddPart(100);
+    store.drawn({
+      type: 'LineString',
+      coordinates: [
+        [0, 0],
+        [1, 1],
+      ],
+    });
+    expect(store.doc?.features[0]?.geometry.type).toBe('MultiPoint');
+    store.drawn({ type: 'Point', coordinates: [5, 5] });
+    expect(store.doc?.features).toHaveLength(2);
+  });
+
+  it('removes a deleted category from the undo history too', async () => {
+    api.features.page.mockResolvedValue({
+      items: [makeFeature({ categories: [20] })],
+      total: 1,
+      totalPages: 1,
+    } as never);
+    const store = await loaded();
+    store.patchFeature(100, { properties: { title: 'Changed' } });
+    await store.removeCategory(20);
+    store.undo();
+    expect(store.doc?.features[0]?.categories).toEqual([]);
+    store.redo();
+    expect(store.doc?.features[0]?.categories).toEqual([]);
+  });
+
   it('assigns categories through the working copy and saves them with the feature', async () => {
     const store = await loaded();
     store.patchFeature(100, { categories: [20] });

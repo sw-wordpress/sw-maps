@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { EditorDoc, SaveApi } from '@/features/editor/model';
 import {
+  appendPart,
   moveLayer,
+  partTool,
   History,
   SaveError,
   addFeature,
@@ -116,6 +118,61 @@ describe('History', () => {
       steps++;
     }
     expect(steps).toBe(3);
+  });
+});
+
+describe('multi geometry parts', () => {
+  const point = { type: 'Point' as const, coordinates: [1, 1] };
+  const line = {
+    type: 'LineString' as const,
+    coordinates: [
+      [0, 0],
+      [1, 1],
+    ],
+  };
+  const polygon = {
+    type: 'Polygon' as const,
+    coordinates: [
+      [
+        [0, 0],
+        [1, 0],
+        [1, 1],
+        [0, 0],
+      ],
+    ],
+  };
+
+  it('maps feature types to the tool that draws a part', () => {
+    expect(
+      ['Point', 'MultiPoint', 'LineString', 'MultiLineString', 'Polygon', 'MultiPolygon'].map((t) =>
+        partTool(t as never),
+      ),
+    ).toEqual(['point', 'point', 'line', 'line', 'polygon', 'polygon']);
+  });
+
+  it('turns single geometries into multi geometries and extends existing ones', () => {
+    const doc = (geometry: unknown) => ({
+      ...base(),
+      features: [makeFeature({ geometry: geometry as never })],
+    });
+    const a = appendPart(doc(point), 100, { type: 'Point', coordinates: [2, 2] });
+    expect(a.features[0]!.geometry).toEqual({
+      type: 'MultiPoint',
+      coordinates: [
+        [1, 1],
+        [2, 2],
+      ],
+    });
+    const b = appendPart(a, 100, { type: 'Point', coordinates: [3, 3] });
+    expect((b.features[0]!.geometry.coordinates as unknown[]).length).toBe(3);
+    const l = appendPart(doc(line), 100, line);
+    expect(l.features[0]!.geometry.type).toBe('MultiLineString');
+    const p = appendPart(doc(polygon), 100, polygon);
+    expect(p.features[0]!.geometry.type).toBe('MultiPolygon');
+    const d = doc(line);
+    expect(appendPart(d, 100, point)).toBe(d);
+    expect(appendPart(d, 999, line)).toBe(d);
+    expect(appendPart(d, 100, { type: 'MultiPoint', coordinates: [] })).toBe(d);
   });
 });
 

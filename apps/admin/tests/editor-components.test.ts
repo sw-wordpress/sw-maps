@@ -183,6 +183,43 @@ describe('LayerPanel', () => {
     expect(w.find('[data-test=layer-form]').exists()).toBe(false);
   });
 
+  it('edits style rules per category', async () => {
+    const categories = [makeCategory(), makeCategory({ id: 22, title: 'Lakes' })];
+    const layer = makeLayer({
+      style: { rules: [{ categoryId: 20, style: { color: '#112233' } }] },
+    });
+    const w = mount(LayerPanel, { props: { ...props, layers: [layer], categories } });
+    await w.find('[data-test=layer-settings]').trigger('click');
+    expect(w.findAll('[data-test=rule]')).toHaveLength(1);
+    const color = w.find<HTMLInputElement>('input[data-test=rule-color]');
+    expect(color.element.value).toBe('#112233');
+    color.element.value = '#445566';
+    await color.trigger('change');
+    const select = w
+      .findAllComponents({ name: 'QSelect' })
+      .find((c) => c.vm.$attrs['data-test'] === 'rule-category')!;
+    select.vm.$emit('update:modelValue', 22);
+    await w.find('[data-test=rule-add]').trigger('click');
+    await w.find('[data-test=rule-remove]').trigger('click');
+    expect(w.emitted('style-layer')).toEqual([
+      [10, { rules: [{ categoryId: 20, style: { color: '#445566' } }] }],
+      [10, { rules: [{ categoryId: 22, style: { color: '#112233' } }] }],
+      [
+        10,
+        {
+          rules: [
+            { categoryId: 20, style: { color: '#112233' } },
+            { categoryId: 22, style: { color: '#2563eb' } },
+          ],
+        },
+      ],
+      [10, {}],
+    ]);
+    const none = mount(LayerPanel, { props: { ...props, layers: [layer] } });
+    await none.find('[data-test=layer-settings]').trigger('click');
+    expect(none.find('[data-test=rules]').exists()).toBe(false);
+  });
+
   it('asks before deleting a layer', async () => {
     const w = mount(LayerPanel, { props, attachTo: document.body });
     await w.findAll('[data-test=delete-layer]')[1]?.trigger('click');
@@ -234,6 +271,12 @@ describe('FeatureForm', () => {
     expect(w.emitted('patch')?.at(-1)).toEqual([
       { properties: { fields: [{ label: 'Phone', value: '' }] } },
     ]);
+  });
+
+  it('asks to draw another part', async () => {
+    const w = mount(FeatureForm, { props: { feature: feature() } });
+    await w.find('[data-test=add-part]').trigger('click');
+    expect(w.emitted('addPart')).toHaveLength(1);
   });
 
   it('hides the add button at the field limit', () => {

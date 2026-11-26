@@ -153,9 +153,9 @@ Erledigte Aufgaben aus [TODO.md](TODO.md) (Foundation = M0, MVP = M1; Details de
 - [x] M2-01: Mehrere Layer pro Karte (Titel, Sichtbarkeit, Reihenfolge, Stil); Basiskarte und Overlay getrennt; Zoombegrenzung pro Layer
   - Ergebnis: Layer-Reihenfolge (hoch/runter, bestimmt die Zeichenreihenfolge), Layer-Stil und Zoombegrenzung pro Layer (`minZoom`/`maxZoom`, auch für Cluster); Basiskarte (Anbieter) und Overlays (Layer) sind getrennte Konzepte. Tests: `model.test.ts`, `LayerPanel`, `filters.test.ts`.
 - [x] M2-02: Linien und Polygone zeichnen und bearbeiten (Stützpunkte verschieben/ergänzen/entfernen); Multi-Geometrien; Polygonlöcher beim Import erhalten und im Editor testen
-  - Ergebnis: Das Auswahlwerkzeug verschiebt, ergänzt (Ziehen auf der Linie) und entfernt (Alt+Klick) Stützpunkte; Polygonlöcher und Multi-Geometrien bleiben durch Import und Bearbeitung erhalten (`renderer.test.ts`, `ImportersTest`, e2e). Einschränkung: Neue Multi-Geometrien werden nicht gezeichnet, nur importiert und bearbeitet.
+  - Ergebnis: Das Auswahlwerkzeug verschiebt, ergänzt (Ziehen auf der Linie) und entfernt (Alt+Klick) Stützpunkte; Polygonlöcher und Multi-Geometrien bleiben durch Import und Bearbeitung erhalten (`renderer.test.ts`, `ImportersTest`, e2e). Neue Multi-Geometrien entstehen über „Teil hinzufügen“ im Standortformular (Punkt/Linie/Fläche wird als weiterer Teil angehängt).
 - [x] M2-03: Stile: Farbe, Deckkraft, Linienstärke, Füllung, Strichmuster; Stilregeln pro Layer
-  - Ergebnis: Farbe, Deckkraft, Linienstärke, Füllung, Strichmuster je Standort und Layer; Kaskade Layer → Kategorie → Standort ersetzt freie Stilregeln (Stil-Objekte sind flach, Regeln mit Bedingungen sind nicht umgesetzt).
+  - Ergebnis: Farbe, Deckkraft, Linienstärke, Füllung, Strichmuster je Standort und Layer; Stilregeln pro Layer (`style.rules`: Kategorie → Stil, höchstens 10, validiert; Reihenfolge Standort > Regel > Kategorie > Layer), bearbeitbar im Layer-Panel.
 - [x] M2-04: Kategorien und Tags mit Filter, Legende und individueller Gestaltung (nicht nur per Farbe unterscheidbar)
   - Ergebnis: Seitenweite Kategorien (REST `/categories`, Verwaltung im Editor), Zuordnung je Standort, Filter-Legende mit Symbol und Farbe im Viewer, Kategorie-Stil als Standard für Farbe und Symbol. Tags als eigenes Konzept gibt es nicht (Kategorien decken den Fall ab).
 - [x] M2-05: Marker-Clustering (klickbar, auflösbar)
@@ -163,7 +163,7 @@ Erledigte Aufgaben aus [TODO.md](TODO.md) (Foundation = M0, MVP = M1; Details de
 - [x] M2-06: Synchronisierte Standortliste mit Suche und Filter
   - Ergebnis: Serverseitig gerenderte Liste mit Suche und Kategoriefilter, Liste und Karte werden gemeinsam gefiltert (`filters.ts`).
 - [x] M2-07: Popup, Tooltip oder Detail-Seitenleiste; strukturierte Zusatzfelder
-  - Ergebnis: Popup mit strukturierten Zusatzfeldern (Bezeichnung/Wert, bis 10, reiner Text), auch aus CSV-Spalten importierbar. Tooltip und Detail-Seitenleiste sind nicht umgesetzt (das Popup erfüllt die Anforderung „oder“).
+  - Ergebnis: Popup mit strukturierten Zusatzfeldern (Bezeichnung/Wert, bis 10, reiner Text), auch aus CSV-Spalten importierbar. Zusätzlich Hover-Tooltip mit dem Titel (Zeigergeräte). Eine Detail-Seitenleiste gibt es nicht.
 - [x] M2-08: Streckenlänge sphärisch (Haversine), Unit-Tests
   - Ergebnis: Core `DistanceCalculator` (Haversine, Radius 6371008,8 m) mit Unit-Tests; identische Berechnung in `map-contracts` (`lineLengthMeters`), Anzeige im Editor. Die REST-API liefert keine Länge.
 - [x] M2-09: Importer GeoJSON (RFC 7946; GeometryCollection ablehnen oder zerlegen), GPX 1.0/1.1 (Segmente, Routen, Wegpunkte), CSV (Trennzeichen/Dezimalformat explizit)

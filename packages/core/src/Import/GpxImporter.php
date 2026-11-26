@@ -24,7 +24,7 @@ final class GpxImporter implements ImporterInterface
         $previous = libxml_use_internal_errors(true);
         $document = new \DOMDocument();
         try {
-            $loaded = $document->loadXML($content, LIBXML_NONET | LIBXML_NOBLANKS | LIBXML_NOCDATA | LIBXML_PARSEHUGE);
+            $loaded = $document->loadXML($content, LIBXML_NONET | LIBXML_NOBLANKS | LIBXML_NOCDATA);
         } finally {
             libxml_clear_errors();
             libxml_use_internal_errors($previous);
@@ -36,6 +36,9 @@ final class GpxImporter implements ImporterInterface
             throw new ImportException(ImportException::FORBIDDEN, 'DOCTYPE declarations are not allowed.');
         }
         $root = $document->documentElement;
+        if (self::depth($root) > $limits->maxDepth) {
+            throw new ImportException(ImportException::TOO_DEEP, 'The file is nested too deeply.');
+        }
         if ($root->localName !== 'gpx') {
             throw new ImportException(ImportException::MALFORMED, 'The file is not a GPX document.');
         }
@@ -53,6 +56,24 @@ final class GpxImporter implements ImporterInterface
         }
 
         return $collector->result();
+    }
+
+    /** Maximum element nesting (iterative, so hostile nesting cannot exhaust the stack). */
+    private static function depth(\DOMElement $root): int
+    {
+        $max = 0;
+        $stack = [[$root, 1]];
+        while ($stack !== []) {
+            [$node, $level] = array_pop($stack);
+            $max = max($max, $level);
+            foreach ($node->childNodes as $child) {
+                if ($child instanceof \DOMElement) {
+                    $stack[] = [$child, $level + 1];
+                }
+            }
+        }
+
+        return $max;
     }
 
     private function waypoint(\DOMElement $wpt, int $index, ParseCollector $collector): void

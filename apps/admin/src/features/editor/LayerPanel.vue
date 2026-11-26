@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { FeatureData, LayerData } from '@sw-maps/map-contracts';
+import type { CategoryData, FeatureData, LayerData, StyleRule } from '@sw-maps/map-contracts';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import SwmapCard from '@/components/ui/SwmapCard.vue';
 
@@ -10,6 +10,7 @@ const props = defineProps<{
   features: FeatureData[];
   activeLayerId: number | null;
   selectedId: number | null;
+  categories?: CategoryData[];
 }>();
 const emit = defineEmits<{
   'update:activeLayerId': [id: number];
@@ -68,6 +69,44 @@ function commitLayerNumber(layer: LayerData, key: keyof typeof RANGES): void {
     style[key] = Math.min(max, Math.max(min, Number(raw)));
   }
   if (JSON.stringify(style) !== JSON.stringify(layer.style)) emit('style-layer', layer.id, style);
+}
+
+const categoryOptions = computed(() =>
+  (props.categories ?? []).map((c) => ({ value: c.id, label: c.title })),
+);
+const MAX_RULES = 10;
+
+function rulesOf(layer: LayerData): StyleRule[] {
+  const rules = layer.style['rules'];
+  return Array.isArray(rules) ? rules : [];
+}
+
+function emitRules(layer: LayerData, rules: StyleRule[]): void {
+  const style: LayerData['style'] = { ...layer.style };
+  if (rules.length === 0) delete style['rules'];
+  else style['rules'] = rules;
+  emit('style-layer', layer.id, style);
+}
+
+function addRule(layer: LayerData): void {
+  const used = new Set(rulesOf(layer).map((r) => r.categoryId));
+  const next = (props.categories ?? []).find((c) => !used.has(c.id));
+  if (next)
+    emitRules(layer, [...rulesOf(layer), { categoryId: next.id, style: { color: '#2563eb' } }]);
+}
+
+function patchRule(layer: LayerData, index: number, patch: Partial<StyleRule>): void {
+  emitRules(
+    layer,
+    rulesOf(layer).map((r, i) => (i === index ? { ...r, ...patch } : r)),
+  );
+}
+
+function removeRule(layer: LayerData, index: number): void {
+  emitRules(
+    layer,
+    rulesOf(layer).filter((_, i) => i !== index),
+  );
 }
 
 function commitLayerValue(layer: LayerData, key: 'color' | 'dash', value: string): void {
@@ -235,6 +274,60 @@ function askDelete(layer: LayerData): void {
             :label="t('feature.dash')"
             data-test="layer-dash"
             @update:model-value="commitLayerValue(layer, 'dash', $event)"
+          />
+        </div>
+        <div v-if="categoryOptions.length > 0" class="q-mt-sm" data-test="rules">
+          <div class="text-caption">{{ t('editor.rules') }}</div>
+          <div
+            v-for="(rule, ruleIndex) in rulesOf(layer)"
+            :key="ruleIndex"
+            class="row items-center no-wrap q-gutter-xs q-mb-xs"
+            data-test="rule"
+          >
+            <q-select
+              :model-value="rule.categoryId"
+              class="col"
+              dense
+              outlined
+              emit-value
+              map-options
+              :options="categoryOptions"
+              :label="t('feature.categories')"
+              data-test="rule-category"
+              @update:model-value="patchRule(layer, ruleIndex, { categoryId: $event })"
+            />
+            <input
+              type="color"
+              :value="typeof rule.style['color'] === 'string' ? rule.style['color'] : '#2563eb'"
+              :aria-label="t('feature.color')"
+              data-test="rule-color"
+              @change="
+                patchRule(layer, ruleIndex, {
+                  style: { ...rule.style, color: ($event.target as HTMLInputElement).value },
+                })
+              "
+            />
+            <q-btn
+              flat
+              dense
+              round
+              icon="r_close"
+              :aria-label="t('common.delete')"
+              data-test="rule-remove"
+              @click="removeRule(layer, ruleIndex)"
+            />
+          </div>
+          <q-btn
+            v-if="
+              rulesOf(layer).length < MAX_RULES && rulesOf(layer).length < categoryOptions.length
+            "
+            flat
+            dense
+            no-caps
+            icon="r_add"
+            :label="t('editor.addRule')"
+            data-test="rule-add"
+            @click="addRule(layer)"
           />
         </div>
         <div class="q-mt-sm">

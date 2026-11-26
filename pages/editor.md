@@ -1,13 +1,13 @@
 # Karteneditor
 
 - **Layer-Leiste (links):** Layer anlegen, umbenennen, ein-/ausblenden, löschen, in der Reihenfolge verschieben (spätere Layer liegen oben) und über das Regler-Symbol gestalten (Farbe, Linienstärke, Muster, Deckkraft, Sichtbarkeit ab/bis Zoom); Standorte des Layers auswählen. Die Basiskarte (Anbieter) ist von den Layern getrennt.
-- **Karte (Mitte):** Werkzeuge *Auswählen/Verschieben*, *Marker*, *Linie*, *Fläche*. Marker lassen sich per Ziehen verschieben; Stützpunkte von Linien und Flächen ändert das Auswahlwerkzeug (Ziehen verschiebt, Ziehen auf einer Linie ergänzt, Alt+Klick auf einen Stützpunkt entfernt ihn); Polygonlöcher und Multi-Geometrien bleiben erhalten.
+- **Karte (Mitte):** Werkzeuge *Auswählen/Verschieben*, *Marker*, *Linie*, *Fläche*. Marker lassen sich per Ziehen verschieben; Stützpunkte von Linien und Flächen ändert das Auswahlwerkzeug (Ziehen verschiebt, Ziehen auf einer Linie ergänzt, Alt+Klick auf einen Stützpunkt entfernt ihn); Polygonlöcher und Multi-Geometrien bleiben erhalten; *Teil hinzufügen* im Standortformular zeichnet einen weiteren Teil (Multi-Geometrie).
 - **Eigenschaften (rechts):** Reiter *Karte* (Titel, Slug, Status, Anbieter, Startansicht, Zoomgrenzen, Höhe/Seitenverhältnis, Bedienung) und *Standort* (Titel, Beschreibung, Adresse, Link, Symbol, Farbe, Bild, exakte Koordinaten).
 - **Startansicht:** Mittelpunkt und Zoom eintragen oder *Aktuelle Ansicht übernehmen*; „An alle Standorte anpassen“ wählt den Ausschnitt automatisch.
 - **Vorschau:** Umschalter Desktop/Mobil in der Werkzeugleiste.
 
 ## Kategorien, Stile und Zusatzfelder
-- **Kategorien** gelten seitenweit (Standortformular → *Kategorien verwalten*): Name, Farbe und Symbol. Ein Standort kann mehrere Kategorien haben; Farbe und Symbol der ersten Kategorie gelten, solange der Standort nichts Eigenes wählt (Reihenfolge Layer → Kategorie → Standort). Besucher filtern über die Legende, deren Knöpfe das Symbol zeigen (nicht nur die Farbe).
+- **Kategorien** gelten seitenweit (Standortformular → *Kategorien verwalten*): Name, Farbe und Symbol. Ein Standort kann mehrere Kategorien haben; Farbe und Symbol der ersten Kategorie gelten, solange der Standort nichts Eigenes wählt (Reihenfolge Standort > Regel > Kategorie > Layer). **Stilregeln** je Layer (Layer-Einstellungen): „Standorte der Kategorie X erhalten diese Farbe“. Besucher filtern über die Legende, deren Knöpfe das Symbol zeigen (nicht nur die Farbe).
 - **Linien und Flächen:** Stärke, Muster (durchgezogen, gestrichelt, gepunktet), Deckkraft, Flächenfüllung; die Länge (Haversine) steht im Kopf des Formulars.
 - **Zusatzfelder:** bis zu 10 Paare aus Bezeichnung und Wert, im Popup als Liste (reiner Text).
 

@@ -145,6 +145,13 @@ final class ImportersTest extends TestCase
         $this->expectReason(ImportException::MALFORMED, fn () => (new GpxImporter())->parse('<kml/>', new ImportLimits()));
     }
 
+    public function testGpxNestingLimitIsEnforced(): void
+    {
+        $nested = '<gpx>' . str_repeat('<extensions>', 40) . str_repeat('</extensions>', 40) . '<wpt lat="1" lon="1"/></gpx>';
+        $this->expectReason(ImportException::TOO_DEEP, fn () => (new GpxImporter())->parse($nested, new ImportLimits(maxDepth: 32)));
+        self::assertCount(1, (new GpxImporter())->parse($nested, new ImportLimits(maxDepth: 64))->features);
+    }
+
     public function testCsvSemicolonAndDecimalComma(): void
     {
         $csv = "\xEF\xBB\xBF" . "Name;Breite;Länge;Info\n\"Hütte; Nord\";49,5;8,25;\"line1\nline2\"\n\nBad;x;1;\nShort;1\n";

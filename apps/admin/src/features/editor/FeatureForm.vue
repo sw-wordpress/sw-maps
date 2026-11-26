@@ -20,6 +20,7 @@ const emit = defineEmits<{
     },
   ];
   manageCategories: [];
+  addPart: [];
   coordinates: [lon: number, lat: number];
   delete: [];
 }>();
@@ -446,6 +447,14 @@ async function chooseImage(): Promise<void> {
         {{ t('feature.coordinatesInvalid') }}
       </div>
     </div>
+    <q-btn
+      flat
+      no-caps
+      icon="r_add_circle_outline"
+      :label="t('feature.addPart')"
+      data-test="add-part"
+      @click="emit('addPart')"
+    />
     <q-btn
       flat
       no-caps

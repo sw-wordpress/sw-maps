@@ -214,6 +214,15 @@
   border: 1px solid currentcolor;
   border-radius: 4px;
 }
+.swmap-tooltip {
+  max-width: 16rem;
+  padding: 0.2em 0.6em;
+  font-size: 0.9em;
+  color: #fff;
+  pointer-events: none;
+  background: #1d2327;
+  border-radius: 4px;
+}
 .swmap__filters {
   display: flex;
   flex-wrap: wrap;

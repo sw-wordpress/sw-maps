@@ -72,8 +72,7 @@ async function save(): Promise<void> {
 }
 
 function onDraw(geometry: Geometry): void {
-  store.addGeometry(geometry);
-  store.tool = 'select';
+  store.drawn(geometry);
 }
 
 async function onImported(): Promise<void> {
@@ -150,6 +149,7 @@ import DataState from '@/components/ui/DataState.vue';
         :features="store.doc.features"
         :active-layer-id="store.activeLayerId"
         :selected-id="store.selectedFeatureId"
+        :categories="store.categories"
         @update:active-layer-id="store.activeLayerId = $event"
         @add-layer="store.createLayer(`${t('editor.newLayer')} ${store.doc.layers.length + 1}`)"
         @rename-layer="(id, title) => store.patchLayer(id, { title })"
@@ -189,6 +189,7 @@ import DataState from '@/components/ui/DataState.vue';
             :categories="store.categories"
             :can-manage-categories="canManageCategories"
             @manage-categories="categoriesOpen = true"
+            @add-part="store.startAddPart(store.selectedFeature.id)"
             @patch="store.patchFeature(store.selectedFeature.id, $event)"
             @coordinates="
               (lon, lat) => store.setPointCoordinates(store.selectedFeature!.id, lon, lat)

@@ -37,6 +37,32 @@ final class LayerFeatureServiceTest extends TestCase
         self::assertContains('layer:' . $a->id . ':' . $this->mapId, $this->f->events->log);
     }
 
+    public function testLayerStyleRulesAreValidated(): void
+    {
+        $rules = [['categoryId' => 3, 'style' => ['color' => '#ff0000', 'weight' => 5]]];
+        $layer = $this->f->layerService->create($this->mapId, ['title' => 'R', 'style' => ['color' => '#111111', 'rules' => $rules]]);
+        self::assertSame($rules, $layer->style['rules']);
+        self::assertSame($rules, $this->f->layerService->update($layer->id, ['style' => ['rules' => $rules]])->style['rules']);
+        $bad = [
+            'x',
+            array_fill(0, 11, $rules[0]),
+            [['categoryId' => 'a', 'style' => []]],
+            [['categoryId' => 0, 'style' => []]],
+            [['categoryId' => 1]],
+            [['categoryId' => 1, 'style' => ['rules' => []]]],
+            [['categoryId' => 1, 'style' => ['color' => '<script>']]],
+            ['categoryId' => 1],
+        ];
+        foreach ($bad as $value) {
+            try {
+                $this->f->layerService->update($layer->id, ['style' => ['rules' => $value]]);
+                self::fail('expected ValidationException');
+            } catch (ValidationException) {
+                self::assertTrue(true);
+            }
+        }
+    }
+
     public function testLayerErrors(): void
     {
         $l = $this->f->layerService->create($this->mapId, ['title' => 'A']);

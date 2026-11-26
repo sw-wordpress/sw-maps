@@ -20,7 +20,14 @@ export interface PointGeometry extends Geometry {
   coordinates: Position;
 }
 
-export type StyleValue = string | number | boolean | null;
+export type ScalarStyle = string | number | boolean | null;
+export interface StyleRule {
+  categoryId: number;
+  style: Record<string, ScalarStyle>;
+}
+
+/** Layer styles may carry `rules` (category based overrides); every other value is a scalar. */
+export type StyleValue = ScalarStyle | StyleRule[];
 export type StyleMap = Record<string, StyleValue>;
 
 export interface FeatureProperties {

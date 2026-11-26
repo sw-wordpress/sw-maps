@@ -33,6 +33,7 @@ import { toOlGeometry } from './geometry';
 import { buildPopup } from './popup';
 import type { FeatureMeta } from './styles';
 import { createPmtilesSource } from './pmtiles';
+import { ruleStyle } from './styles';
 import { createClusterStyleFunction, createStyleFunction, layerInRange } from './styles';
 
 export interface RendererConfig {
@@ -321,7 +322,10 @@ export class OpenLayersRenderer implements MapRenderer {
       target.append(this.attribution);
     }
     if (settings.fullscreen && doc.fullscreenEnabled) this.addFullscreenButton(target, doc);
-    if (this.config.popups) this.overlay = this.createOverlay(doc);
+    if (this.config.popups) {
+      this.overlay = this.createOverlay(doc);
+      this.createTooltip(doc);
+    }
 
     this.map.on('singleclick', (event) => this.onMapClick(event));
     let lastZoom = Math.round((this.map.getView().getZoom() ?? 0) * 2);
@@ -486,6 +490,42 @@ export class OpenLayersRenderer implements MapRenderer {
     return overlay;
   }
 
+  /** Hover label with the title of a location (pointer devices; the popup stays the full detail view). */
+  private createTooltip(doc: Document): Overlay {
+    const element = doc.createElement('div');
+    element.className = 'swmap-tooltip';
+    element.setAttribute('role', 'tooltip');
+    const overlay = new Overlay({
+      element,
+      positioning: 'bottom-center',
+      offset: [0, -44],
+      stopEvent: false,
+    });
+    const map = this.requireMap();
+    map.addOverlay(overlay);
+    map.on('pointermove', (event) => {
+      if (event.dragging) return;
+      const hit = map.forEachFeatureAtPixel(event.pixel, (f) => f as Feature, { hitTolerance: 6 });
+      const members = hit?.get('features') as Feature[] | undefined;
+      const id = members
+        ? members.length === 1
+          ? (members[0]?.get(FEATURE_ID) as number | undefined)
+          : undefined
+        : (hit?.get(FEATURE_ID) as number | undefined);
+      const title =
+        id === undefined || id === this.popupFor ? '' : this.metas.get(id)?.properties.title;
+      const target = map.getTargetElement();
+      if (target) target.style.cursor = hit ? 'pointer' : '';
+      if (!title) {
+        overlay.setPosition(undefined);
+        return;
+      }
+      element.textContent = title;
+      overlay.setPosition(event.coordinate);
+    });
+    return overlay;
+  }
+
   private openPopup(id: number): void {
     const meta = this.metas.get(id);
     const feature = this.source.getFeatures().find((f) => f.get(FEATURE_ID) === id);
@@ -571,7 +611,10 @@ export class OpenLayersRenderer implements MapRenderer {
     const categories = new Map((data.categories ?? []).map((c) => [c.id, c.style]));
     for (const [order, layer] of data.layers.entries()) {
       for (const f of layer.features) {
-        const categoryStyle = categories.get(f.categories?.[0] ?? -1) ?? {};
+        const categoryStyle = {
+          ...(categories.get(f.categories?.[0] ?? -1) ?? {}),
+          ...ruleStyle(layer.style, f.categories ?? []),
+        };
         wanted.set(f.id, {
           meta: { id: f.id, layer, order, properties: f.properties, style: f.style, categoryStyle },
           signature: JSON.stringify([

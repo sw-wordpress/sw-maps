@@ -173,6 +173,43 @@ export function updateFeature(
   return next;
 }
 
+const MULTI_OF = {
+  Point: 'MultiPoint',
+  LineString: 'MultiLineString',
+  Polygon: 'MultiPolygon',
+} as const;
+const SINGLE_OF = {
+  MultiPoint: 'Point',
+  MultiLineString: 'LineString',
+  MultiPolygon: 'Polygon',
+} as const;
+
+/** Tool that draws the kind of part a feature can receive (Point/MultiPoint -> point, ...). */
+export function partTool(type: Geometry['type']): 'point' | 'line' | 'polygon' {
+  const single = type in SINGLE_OF ? SINGLE_OF[type as keyof typeof SINGLE_OF] : type;
+  return single === 'Point' ? 'point' : single === 'LineString' ? 'line' : 'polygon';
+}
+
+/**
+ * Adds a drawn geometry as another part of a feature (Point -> MultiPoint, ...). Parts of another kind are ignored
+ * (the doc is returned unchanged).
+ */
+export function appendPart(doc: EditorDoc, id: number, part: Geometry): EditorDoc {
+  const feature = doc.features.find((f) => f.id === id);
+  if (!feature || !(part.type in MULTI_OF)) return doc;
+  const target = MULTI_OF[part.type as keyof typeof MULTI_OF];
+  const type = feature.geometry.type;
+  const parts = Array.isArray(feature.geometry.coordinates) ? feature.geometry.coordinates : [];
+  if (type === part.type)
+    return setFeatureGeometry(doc, id, {
+      type: target,
+      coordinates: [feature.geometry.coordinates, part.coordinates],
+    });
+  if (type === target)
+    return setFeatureGeometry(doc, id, { type: target, coordinates: [...parts, part.coordinates] });
+  return doc;
+}
+
 export function removeFeature(doc: EditorDoc, id: number): EditorDoc {
   const next = cloneDoc(doc);
   next.features = next.features.filter((f) => f.id !== id);
@@ -215,6 +252,11 @@ export class History {
     if (!next) return null;
     this.past.push(cloneDoc(current));
     return next;
+  }
+
+  /** Applies a change to every stored snapshot (e.g. removing a category that no longer exists). */
+  mapSnapshots(change: (doc: EditorDoc) => void): void {
+    for (const doc of [...this.past, ...this.future]) change(doc);
   }
 
   clear(): void {
