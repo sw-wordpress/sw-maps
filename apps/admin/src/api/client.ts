@@ -21,6 +21,11 @@ export class ApiError extends Error {
     this.details = details;
   }
 
+  /** Field level messages keyed by field name (for forms). */
+  get params(): Record<string, string> {
+    return Object.fromEntries(this.details.map((d) => [d.field, d.message]));
+  }
+
   get isAborted(): boolean {
     return this.code === 'swmap_aborted';
   }

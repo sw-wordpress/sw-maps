@@ -36,7 +36,7 @@ async function mountApp(capabilities?: string[]) {
 describe('App shell', () => {
   it('shows all sections to system managers', async () => {
     const w = await mountApp();
-    const labels = w.findAll('a.q-tab').map((t) => t.text());
+    const labels = w.findAll('a.swmap-nav-link').map((t) => t.text());
     expect(labels).toHaveLength(5);
     for (const [i, label] of [
       'Dashboard',
@@ -50,7 +50,7 @@ describe('App shell', () => {
 
   it('hides provider, settings and status for editors', async () => {
     const w = await mountApp(['swmap_edit_maps']);
-    expect(w.findAll('a.q-tab')).toHaveLength(2);
+    expect(w.findAll('a.swmap-nav-link')).toHaveLength(2);
   });
 });
 

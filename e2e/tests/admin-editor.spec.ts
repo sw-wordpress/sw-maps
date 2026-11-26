@@ -45,9 +45,15 @@ test('create a map, place, move and publish a marker', async ({ page, baseURL })
 
   // Drag the marker with the select tool.
   await tool(page, 'select').click();
-  await page.mouse.move(x, y);
+  // The page can have scrolled meanwhile: the marker still sits at the centre of the (possibly moved) canvas.
+  const now = (await canvas.boundingBox())!;
+  const mx = now.x + now.width / 2;
+  const my = now.y + now.height / 2;
+  // Several pointer moves: the Modify interaction hit-tests the vertex under the pointer on move events.
+  await page.mouse.move(mx - 12, my - 12);
+  await page.mouse.move(mx, my, { steps: 6 });
   await page.mouse.down();
-  await page.mouse.move(x + 60, y + 40, { steps: 8 });
+  await page.mouse.move(mx + 60, my + 40, { steps: 8 });
   await page.mouse.up();
   await expect(page.locator('[data-test="dirty"]')).toBeVisible();
   await page.locator('[data-test="save"]').click();

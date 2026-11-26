@@ -13,6 +13,8 @@
 - Datenschutz: WP Consent API (Kacheln erst nach Einwilligung), Click-to-load, Datenschutztext-Vorschlag; Entwürfe und nicht veröffentlichte Layer werden nie öffentlich ausgeliefert.
 - Deutsche und englische Oberfläche (gettext, SPA-Kataloge, Block-Editor-Katalog).
 
+- Oberfläche an SW BackupIt angelehnt: Navigationsleiste mit Einklappen und Dunkelmodus, Seitenköpfe, Karten, Kennzahlen-Kacheln, Statusanzeigen, responsiver Karteneditor.
+
 ### Bugs
 
 - Gleichzeitiges Anlegen von Karten mit gleichem Titel führt nicht mehr zu einem Serverfehler (Slug-Konflikt wird wiederholt).

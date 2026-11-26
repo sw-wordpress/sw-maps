@@ -33,7 +33,7 @@ const tools: Array<{
 </script>
 
 <template>
-  <div class="swmap-toolbar" role="toolbar" :aria-label="t('editor.tools')">
+  <div class="swmap-toolbar swmap-editor__bar" role="toolbar" :aria-label="t('editor.tools')">
     <q-btn-group flat>
       <q-btn
         v-for="item in tools"

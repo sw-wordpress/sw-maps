@@ -81,14 +81,18 @@ function fitAll(): void {
   );
   if (bounds) canvas.value?.fitBounds(bounds);
 }
+import PageHeader from '@/components/ui/PageHeader.vue';
+import SwmapCard from '@/components/ui/SwmapCard.vue';
+import DataState from '@/components/ui/DataState.vue';
 </script>
 
 <template>
   <div v-if="store.doc">
-    <div class="row items-center q-mb-sm">
-      <q-btn flat dense no-caps icon="r_arrow_back" :label="t('editor.back')" to="/maps" />
-      <h2 class="text-h6 q-my-none q-ml-md">{{ store.doc.map.title }}</h2>
-    </div>
+    <PageHeader
+      :title="store.doc.map.title || t('maps.untitled')"
+      back-to="/maps"
+      :back-label="t('editor.back')"
+    />
     <EditorToolbar
       v-model:tool="store.tool"
       v-model:mobile="mobile"
@@ -124,7 +128,7 @@ function fitAll(): void {
         @geometrychange="(id, geometry) => store.moveFeature(id, geometry)"
         @select="store.select($event)"
       />
-      <div class="swmap-card swmap-editor__side">
+      <SwmapCard class="swmap-editor__side">
         <q-tabs v-model="tab" dense no-caps align="left">
           <q-tab name="map" :label="t('editor.tabMap')" data-test="tab-map" />
           <q-tab name="feature" :label="t('editor.tabFeature')" data-test="tab-feature" />
@@ -149,12 +153,12 @@ function fitAll(): void {
           />
           <p v-else class="swmap-muted" data-test="select-hint">{{ t('editor.selectHint') }}</p>
         </template>
-      </div>
+      </SwmapCard>
     </div>
   </div>
-  <div v-else-if="failed" class="swmap-card" role="alert">
+  <SwmapCard v-else-if="failed" role="alert">
     {{ t('editor.loadFailed') }}
     <q-btn flat no-caps :label="t('common.reload')" @click="load" />
-  </div>
-  <q-spinner v-else color="primary" size="2em" />
+  </SwmapCard>
+  <DataState v-else :loading="true" :error="null" variant="block" />
 </template>

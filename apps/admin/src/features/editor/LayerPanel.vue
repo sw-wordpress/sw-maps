@@ -3,6 +3,7 @@ import { reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { FeatureData, LayerData } from '@sw-maps/map-contracts';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import SwmapCard from '@/components/ui/SwmapCard.vue';
 
 const props = defineProps<{
   layers: LayerData[];
@@ -43,7 +44,7 @@ function askDelete(layer: LayerData): void {
 </script>
 
 <template>
-  <div class="swmap-card swmap-editor__side" data-test="layer-panel">
+  <SwmapCard class="swmap-editor__side" data-test="layer-panel">
     <div class="row items-center">
       <div class="text-subtitle1">{{ t('editor.layers') }}</div>
       <q-space />
@@ -118,5 +119,5 @@ function askDelete(layer: LayerData): void {
       :message="t('editor.deleteLayerConfirm', { title: deleting?.title ?? '' })"
       @confirm="deleting && emit('delete-layer', deleting.id)"
     />
-  </div>
+  </SwmapCard>
 </template>

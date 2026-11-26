@@ -9,6 +9,10 @@ import { getConfig, hasCapability } from '@/config';
 import { useMapsStore } from '@/stores/maps';
 import { errorMessage } from '@/utils/errors';
 import EmbedDialog from './EmbedDialog.vue';
+import PaginationBar from '@/components/ui/PaginationBar.vue';
+import PageHeader from '@/components/ui/PageHeader.vue';
+import StatusChip from '@/components/ui/StatusChip.vue';
+import SwmapCard from '@/components/ui/SwmapCard.vue';
 
 const { t } = useI18n();
 const maps = useMapsStore();
@@ -109,31 +113,7 @@ const columns = computed(() => [
 
 <template>
   <div>
-    <div class="swmap-toolbar">
-      <q-input
-        v-model="maps.search"
-        dense
-        outlined
-        clearable
-        debounce="0"
-        :label="t('common.search')"
-        style="min-width: 220px"
-        data-test="search"
-      >
-        <template #prepend><q-icon name="r_search" /></template>
-      </q-input>
-      <q-select
-        v-model="maps.status"
-        dense
-        outlined
-        emit-value
-        map-options
-        :options="statusOptions"
-        :label="t('common.status')"
-        style="min-width: 160px"
-        data-test="status-filter"
-      />
-      <q-space />
+    <PageHeader :title="t('nav.maps')">
       <q-input
         v-model="newTitle"
         dense
@@ -153,100 +133,128 @@ const columns = computed(() => [
         data-test="create"
         @click="create"
       />
-    </div>
+    </PageHeader>
+    <SwmapCard :padding="false">
+      <div class="swmap-toolbar q-pa-md">
+        <q-input
+          v-model="maps.search"
+          dense
+          outlined
+          clearable
+          debounce="0"
+          :label="t('common.search')"
+          style="min-width: 220px"
+          data-test="search"
+        >
+          <template #prepend><q-icon name="r_search" /></template>
+        </q-input>
+        <q-select
+          v-model="maps.status"
+          dense
+          outlined
+          emit-value
+          map-options
+          :options="statusOptions"
+          :label="t('common.status')"
+          style="min-width: 160px"
+          data-test="status-filter"
+        />
+      </div>
 
-    <q-table
-      flat
-      bordered
-      row-key="id"
-      :rows="maps.items"
-      :columns="columns"
-      :loading="maps.loading"
-      hide-pagination
-      :rows-per-page-options="[0]"
-      :no-data-label="t('maps.empty')"
-    >
-      <template #body-cell-title="p">
-        <q-td :props="p">
-          <router-link :to="{ name: 'editor', params: { id: p.row.id } }" data-test="open">{{
-            p.row.title || t('maps.untitled')
-          }}</router-link>
-        </q-td>
-      </template>
-      <template #body-cell-status="p">
-        <q-td :props="p">
-          <q-badge
-            :color="p.row.status === 'published' ? 'positive' : 'grey-7'"
-            :label="p.row.status === 'published' ? t('common.published') : t('common.draft')"
-          />
-        </q-td>
-      </template>
-      <template #body-cell-actions="p">
-        <q-td :props="p" auto-width>
-          <q-btn
-            flat
-            dense
-            round
-            icon="r_edit"
-            :aria-label="t('common.edit')"
-            :to="{ name: 'editor', params: { id: p.row.id } }"
-          />
-          <q-btn
-            flat
-            dense
-            round
-            icon="r_code"
-            :aria-label="t('maps.embed')"
-            data-test="embed"
-            @click="openEmbed(p.row)"
-          />
-          <q-btn
-            flat
-            dense
-            round
-            icon="r_content_copy"
-            :aria-label="t('maps.duplicate')"
-            data-test="duplicate"
-            @click="run(() => maps.duplicate(p.row.id), t('maps.duplicated'))"
-          />
-          <q-btn
-            v-if="canPublish"
-            flat
-            dense
-            round
-            :icon="p.row.status === 'published' ? 'r_visibility_off' : 'r_public'"
-            :aria-label="p.row.status === 'published' ? t('maps.unpublish') : t('maps.publish')"
-            data-test="toggle-publish"
-            @click="
-              run(
-                () =>
-                  maps.setStatus(p.row.id, p.row.status === 'published' ? 'draft' : 'published'),
-                p.row.status === 'published' ? t('maps.unpublishedNow') : t('maps.publishedNow'),
-              )
-            "
-          />
-          <q-btn
-            flat
-            dense
-            round
-            icon="r_delete"
-            color="negative"
-            :aria-label="t('common.delete')"
-            data-test="delete"
-            @click="askDelete(p.row)"
-          />
-        </q-td>
-      </template>
-    </q-table>
+      <q-table
+        flat
+        row-key="id"
+        :rows="maps.items"
+        :columns="columns"
+        :loading="maps.loading"
+        hide-pagination
+        :rows-per-page-options="[0]"
+        :no-data-label="t('maps.empty')"
+      >
+        <template #body-cell-title="p">
+          <q-td :props="p">
+            <router-link :to="{ name: 'editor', params: { id: p.row.id } }" data-test="open">{{
+              p.row.title || t('maps.untitled')
+            }}</router-link>
+          </q-td>
+        </template>
+        <template #body-cell-status="p">
+          <q-td :props="p">
+            <StatusChip
+              :kind="p.row.status === 'published' ? 'success' : 'neutral'"
+              :icon="p.row.status === 'published' ? 'r_public' : 'r_edit_note'"
+              :label="p.row.status === 'published' ? t('common.published') : t('common.draft')"
+            />
+          </q-td>
+        </template>
+        <template #body-cell-actions="p">
+          <q-td :props="p" auto-width>
+            <q-btn
+              flat
+              dense
+              round
+              icon="r_edit"
+              :aria-label="t('common.edit')"
+              :to="{ name: 'editor', params: { id: p.row.id } }"
+            />
+            <q-btn
+              flat
+              dense
+              round
+              icon="r_code"
+              :aria-label="t('maps.embed')"
+              data-test="embed"
+              @click="openEmbed(p.row)"
+            />
+            <q-btn
+              flat
+              dense
+              round
+              icon="r_content_copy"
+              :aria-label="t('maps.duplicate')"
+              data-test="duplicate"
+              @click="run(() => maps.duplicate(p.row.id), t('maps.duplicated'))"
+            />
+            <q-btn
+              v-if="canPublish"
+              flat
+              dense
+              round
+              :icon="p.row.status === 'published' ? 'r_visibility_off' : 'r_public'"
+              :aria-label="p.row.status === 'published' ? t('maps.unpublish') : t('maps.publish')"
+              data-test="toggle-publish"
+              @click="
+                run(
+                  () =>
+                    maps.setStatus(p.row.id, p.row.status === 'published' ? 'draft' : 'published'),
+                  p.row.status === 'published' ? t('maps.unpublishedNow') : t('maps.publishedNow'),
+                )
+              "
+            />
+            <q-btn
+              flat
+              dense
+              round
+              icon="r_delete"
+              color="negative"
+              :aria-label="t('common.delete')"
+              data-test="delete"
+              @click="askDelete(p.row)"
+            />
+          </q-td>
+        </template>
+      </q-table>
+    </SwmapCard>
 
-    <div v-if="maps.totalPages > 1" class="flex flex-center q-mt-md">
-      <q-pagination
-        v-model="maps.page"
-        :max="maps.totalPages"
-        direction-links
-        data-test="pagination"
-      />
-    </div>
+    <PaginationBar
+      v-if="maps.totalPages > 1"
+      data-test="pagination"
+      class="q-mt-md"
+      :page="maps.page"
+      :pages="maps.totalPages"
+      :total="maps.total"
+      @update:page="maps.page = $event"
+    />
 
     <ConfirmDialog
       v-model="confirmOpen"
