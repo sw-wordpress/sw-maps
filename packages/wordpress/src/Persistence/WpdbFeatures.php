@@ -41,6 +41,30 @@ final class WpdbFeatures implements FeatureRepositoryInterface {
 		return $this->hydrate_all( $rows );
 	}
 
+	/**
+	 * @param int      $layerId Layer ID.
+	 * @param string[] $externalIds External IDs.
+	 * @return array<string, Feature>
+	 */
+	public function byExternalIds( int $layerId, array $externalIds ): array {
+		global $wpdb;
+		if ( array() === $externalIds ) {
+			return array();
+		}
+		$table = Schema::table( 'features' );
+		$out   = array();
+		foreach ( array_chunk( $externalIds, 200 ) as $chunk ) {
+			$placeholders = implode( ',', array_fill( 0, count( $chunk ), '%s' ) );
+			$rows         = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE layer_id = %d AND external_id IN ({$placeholders})", $layerId, ...$chunk ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare,WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+			foreach ( $this->hydrate_all( $rows ) as $feature ) {
+				if ( null !== $feature->externalId ) {
+					$out[ $feature->externalId ] = $feature;
+				}
+			}
+		}
+		return $out;
+	}
+
 	public function count( int $layerId ): int {
 		global $wpdb;
 		$table = Schema::table( 'features' );

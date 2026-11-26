@@ -19,6 +19,12 @@ interface FeatureRepositoryInterface
      */
     public function forLayers(array $layerIds): array;
 
+    /**
+     * @param list<string> $externalIds
+     * @return array<string, Feature> existing features of the layer keyed by external id
+     */
+    public function byExternalIds(int $layerId, array $externalIds): array;
+
     public function count(int $layerId): int;
 
     public function countForMap(int $mapId): int;

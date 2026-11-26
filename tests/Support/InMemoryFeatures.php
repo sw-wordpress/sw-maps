@@ -32,6 +32,18 @@ final class InMemoryFeatures implements FeatureRepositoryInterface
         return array_values(array_filter($this->items, static fn (Feature $f): bool => in_array($f->layerId, $layerIds, true)));
     }
 
+    public function byExternalIds(int $layerId, array $externalIds): array
+    {
+        $out = [];
+        foreach ($this->forLayers([$layerId]) as $f) {
+            if ($f->externalId !== null && in_array($f->externalId, $externalIds, true)) {
+                $out[$f->externalId] = $f;
+            }
+        }
+
+        return $out;
+    }
+
     public function count(int $layerId): int
     {
         return count($this->forLayers([$layerId]));
