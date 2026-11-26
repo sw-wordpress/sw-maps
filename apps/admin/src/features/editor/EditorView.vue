@@ -154,6 +154,8 @@ import DataState from '@/components/ui/DataState.vue';
         @add-layer="store.createLayer(`${t('editor.newLayer')} ${store.doc.layers.length + 1}`)"
         @rename-layer="(id, title) => store.patchLayer(id, { title })"
         @toggle-layer="(id, visible) => store.patchLayer(id, { visible })"
+        @move-layer="(id, direction) => store.reorderLayer(id, direction)"
+        @style-layer="(id, style) => store.patchLayer(id, { style })"
         @delete-layer="store.deleteLayer($event)"
         @select="store.select($event)"
       />

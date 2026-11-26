@@ -10,6 +10,8 @@ export interface FeatureMeta {
   layer: PublicLayer;
   properties: FeatureProperties;
   style: StyleMap;
+  /** Position of the layer in the draw order (later layers are drawn on top). */
+  order: number;
   /** Style of the first category of the feature (defaults for colour and icon). */
   categoryStyle: StyleMap;
 }
@@ -34,11 +36,22 @@ function numberStyle(value: unknown, min: number, max: number, fallback: number)
     : fallback;
 }
 
+/** Per-layer zoom limits (`minZoom` inclusive, `maxZoom` inclusive); without a known zoom everything is shown. */
+export function layerInRange(style: StyleMap, zoom: number | null): boolean {
+  if (zoom === null) return true;
+  const min = style['minZoom'];
+  const max = style['maxZoom'];
+  if (typeof min === 'number' && zoom < min) return false;
+  if (typeof max === 'number' && zoom > max) return false;
+  return true;
+}
+
 /** Creates the OpenLayers style function. `selectedId` is read lazily so selection needs no style rebuild. */
 export function createStyleFunction(
   metaOf: (feature: FeatureLike) => FeatureMeta | undefined,
   selectedId: () => number | null,
   isVisible: (id: number) => boolean = () => true,
+  zoomOf: (resolution: number) => number | null = () => null,
 ): StyleLike {
   const cache = new Map<string, Style>();
   const remember = (key: string, make: () => Style): Style => {
@@ -50,10 +63,16 @@ export function createStyleFunction(
     return style;
   };
 
-  return (feature) => {
+  return (feature, resolution) => {
     const meta = metaOf(feature as FeatureLike);
     const geometry = feature.getGeometry();
-    if (!meta || !geometry || !isVisible(meta.id)) return undefined;
+    if (
+      !meta ||
+      !geometry ||
+      !isVisible(meta.id) ||
+      !layerInRange(meta.layer.style, zoomOf(resolution))
+    )
+      return undefined;
     const selected = selectedId() === meta.id;
     const color = safeColor(
       meta.style['color'] ?? meta.categoryStyle['color'] ?? meta.layer.style['color'],
@@ -70,7 +89,7 @@ export function createStyleFunction(
         1,
       );
       return remember(
-        `p|${icon.src}|${markerOpacity}|${selected}`,
+        `p|${icon.src}|${markerOpacity}|${meta.order}|${selected}`,
         () =>
           new Style({
             image: new Icon({
@@ -81,7 +100,7 @@ export function createStyleFunction(
               width: icon.custom ? 32 : undefined,
               height: icon.custom ? 32 : undefined,
             }),
-            zIndex: selected ? 10 : 1,
+            zIndex: meta.order * 100 + (selected ? 50 : 10),
           }),
       );
     }
@@ -96,7 +115,7 @@ export function createStyleFunction(
       0.25,
     );
     return remember(
-      `g|${color}|${weight}|${fillOpacity}|${opacity}|${dash?.join('-') ?? ''}|${selected}`,
+      `g|${color}|${weight}|${fillOpacity}|${opacity}|${dash?.join('-') ?? ''}|${meta.order}|${selected}`,
       () =>
         new Style({
           stroke: new Stroke({
@@ -106,6 +125,7 @@ export function createStyleFunction(
           }),
           fill: new Fill({ color: hexToRgba(color, fillOpacity) }),
           image: new CircleStyle({ radius: 5, fill: new Fill({ color }) }),
+          zIndex: meta.order * 100 + (selected ? 50 : 0),
         }),
     );
   };

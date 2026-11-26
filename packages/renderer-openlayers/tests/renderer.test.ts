@@ -370,11 +370,7 @@ describe('line and area styles', () => {
     getStroke(): { getLineDash(): number[] | null; getWidth(): number; getColor(): string };
     getImage(): { getOpacity(): number };
   };
-  function styleOf(
-    style: StyleMap,
-    layerStyle: StyleMap = {},
-    geometry = 'LineString',
-  ) {
+  function styleOf(style: StyleMap, layerStyle: StyleMap = {}, geometry = 'LineString') {
     const data = makeData();
     data.layers[0]!.style = layerStyle;
     data.layers[0]!.features = [

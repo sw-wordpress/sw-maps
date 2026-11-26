@@ -133,6 +133,56 @@ describe('LayerPanel', () => {
     expect(w.emitted('rename-layer')).toEqual([[10, 'Renamed']]);
   });
 
+  it('moves layers up and down but not past the ends', async () => {
+    const w = mount(LayerPanel, { props });
+    expect(w.findAll('[data-test=move-up]')[0]!.attributes('disabled')).toBeDefined();
+    expect(w.findAll('[data-test=move-down]')[1]!.attributes('disabled')).toBeDefined();
+    await w.findAll('[data-test=move-down]')[0]!.trigger('click');
+    await w.findAll('[data-test=move-up]')[1]!.trigger('click');
+    expect(w.emitted('move-layer')).toEqual([
+      [10, 1],
+      [11, -1],
+    ]);
+  });
+
+  it('edits the layer style: zoom range, width, opacity, pattern and colour', async () => {
+    const withStyle = {
+      ...props,
+      layers: [
+        makeLayer({ style: { minZoom: 5, color: '#112233' } }),
+        makeLayer({ id: 11, title: 'Second' }),
+      ],
+    };
+    const w = mount(LayerPanel, { props: withStyle });
+    expect(w.find('[data-test=layer-form]').exists()).toBe(false);
+    await w.findAll('[data-test=layer-settings]')[0]!.trigger('click');
+    expect(w.find<HTMLInputElement>('input[data-test=layer-min-zoom]').element.value).toBe('5');
+    expect(w.find<HTMLInputElement>('input[data-test=layer-color]').element.value).toBe('#112233');
+    await blur(w, 'input[data-test=layer-min-zoom]', '5');
+    expect(w.emitted('style-layer')).toBeUndefined();
+    await blur(w, 'input[data-test=layer-max-zoom]', '99');
+    await blur(w, 'input[data-test=layer-weight]', '4');
+    await blur(w, 'input[data-test=layer-opacity]', '0.5');
+    await blur(w, 'input[data-test=layer-min-zoom]', '');
+    const dash = w
+      .findAllComponents({ name: 'QSelect' })
+      .find((c) => c.vm.$attrs['data-test'] === 'layer-dash')!;
+    dash.vm.$emit('update:modelValue', 'dotted');
+    const color = w.find<HTMLInputElement>('input[data-test=layer-color]');
+    color.element.value = '#abcdef';
+    await color.trigger('change');
+    expect(w.emitted('style-layer')).toEqual([
+      [10, { minZoom: 5, color: '#112233', maxZoom: 24 }],
+      [10, { minZoom: 5, color: '#112233', weight: 4 }],
+      [10, { minZoom: 5, color: '#112233', opacity: 0.5 }],
+      [10, { color: '#112233' }],
+      [10, { minZoom: 5, color: '#112233', dash: 'dotted' }],
+      [10, { minZoom: 5, color: '#abcdef' }],
+    ]);
+    await w.findAll('[data-test=layer-settings]')[0]!.trigger('click');
+    expect(w.find('[data-test=layer-form]').exists()).toBe(false);
+  });
+
   it('asks before deleting a layer', async () => {
     const w = mount(LayerPanel, { props, attachTo: document.body });
     await w.findAll('[data-test=delete-layer]')[1]?.trigger('click');

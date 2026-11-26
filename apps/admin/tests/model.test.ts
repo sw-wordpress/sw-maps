@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { EditorDoc, SaveApi } from '@/features/editor/model';
 import {
+  moveLayer,
   History,
   SaveError,
   addFeature,
@@ -115,6 +116,29 @@ describe('History', () => {
       steps++;
     }
     expect(steps).toBe(3);
+  });
+});
+
+describe('layer order', () => {
+  const three = (): EditorDoc => {
+    let doc = base();
+    doc = addLayer(doc, -1, 'B');
+    doc = addLayer(doc, -2, 'C');
+    return doc;
+  };
+
+  it('swaps neighbours, keeps the array sorted and ignores moves past the ends', () => {
+    const doc = three();
+    const order = (d: EditorDoc) => d.layers.map((l) => l.id);
+    const first = doc.layers[0]!.id;
+    expect(order(moveLayer(doc, first, -1))).toEqual(order(doc));
+    expect(moveLayer(doc, first, -1)).toBe(doc);
+    const down = moveLayer(doc, first, 1);
+    expect(order(down)).toEqual([doc.layers[1]!.id, first, doc.layers[2]!.id]);
+    expect(down.layers.map((l) => l.sort_order)).toEqual([0, 1, 2]);
+    expect(moveLayer(down, -2, 1)).toBe(down);
+    expect(moveLayer(down, 999, 1)).toBe(down);
+    expect(diff(doc, down).some((o) => o.kind === 'layer-update')).toBe(true);
   });
 });
 

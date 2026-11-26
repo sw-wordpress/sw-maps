@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MapRenderData } from '@sw-maps/map-contracts';
 import { MapViewer, OpenLayersRenderer } from '../src';
+import { layerInRange } from '../src/styles';
 import { buildFilterBar, matchingIds } from '../src/filters';
 import { resolveIcon } from '../src/markers';
 import { feature, makeData } from './fixtures';
@@ -182,5 +183,56 @@ describe('renderer visibility', () => {
     expect([visible(1), visible(2)]).toEqual([true, true]);
     r.setVisibleIds([]);
     expect(visible(1)).toBe(false);
+  });
+});
+
+describe('layer zoom limits and draw order', () => {
+  it('applies minZoom/maxZoom per layer and treats an unknown zoom as visible', () => {
+    expect(layerInRange({}, 5)).toBe(true);
+    expect(layerInRange({ minZoom: 8 }, 7.9)).toBe(false);
+    expect(layerInRange({ minZoom: 8 }, 8)).toBe(true);
+    expect(layerInRange({ maxZoom: 12 }, 12)).toBe(true);
+    expect(layerInRange({ maxZoom: 12 }, 12.1)).toBe(false);
+    expect(layerInRange({ minZoom: 8, maxZoom: 12 }, null)).toBe(true);
+    expect(layerInRange({ minZoom: '8' }, 1)).toBe(true);
+  });
+
+  it('hides features of out-of-range layers, also from clusters, and refreshes on zoom changes', () => {
+    document.body.innerHTML = '<div class="swmap__stage"></div>';
+    const data = dataWithCategories();
+    data.settings = { ...data.settings, cluster: true };
+    data.layers[0]!.style = { minZoom: 12 };
+    data.layers.push({ id: 2, title: 'Top', style: {}, features: [feature(50, 8.7, 49.3)] });
+    const r = new OpenLayersRenderer({ popups: true });
+    r.mount(document.querySelector<HTMLElement>('.swmap__stage')!, { data });
+    const internals = r as unknown as {
+      clusterSource: { refresh(): void };
+      map: {
+        getView(): { setZoom(z: number): void; dispatchEvent(e: string): void };
+        dispatchEvent(e: string): void;
+      };
+      source: { getFeatures(): Array<{ get(k: string): number }> };
+      vectorLayer: { getStyleFunction(): (f: unknown, r: number) => unknown };
+      metas: Map<number, unknown>;
+    };
+    const refresh = vi.spyOn(internals.clusterSource, 'refresh');
+    internals.map.getView().setZoom(6);
+    internals.map.dispatchEvent('moveend');
+    expect(refresh).toHaveBeenCalledTimes(1);
+    internals.map.dispatchEvent('moveend');
+    expect(refresh).toHaveBeenCalledTimes(1);
+    const hidden = internals.source.getFeatures().find((f) => f.get('swmapId') === 1)!;
+    const visible = internals.source.getFeatures().find((f) => f.get('swmapId') === 50)!;
+    const geometryFunction = (
+      internals.clusterSource as unknown as { geometryFunction(f: unknown): unknown }
+    ).geometryFunction;
+    expect(geometryFunction(hidden)).toBeNull();
+    expect(geometryFunction(visible)).not.toBeNull();
+    internals.map.getView().setZoom(13);
+    expect(geometryFunction(hidden)).not.toBeNull();
+    // Later layers are drawn above earlier ones.
+    const top = (internals.metas.get(50) as { order: number }).order;
+    const bottom = (internals.metas.get(1) as { order: number }).order;
+    expect(top).toBeGreaterThan(bottom);
   });
 });

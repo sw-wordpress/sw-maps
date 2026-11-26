@@ -25,6 +25,7 @@ import {
   docEquals,
   nextTempId,
   remapIds,
+  moveLayer,
   removeFeature,
   removeLayer,
   runOps,
@@ -156,6 +157,11 @@ export const useEditorStore = defineStore('editor', () => {
 
   function patchLayer(id: number, patch: Parameters<typeof updateLayer>[2]): void {
     commit(updateLayer(current(), id, patch));
+  }
+
+  function reorderLayer(id: number, direction: -1 | 1): void {
+    const next = moveLayer(current(), id, direction);
+    if (next !== doc.value) commit(next);
   }
 
   function deleteLayer(id: number): void {
@@ -325,6 +331,7 @@ export const useEditorStore = defineStore('editor', () => {
     patchMap,
     createLayer,
     patchLayer,
+    reorderLayer,
     deleteLayer,
     addGeometry,
     moveFeature,

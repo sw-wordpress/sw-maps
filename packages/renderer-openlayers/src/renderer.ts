@@ -32,7 +32,7 @@ import { Emitter } from './emitter';
 import { toOlGeometry } from './geometry';
 import { buildPopup } from './popup';
 import type { FeatureMeta } from './styles';
-import { createClusterStyleFunction, createStyleFunction } from './styles';
+import { createClusterStyleFunction, createStyleFunction, layerInRange } from './styles';
 
 export interface RendererConfig {
   /** Viewer: popups on selection. Editor: selection is shown by the properties panel instead. */
@@ -162,6 +162,10 @@ export class OpenLayersRenderer implements MapRenderer {
     return this.map;
   }
 
+  /** Zoom of a resolution, used for the per-layer zoom limits. */
+  protected zoomOf = (resolution: number): number | null =>
+    this.map?.getView().getZoomForResolution(resolution) ?? null;
+
   protected isVisible = (id: number): boolean =>
     this.visibleIds === null || this.visibleIds.has(id);
 
@@ -246,7 +250,12 @@ export class OpenLayersRenderer implements MapRenderer {
       source: this.createTileSource(data) ?? undefined,
       visible: provider !== null,
     });
-    const featureStyle = createStyleFunction(this.metaOf, () => this.selectedId, this.isVisible);
+    const featureStyle = createStyleFunction(
+      this.metaOf,
+      () => this.selectedId,
+      this.isVisible,
+      this.zoomOf,
+    );
     this.vectorLayer = new VectorLayer({
       source: this.source,
       style: settings.cluster
@@ -264,7 +273,13 @@ export class OpenLayersRenderer implements MapRenderer {
         geometryFunction: (feature) => {
           const geometry = feature.getGeometry();
           const id = feature.get(FEATURE_ID) as number;
-          return geometry?.getType() === 'Point' && this.isVisible(id) ? (geometry as Point) : null;
+          const meta = this.metas.get(id);
+          const inRange = meta
+            ? layerInRange(meta.layer.style, this.map?.getView().getZoom() ?? null)
+            : true;
+          return geometry?.getType() === 'Point' && this.isVisible(id) && inRange
+            ? (geometry as Point)
+            : null;
         },
       });
       this.clusterLayer = new VectorLayer({
@@ -290,7 +305,14 @@ export class OpenLayersRenderer implements MapRenderer {
     if (this.config.popups) this.overlay = this.createOverlay(doc);
 
     this.map.on('singleclick', (event) => this.onMapClick(event));
-    this.map.on('moveend', () => this.events.emit('viewchange', this.getView()));
+    let lastZoom = Math.round((this.map.getView().getZoom() ?? 0) * 2);
+    this.map.on('moveend', () => {
+      this.events.emit('viewchange', this.getView());
+      // Layers with zoom limits change the clustered point set when the zoom changes.
+      const zoom = Math.round((this.map?.getView().getZoom() ?? 0) * 2);
+      if (zoom !== lastZoom && this.hasZoomLimits()) this.clusterSource?.refresh();
+      lastZoom = zoom;
+    });
 
     this.signatures.clear();
     this.syncFeatures();
@@ -324,6 +346,12 @@ export class OpenLayersRenderer implements MapRenderer {
     this.clusterLayer = null;
     this.vectorLayer = null;
     this.tileLayer = null;
+  }
+
+  private hasZoomLimits(): boolean {
+    return (this.data?.layers ?? []).some(
+      (l) => typeof l.style['minZoom'] === 'number' || typeof l.style['maxZoom'] === 'number',
+    );
   }
 
   private computeSettingsKey(data: MapRenderData): string {
@@ -515,17 +543,18 @@ export class OpenLayersRenderer implements MapRenderer {
     if (!data) return;
     const wanted = new Map<number, { meta: FeatureMeta; signature: string; geometry: unknown }>();
     const categories = new Map((data.categories ?? []).map((c) => [c.id, c.style]));
-    for (const layer of data.layers) {
+    for (const [order, layer] of data.layers.entries()) {
       for (const f of layer.features) {
         const categoryStyle = categories.get(f.categories?.[0] ?? -1) ?? {};
         wanted.set(f.id, {
-          meta: { id: f.id, layer, properties: f.properties, style: f.style, categoryStyle },
+          meta: { id: f.id, layer, order, properties: f.properties, style: f.style, categoryStyle },
           signature: JSON.stringify([
             f.geometry,
             f.properties,
             f.style,
             layer.style,
             categoryStyle,
+            order,
           ]),
           geometry: f.geometry,
         });

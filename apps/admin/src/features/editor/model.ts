@@ -105,6 +105,23 @@ export function updateLayer(
   return next;
 }
 
+/** Moves a layer one position up (-1) or down (+1) in the draw order; ties are resolved by id first. */
+export function moveLayer(doc: EditorDoc, id: number, direction: -1 | 1): EditorDoc {
+  const ordered = [...doc.layers].sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
+  const from = ordered.findIndex((l) => l.id === id);
+  const to = from + direction;
+  if (from < 0 || to < 0 || to >= ordered.length) return doc;
+  const next = cloneDoc(doc);
+  const moved = ordered.map((l) => l.id);
+  [moved[from], moved[to]] = [moved[to] as number, moved[from] as number];
+  moved.forEach((layerId, position) => {
+    const layer = next.layers.find((l) => l.id === layerId);
+    if (layer) layer.sort_order = position;
+  });
+  next.layers.sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
+  return next;
+}
+
 export function removeLayer(doc: EditorDoc, id: number): EditorDoc {
   const next = cloneDoc(doc);
   next.layers = next.layers.filter((l) => l.id !== id);
