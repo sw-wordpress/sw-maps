@@ -47,6 +47,24 @@ describe('maps store', () => {
     expect(store.items[0]?.id).toBe(9);
   });
 
+  it('moves to the last page when the current page no longer exists', async () => {
+    const store = useMapsStore();
+    store.page = 2;
+    api.maps.list
+      .mockResolvedValueOnce({ items: [], total: 20, totalPages: 1 } as never)
+      .mockResolvedValueOnce({ items: [makeMap()], total: 20, totalPages: 1 } as never);
+    await store.load();
+    expect(store.page).toBe(1);
+    expect(api.maps.list).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1 }));
+    expect(store.items).toHaveLength(1);
+    // An empty result set (no maps at all) stays on page 1 without looping.
+    api.maps.list.mockResolvedValue({ items: [], total: 0, totalPages: 0 } as never);
+    store.page = 3;
+    await store.load();
+    expect(store.page).toBe(1);
+    expect(store.items).toEqual([]);
+  });
+
   it('creates, duplicates, deletes and changes status, reloading afterwards', async () => {
     const store = useMapsStore();
     expect((await store.create('New')).id).toBe(5);

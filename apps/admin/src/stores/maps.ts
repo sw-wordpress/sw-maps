@@ -25,6 +25,13 @@ export const useMapsStore = defineStore('maps', () => {
         per_page: perPage.value,
       });
       if (ticket !== request) return; // a newer request superseded this one
+      const lastPage = Math.max(1, result.totalPages);
+      if (page.value > lastPage) {
+        // E.g. the last map of the final page was deleted: show the new last page instead of an empty table.
+        page.value = lastPage;
+        loading.value = false;
+        return load();
+      }
       items.value = result.items;
       total.value = result.total;
       totalPages.value = result.totalPages;
