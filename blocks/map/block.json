@@ -1,0 +1,40 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "sw-maps/map",
+  "title": "SW Map",
+  "category": "widgets",
+  "icon": "location-alt",
+  "description": "Displays a map created with SW Maps.",
+  "keywords": [
+    "map",
+    "karte",
+    "openstreetmap"
+  ],
+  "textdomain": "sw-maps",
+  "attributes": {
+    "mapId": {
+      "type": "integer",
+      "default": 0
+    },
+    "height": {
+      "type": "string",
+      "default": ""
+    },
+    "clickToLoad": {
+      "type": "boolean"
+    },
+    "showList": {
+      "type": "boolean"
+    }
+  },
+  "supports": {
+    "html": false,
+    "align": [
+      "wide",
+      "full"
+    ]
+  },
+  "editorScript": "file:./index.js",
+  "editorStyle": "file:./editor.css"
+}

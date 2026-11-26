@@ -1,0 +1,110 @@
+/*
+ * SW Maps admin styles. Everything is namespaced with `swmap-` / `.swmap-root` so nothing leaks into wp-admin.
+ * Quasar's own CSS is scoped to `.swmap-root` at build time (tools/postcssScope.ts).
+ */
+.swmap-root {
+  --swmap-primary: #1d4f91;
+  --swmap-bg: #f6f7f7;
+  --swmap-surface: #fff;
+  --swmap-border: #dcdcde;
+  --swmap-text: #1d2327;
+  --swmap-muted: #50575e;
+  --q-primary: #1d4f91;
+  color: var(--swmap-text);
+  font-family: inherit;
+}
+.swmap-root .swmap-app {
+  max-width: 1600px;
+}
+.swmap-root .swmap-nav {
+  margin-bottom: 16px;
+  background: var(--swmap-surface);
+  border: 1px solid var(--swmap-border);
+  border-radius: 4px;
+}
+.swmap-root .swmap-main {
+  min-height: 300px;
+}
+.swmap-root .swmap-card {
+  padding: 16px;
+  background: var(--swmap-surface);
+  border: 1px solid var(--swmap-border);
+  border-radius: 4px;
+}
+.swmap-root .swmap-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.swmap-root .swmap-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+.swmap-root .swmap-stat {
+  padding: 12px 16px;
+  background: var(--swmap-surface);
+  border: 1px solid var(--swmap-border);
+  border-radius: 4px;
+}
+.swmap-root .swmap-stat__value {
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.swmap-root .swmap-stat__label {
+  color: var(--swmap-muted);
+}
+/* editor layout: layer bar | map | properties */
+.swmap-root .swmap-editor {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 260px minmax(0, 1fr) 320px;
+  align-items: start;
+}
+.swmap-root .swmap-editor__side {
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
+}
+.swmap-root .swmap-editor__canvas {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 260px);
+  min-height: 420px;
+  margin: 0 auto;
+  overflow: hidden;
+  background: #e5e3df;
+  border: 1px solid var(--swmap-border);
+  border-radius: 4px;
+}
+.swmap-root .swmap-editor__canvas--mobile {
+  max-width: 375px;
+}
+.swmap-root .swmap-editor__canvas .swmap__canvas {
+  position: absolute;
+  inset: 0;
+}
+@media (max-width: 1100px) {
+  .swmap-root .swmap-editor {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .swmap-root .swmap-editor__side {
+    max-height: none;
+  }
+}
+.swmap-root .swmap-field {
+  margin-bottom: 12px;
+}
+.swmap-root .swmap-muted {
+  color: var(--swmap-muted);
+}
+.swmap-root .swmap-code {
+  padding: 8px 10px;
+  overflow-x: auto;
+  font-family: monospace;
+  background: #f0f0f1;
+  border-radius: 4px;
+  white-space: pre;
+}

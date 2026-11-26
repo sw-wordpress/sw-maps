@@ -1,0 +1,199 @@
+# German translation of SW Maps.
+msgid ""
+msgstr ""
+"Project-Id-Version: sw-maps\n"
+"Report-Msgid-Bugs-To: https://github.com/sw-wordpress/sw-maps/issues\n"
+"POT-Creation-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Language: de_DE\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+
+#: blocks/map/index.js:14
+msgid "Select a map"
+msgstr "Karte auswählen"
+
+#: blocks/map/index.js:23 blocks/map/index.js:25
+msgid "Map"
+msgstr "Karte"
+
+#: blocks/map/index.js:31
+msgid "Height"
+msgstr "Höhe"
+
+#: blocks/map/index.js:37
+msgid "Click to load"
+msgstr "Click-to-load"
+
+#: blocks/map/index.js:42
+msgid "Location list"
+msgstr "Standortliste"
+
+#: blocks/map/index.js:53
+msgid "Select a map in the block settings."
+msgstr "Karte in den Blockeinstellungen auswählen."
+
+#: packages/wordpress/src/Admin/AdminPage.php:29
+#: packages/wordpress/src/Admin/AdminPage.php:30
+#: packages/wordpress/src/Integration/Privacy.php:35
+msgid "Maps"
+msgstr "Karten"
+
+#: packages/wordpress/src/Admin/AdminPage.php:41
+msgid "You do not have permission to access this page."
+msgstr "Sie haben keine Berechtigung für diese Seite."
+
+#: packages/wordpress/src/Admin/AdminPage.php:45
+msgid "The SW Maps admin interface has not been built. Install the release package or run \"make build\"."
+msgstr "Die SW-Maps-Oberfläche wurde nicht gebaut. Release-Paket installieren oder „make build“ ausführen."
+
+#: packages/wordpress/src/Admin/AdminPage.php:47
+msgid "SW Maps requires JavaScript."
+msgstr "SW Maps benötigt JavaScript."
+
+#: packages/wordpress/src/Api/BaseController.php:42
+msgid "You are not allowed to do this."
+msgstr "Sie dürfen das nicht tun."
+
+#: packages/wordpress/src/Api/BaseController.php:65
+msgid "The geometry is invalid."
+msgstr "Die Geometrie ist ungültig."
+
+#: packages/wordpress/src/Api/BaseController.php:75
+#: packages/wordpress/src/Api/SettingsController.php:53
+msgid "Invalid input."
+msgstr "Ungültige Eingabe."
+
+#: packages/wordpress/src/Api/BaseController.php:83
+msgid "Not found."
+msgstr "Nicht gefunden."
+
+#: packages/wordpress/src/Api/BaseController.php:86
+msgid "This value is already in use."
+msgstr "Dieser Wert wird bereits verwendet."
+
+#: packages/wordpress/src/Api/BaseController.php:89
+msgid "Unexpected error."
+msgstr "Unerwarteter Fehler."
+
+#: packages/wordpress/src/Api/FeaturesController.php:92
+msgid "The feature limit of this layer is reached."
+msgstr "Das Standortlimit dieses Layers ist erreicht."
+
+#: packages/wordpress/src/Api/MapsController.php:133
+msgid "You are not allowed to publish maps."
+msgstr "Sie dürfen Karten nicht veröffentlichen."
+
+#: packages/wordpress/src/Api/ProvidersController.php:119
+msgid "The tile server is not reachable."
+msgstr "Der Kachelserver ist nicht erreichbar."
+
+#: packages/wordpress/src/Api/ProvidersController.php:130
+msgid "Connection successful."
+msgstr "Verbindung erfolgreich."
+
+#: packages/wordpress/src/Api/ProvidersController.php:130
+msgid "The tile server did not return a tile."
+msgstr "Der Kachelserver hat keine Kachel geliefert."
+
+#: packages/wordpress/src/Integration/Block.php:23
+msgid "SW Map"
+msgstr "SW-Karte"
+
+#: packages/wordpress/src/Integration/Block.php:24
+msgid "Displays a map created with SW Maps."
+msgstr "Zeigt eine mit SW Maps erstellte Karte an."
+
+#: packages/wordpress/src/Integration/Block.php:63
+msgid "Draft"
+msgstr "Entwurf"
+
+#: packages/wordpress/src/Integration/MapPayload.php:101
+msgid "Zoom in"
+msgstr "Vergrößern"
+
+#: packages/wordpress/src/Integration/MapPayload.php:102
+msgid "Zoom out"
+msgstr "Verkleinern"
+
+#: packages/wordpress/src/Integration/MapPayload.php:103
+msgid "Fullscreen"
+msgstr "Vollbild"
+
+#: packages/wordpress/src/Integration/MapPayload.php:104
+msgid "Exit fullscreen"
+msgstr "Vollbild beenden"
+
+#: packages/wordpress/src/Integration/MapPayload.php:105
+msgid "Load map"
+msgstr "Karte laden"
+
+#: packages/wordpress/src/Integration/MapPayload.php:106
+msgid "The map is shown after you accept the cookies required for it."
+msgstr "Die Karte wird angezeigt, sobald Sie die dafür nötigen Cookies akzeptieren."
+
+#: packages/wordpress/src/Integration/MapPayload.php:107
+msgid "Loading the map contacts the map provider and transmits your IP address."
+msgstr "Beim Laden der Karte wird der Kartenanbieter kontaktiert und Ihre IP-Adresse übertragen."
+
+#: packages/wordpress/src/Integration/MapPayload.php:108
+msgid "The map could not be displayed."
+msgstr "Die Karte konnte nicht angezeigt werden."
+
+#: packages/wordpress/src/Integration/MapPayload.php:109
+msgid "Map attribution"
+msgstr "Kartenquelle"
+
+#: packages/wordpress/src/Integration/MapPayload.php:110
+#: packages/wordpress/src/Integration/Renderer.php:132
+msgid "Open link"
+msgstr "Link öffnen"
+
+#: packages/wordpress/src/Integration/MapPayload.php:111
+msgid "Close"
+msgstr "Schließen"
+
+#: packages/wordpress/src/Integration/Privacy.php:36
+msgid "This text is a suggestion. Check it against your configuration and have it reviewed."
+msgstr "Dieser Text ist ein Vorschlag. Prüfen Sie ihn anhand Ihrer Konfiguration und lassen Sie ihn juristisch prüfen."
+
+#: packages/wordpress/src/Integration/Privacy.php:37
+msgid "We display interactive maps. When a map is loaded, your browser requests map tiles from the map provider. The provider receives your IP address and technical request data. SW Maps itself sets no cookies and sends no data to third parties other than the configured map provider."
+msgstr "Wir zeigen interaktive Karten an. Beim Laden einer Karte fordert Ihr Browser Kartenkacheln beim Kartenanbieter an. Der Anbieter erhält Ihre IP-Adresse und technische Anfragedaten. SW Maps selbst setzt keine Cookies und sendet keine Daten an Dritte außer dem konfigurierten Kartenanbieter."
+
+#. translators: %s: comma separated list of tile server host names
+#: packages/wordpress/src/Integration/Privacy.php:40
+#, php-format
+msgid "Currently configured tile servers: %s."
+msgstr "Aktuell konfigurierte Kachelserver: %s."
+
+#: packages/wordpress/src/Integration/Privacy.php:42
+msgid "Maps are loaded only after you consent or after you click \"Load map\", depending on the site configuration."
+msgstr "Karten werden je nach Konfiguration der Website erst nach Ihrer Einwilligung oder nach einem Klick auf „Karte laden“ geladen."
+
+#: packages/wordpress/src/Integration/Renderer.php:106
+msgid "Draft preview: this map is not published."
+msgstr "Entwurfsvorschau: Diese Karte ist nicht veröffentlicht."
+
+#: packages/wordpress/src/Integration/Renderer.php:126
+msgid "Location"
+msgstr "Standort"
+
+#: packages/wordpress/src/Integration/Renderer.php:134
+msgid "Show on map"
+msgstr "Auf der Karte zeigen"
+
+#: packages/wordpress/src/Integration/Renderer.php:137
+msgid "Locations"
+msgstr "Standorte"
+
+#. translators: 1: required PHP version, 2: current PHP version
+#: sw-maps.php:36
+#, php-format
+msgid "SW Maps requires PHP %1$s or newer. You are running PHP %2$s."
+msgstr "SW Maps benötigt PHP %1$s oder neuer. Sie verwenden PHP %2$s."
+
+#: sw-maps.php:59
+msgid "SW Maps: the vendor directory is missing. Install the release package or run \"composer install\"."
+msgstr "SW Maps: Das Verzeichnis „vendor“ fehlt. Release-Paket installieren oder „composer install“ ausführen."

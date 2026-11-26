@@ -1,0 +1,36 @@
+/* Block editor preview: the server rendered container without the viewer script (map, location list). */
+.wp-block-sw-maps-map .swmap__stage {
+  position: relative;
+  min-height: 160px;
+  background: repeating-linear-gradient(45deg, #e5e3df, #e5e3df 12px, #ebe9e5 12px, #ebe9e5 24px);
+  border-radius: 4px;
+}
+.wp-block-sw-maps-map .swmap__stage::after {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #50575e;
+  font-size: 0.9rem;
+  content: attr(aria-label);
+}
+.wp-block-sw-maps-map .swmap__show {
+  display: none;
+}
+.wp-block-sw-maps-map .swmap__list {
+  padding: 0;
+  margin: 0.5em 0 0;
+  list-style: none;
+}
+.wp-block-sw-maps-map .swmap__list li {
+  padding: 0.35em 0.25em;
+  border-bottom: 1px solid #dcdcde;
+}
+.wp-block-sw-maps-map .swmap__item-title {
+  font-weight: 600;
+}
+.wp-block-sw-maps-map .swmap__item-address {
+  display: block;
+  font-size: 0.9em;
+}

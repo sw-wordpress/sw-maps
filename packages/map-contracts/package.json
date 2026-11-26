@@ -1,0 +1,30 @@
+{
+  "name": "@sw-maps/map-contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Typed data contracts shared by the admin app and the renderers (the only shared package).",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "engines": {
+    "node": "^22.13.0 || ^24.0.0 || >=26.0.0"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage && node ../../scripts/check-coverage.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@vitest/coverage-v8": "^5.1.0",
+    "eslint": "^10.14.0",
+    "eslint-config-prettier": "^10.1.0",
+    "globals": "^17.14.0",
+    "prettier": "^3.10.1",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.2",
+    "vitest": "^5.0.5"
+  }
+}

@@ -1,0 +1,32 @@
+{
+    "translation-revision-date": "1970-01-01 00:00+0000",
+    "generator": "sw-maps bin/i18n-block-json.php",
+    "domain": "messages",
+    "locale_data": {
+        "messages": {
+            "": {
+                "domain": "messages",
+                "lang": "de_DE",
+                "plural-forms": "nplurals=2; plural=n != 1;"
+            },
+            "Select a map": [
+                "Karte auswählen"
+            ],
+            "Map": [
+                "Karte"
+            ],
+            "Height": [
+                "Höhe"
+            ],
+            "Click to load": [
+                "Click-to-load"
+            ],
+            "Location list": [
+                "Standortliste"
+            ],
+            "Select a map in the block settings.": [
+                "Karte in den Blockeinstellungen auswählen."
+            ]
+        }
+    }
+}

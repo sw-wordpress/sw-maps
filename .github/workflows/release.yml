@@ -1,0 +1,36 @@
+name: Release
+# Distribution is GitHub only: a pushed version tag builds the ZIP and attaches it to a GitHub release.
+# The release workflow runs no test suite (tests run on pull requests).
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+    - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, zip
+        tools: composer:v2
+        coverage: none
+    - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+      with:
+        node-version-file: .nvmrc
+    - run: sudo apt-get update && sudo apt-get install -y gettext
+    - run: composer install --prefer-dist --no-interaction --no-progress
+    - name: Version in the plugin file must match the tag
+      run: |
+        file_version="$(grep -m1 'Version:' sw-maps.php | awk '{print $NF}')"
+        [ "$file_version" = "${GITHUB_REF_NAME}" ] || { echo "sw-maps.php says $file_version, tag is ${GITHUB_REF_NAME}" >&2; exit 1; }
+    - run: make dist
+    - name: Publish the GitHub release
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: gh release create "${GITHUB_REF_NAME}" dist/sw-maps-*.zip --title "SW Maps ${GITHUB_REF_NAME}" --notes-file pages/Changelog.md
