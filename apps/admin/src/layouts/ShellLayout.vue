@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { getConfig, hasCapability } from '@/config';
 import { NAV_ITEMS } from '@/router';
 import { useAppStore } from '@/stores/app';
 
 const { t } = useI18n();
-const router = useRouter();
 const app = useAppStore();
 const config = getConfig();
 const main = ref<HTMLElement | null>(null);
@@ -41,7 +39,6 @@ function focusMain(): void {
               class="swmap-nav-link"
               :active-class="item.to === '/' ? '' : 'swmap-nav-link--active'"
               exact-active-class="swmap-nav-link--active"
-              @keydown.enter.prevent="router.push(item.to)"
             >
               <q-icon :name="item.icon" size="22px" aria-hidden="true" />
               <span class="swmap-nav-link__label">{{ t(item.labelKey) }}</span>

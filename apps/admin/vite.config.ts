@@ -1,6 +1,7 @@
 import { fileURLToPath, URL } from 'node:url';
 import { resolve } from 'node:path';
 import { defineConfig } from 'vitest/config';
+import type { Plugin } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { quasar, transformAssetUrls } from '@quasar/vite-plugin';
 import { swmapScope } from './tools/postcssScope.ts';
@@ -17,6 +18,15 @@ function woff2Only() {
   };
 }
 
+// WordPress applies a version query to app.js. Chunks must never import its unversioned URL.
+const isolatedEntry: Plugin = {
+  name: 'swmap-isolated-entry',
+  apply: 'build',
+  options(options) {
+    return { ...options, preserveEntrySignatures: 'strict' };
+  },
+};
+
 const outDir = resolve(import.meta.dirname, '../../assets/admin');
 const alias = {
   '@': fileURLToPath(new URL('./src', import.meta.url)),
@@ -32,7 +42,7 @@ const alias = {
 
 export default defineConfig({
   base: './',
-  plugins: [woff2Only(), vue({ template: { transformAssetUrls } }), quasar()],
+  plugins: [isolatedEntry, woff2Only(), vue({ template: { transformAssetUrls } }), quasar()],
   resolve: { alias },
   css: { postcss: { plugins: [swmapScope()] } },
   // Dev server (mock mode): scan every view and the renderer package at startup so that no dependency is discovered late,

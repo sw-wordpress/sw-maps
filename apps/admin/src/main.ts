@@ -25,7 +25,7 @@ function showFatal(el: HTMLElement, message: string): void {
   el.replaceChildren(p);
 }
 
-export function bootstrap(): void {
+function bootstrap(): void {
   const el = document.getElementById(MOUNT_ID);
   if (!el) {
     console.error(`sw-maps: mount node #${MOUNT_ID} not found`);
