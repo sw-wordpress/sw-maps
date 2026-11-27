@@ -133,9 +133,9 @@ final class MapExporter
         }
         $usedCategories = [];
         $mapData = [];
-        $featureTotal = 0;
+        $totals = ['features' => 0, 'coordinates' => 0];
         foreach ($maps as $map) {
-            $mapData[] = $this->mapData($map, $slugs, $usedCategories, $featureTotal);
+            $mapData[] = $this->mapData($map, $slugs, $usedCategories, $totals);
         }
         $categories = [];
         foreach ($this->categories->all() as $category) {
@@ -172,16 +172,21 @@ final class MapExporter
     /**
      * @param array<int, string> $slugs
      * @param array<int, true> $used
+     * @param array{features: int, coordinates: int} $totals
      * @return array<string, mixed>
      */
-    private function mapData(MapEntity $map, array $slugs, array &$used, int &$featureTotal): array
+    private function mapData(MapEntity $map, array $slugs, array &$used, array &$totals): array
     {
         $layers = [];
         foreach ($this->layers->forMap($map->id) as $layer) {
             $features = [];
             foreach ($this->features->forLayers([$layer->id]) as $feature) {
-                if (count($features) >= $this->limits->maxFeatures || ++$featureTotal > $this->limits->maxFeatures * 10) {
+                if (count($features) >= $this->limits->maxFeatures || ++$totals['features'] > $this->limits->maxFeatures * 10) {
                     throw new ImportException(ImportException::TOO_MANY_FEATURES, 'The package would exceed the import feature limit.');
+                }
+                $totals['coordinates'] += $feature->geometry->coordinateCount();
+                if ($totals['coordinates'] > $this->limits->maxCoordinates) {
+                    throw new ImportException(ImportException::TOO_MANY_COORDINATES, 'The package would exceed the import coordinate limit.');
                 }
                 $media = $feature->properties->toArray();
                 $media['image_id'] = null;

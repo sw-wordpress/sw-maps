@@ -204,6 +204,50 @@ final class ExportImportTest extends TestCase
         self::assertStringStartsWith('mein-export-', $this->exporter()->package(null, 'mein-export')['filename']);
     }
 
+    public function testNumericCategorySlugRoundTripsWithAssignmentsAndStyleRules(): void
+    {
+        $category = $this->f->categoryService->create(['title' => '2026']);
+        self::assertSame('2026', $category->slug);
+        $this->f->layerService->update($this->layerId, [
+            'style' => ['rules' => [['categoryId' => $category->id, 'style' => ['color' => '#ff0000']]]],
+        ]);
+        $first = $this->f->features->forLayers([$this->layerId])[0];
+        $this->f->featureService->update($first->id, ['categories' => [$category->id]]);
+        $package = $this->exporter()->package()['content'];
+        $target = new Fixture();
+        $importer = $this->importer(null, $target);
+
+        $map = $importer->import($package, 1)['maps'][0];
+        $layer = $target->layers->forMap($map['id'])[0];
+        $category = $target->categories->all()[0];
+        self::assertSame('2026', $category->slug);
+        self::assertSame($category->id, $layer->style['rules'][0]['categoryId']);
+        self::assertSame([$category->id], $target->features->forLayers([$layer->id])[0]->categoryIds);
+        self::assertSame(1, $importer->import($package, 1)['categories_matched']);
+    }
+
+    public function testPackageImportEnforcesTheSharedCoordinateBudgetBeforeWriting(): void
+    {
+        $package = $this->exporter()->package()['content'];
+        $target = new Fixture();
+        $importer = $this->importer(new ImportLimits(maxCoordinates: 2), $target);
+        try {
+            $importer->import($package, 1);
+            self::fail('expected the total coordinate count to be rejected');
+        } catch (ImportException $e) {
+            self::assertSame(ImportException::TOO_MANY_COORDINATES, $e->reason);
+            self::assertSame([], $target->maps->items);
+        }
+        self::assertSame(2, $this->importer(new ImportLimits(maxCoordinates: 3))->validate($package)['features']);
+    }
+
+    public function testPackageExportUsesTheSameCoordinateBudget(): void
+    {
+        $this->expectException(ImportException::class);
+        $this->expectExceptionMessage('coordinate limit');
+        $this->exporter(new ImportLimits(maxCoordinates: 2))->package();
+    }
+
     public function testPackageExportRejectsAFileLargerThanTheImportLimit(): void
     {
         $this->expectException(ImportException::class);

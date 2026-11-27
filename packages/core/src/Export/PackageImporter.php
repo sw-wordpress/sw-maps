@@ -81,7 +81,7 @@ final class PackageImporter
     }
 
     /**
-     * @return array{list<array<string, mixed>>, array<string, array{title: string, style: array<string, mixed>}>}
+     * @return array{list<array<string, mixed>>, array<array-key, array{title: string, style: array<string, mixed>}>}
      * @throws ImportException when the file as a whole is rejected
      */
     private function plan(string $content): array
@@ -110,16 +110,17 @@ final class PackageImporter
         }
         $categories = $this->validCategories($data['categories'] ?? []);
         $plan = [];
-        $features = 0;
+        $categorySlugs = array_map(static fn (string|int $slug): string => (string) $slug, array_keys($categories));
+        $totals = ['features' => 0, 'coordinates' => 0];
         foreach ($maps as $i => $map) {
-            $plan[] = $this->validMap($map, $i + 1, array_keys($categories), $features);
+            $plan[] = $this->validMap($map, $i + 1, $categorySlugs, $totals);
         }
 
         return [$plan, $categories];
     }
 
     /**
-     * @return array<string, array{title: string, style: array<string, mixed>}> by slug
+     * @return array<array-key, array{title: string, style: array<string, mixed>}> by slug
      */
     private function validCategories(mixed $input): array
     {
@@ -146,9 +147,10 @@ final class PackageImporter
 
     /**
      * @param list<string> $categorySlugs
+     * @param array{features: int, coordinates: int} $totals
      * @return array<string, mixed>
      */
-    private function validMap(mixed $map, int $number, array $categorySlugs, int &$featureTotal): array
+    private function validMap(mixed $map, int $number, array $categorySlugs, array &$totals): array
     {
         $where = sprintf('Map %d', $number);
         if (!is_array($map) || !is_array($map['layers'] ?? null) || !array_is_list($map['layers'])) {
@@ -177,17 +179,22 @@ final class PackageImporter
             } catch (ValidationException $e) {
                 throw new ImportException(ImportException::MALFORMED, $layerWhere . ': ' . implode(' ', $e->errors()));
             }
+            if (count($layer['features']) > $this->limits->maxFeatures) {
+                throw new ImportException(ImportException::TOO_MANY_FEATURES, $layerWhere . ' contains too many locations.');
+            }
             $featureList = [];
             $seen = [];
             foreach ($layer['features'] as $k => $feature) {
                 $featureWhere = sprintf('%s, location %d', $layerWhere, $k + 1);
-                if (++$featureTotal > $this->limits->maxFeatures * 10) {
+                if (++$totals['features'] > $this->limits->maxFeatures * 10) {
                     throw new ImportException(ImportException::TOO_MANY_FEATURES, 'The package contains too many locations.');
                 }
-                $featureList[] = $this->validFeature($feature, $featureWhere, $categorySlugs, $seen);
-            }
-            if (count($featureList) > $this->limits->maxFeatures) {
-                throw new ImportException(ImportException::TOO_MANY_FEATURES, $layerWhere . ' contains too many locations.');
+                $validated = $this->validFeature($feature, $featureWhere, $categorySlugs, $seen);
+                $totals['coordinates'] += $validated['geometry']->coordinateCount();
+                if ($totals['coordinates'] > $this->limits->maxCoordinates) {
+                    throw new ImportException(ImportException::TOO_MANY_COORDINATES, 'The package contains too many coordinates.');
+                }
+                $featureList[] = $validated;
             }
             $layers[] = ['title' => $layerTitle, 'status' => $status, 'style' => $style, 'order' => $order, 'visible' => $visible, 'features' => $featureList];
         }
@@ -274,7 +281,7 @@ final class PackageImporter
 
     /**
      * @param list<array<string, mixed>> $plan
-     * @param array<string, array{title: string, style: array<string, mixed>}> $categories
+     * @param array<array-key, array{title: string, style: array<string, mixed>}> $categories
      * @return array{maps: list<array{id: int, title: string, layers: int, features: int}>, categories_created: int, categories_matched: int, media_relink_hint: bool, layer_ids: list<array{0: int, 1: int}>}
      */
     private function write(array $plan, array $categories, int $userId): array
@@ -283,12 +290,12 @@ final class PackageImporter
         $created = 0;
         $matched = 0;
         foreach ($categories as $slug => $category) {
-            $existing = $this->categoryBySlug($slug);
+            $existing = $this->categoryBySlug((string) $slug);
             if ($existing !== null) {
                 $ids[$slug] = $existing->id;
                 ++$matched;
             } else {
-                $ids[$slug] = $this->categories->save(new Category(0, $slug, $category['title'], $category['style']))->id;
+                $ids[$slug] = $this->categories->save(new Category(0, (string) $slug, $category['title'], $category['style']))->id;
                 ++$created;
             }
         }

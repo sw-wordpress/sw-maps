@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { authFile, PLUGIN_PAGE } from '../support/env';
+import { authFile } from '../support/env';
+import { openAdmin } from '../support/admin';
 import { mockTiles } from '../support/tiles';
 import { WpApi } from '../support/wp';
 
@@ -52,7 +53,7 @@ async function newMap(page: Page, title: string): Promise<{ id: number; api: WpA
 }
 
 async function openEditor(page: Page, mapId: number): Promise<void> {
-  await page.goto(`${PLUGIN_PAGE}#/maps/${mapId}`);
+  await openAdmin(page, `#/maps/${mapId}`, (p) => p.locator('.swmap-editor__canvas .ol-viewport'));
   await expect(page.locator('.swmap-editor__canvas .ol-viewport')).toBeVisible();
 }
 

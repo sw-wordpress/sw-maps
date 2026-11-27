@@ -30,7 +30,7 @@ final class ParseCollector
         if (count($this->features) >= $this->limits->maxFeatures) {
             throw new ImportException(ImportException::TOO_MANY_FEATURES, sprintf('The file contains more than %d features.', $this->limits->maxFeatures));
         }
-        $this->coordinates += count($geometry->flatten());
+        $this->coordinates += $geometry->coordinateCount();
         if ($this->coordinates > $this->limits->maxCoordinates) {
             throw new ImportException(ImportException::TOO_MANY_COORDINATES, sprintf('The file contains more than %d coordinates.', $this->limits->maxCoordinates));
         }
