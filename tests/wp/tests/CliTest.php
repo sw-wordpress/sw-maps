@@ -153,6 +153,12 @@ final class CliTest extends SwMapsTestCase {
 		$cmd->export( array(), array( 'all' => true, 'output' => $all ) );
 		$this->assertCount( 1, json_decode( (string) file_get_contents( $all ), true )['maps'] );
 
+		// A package dry-run validates without creating an additional map.
+		WP_CLI::$lines = array();
+		$cmd->import( array( $out ), array( 'output' => 'json', 'dry-run' => true ) );
+		$this->assertSame( array( 'maps' => 1, 'layers' => 1, 'features' => 1, 'categories' => 0 ), json_decode( WP_CLI::$lines[0], true ) );
+		$this->assertCount( 1, $this->rest( 'GET', '/maps' )->get_data() );
+
 		// The plugin file imports back as a new draft map (format guessed from the content).
 		WP_CLI::$lines = array();
 		$cmd->import( array( $out ), array( 'output' => 'json' ) );

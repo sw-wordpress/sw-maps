@@ -49,7 +49,7 @@ Anbieter: `type` ist `xyz` oder `pmtiles` (bei `pmtiles` enthält `public_config
 
 ## Export (M3)
 - `GET /maps/{id}/export?format=json|geojson|csv&layer_id=` (`swmap_manage_imports` plus Bearbeitungsrecht): Antwort `{ filename, mime_type, content }`; der Client bietet den Text als Download an. `geojson` und `csv` (nur Punkte, Formelzeichen am Zellenanfang mit `'` entschärft) sind Austauschformate; `json` ist die **Plugin-Datei**.
-- `GET /export` (`swmap_manage_system`): Plugin-Datei aller Karten.
+- `GET /export` (`swmap_manage_system`): Plugin-Datei aller Karten. Die JSON-Exporte verwenden die Paketgrenzen des Imports (100 Karten, 5 MiB, Feature-Limits). Bei Überschreitung antwortet die API mit `swmap_export_rejected` (HTTP 422). Für größere Bestände einzelne Karten exportieren oder eine [Datenbanksicherung](lifecycle.md) verwenden.
 - `POST /imports/package` (`swmap_manage_imports`, Body `{ content }`): legt die Karten der Plugin-Datei als **Entwürfe** neu an (Antwort 201 mit `maps[]`, `categories_created`, `categories_matched`, `media_relink_hint`). Alles wird vor dem Schreiben geprüft und in einer Transaktion geschrieben; eine abgelehnte Datei hinterlässt nichts (422 `swmap_import_rejected`).
 - Plugin-Datei (`format: "sw-maps-package"`, `version: 1`): Kategorien (Slug), Karten mit Ansicht, Einstellungen, Layern (inkl. Stilregeln über `categorySlug`) und Standorten. Sie enthält **keine Zugangsdaten** (Anbieter-ID und Secrets fehlen, die Zielsite wählt ihre Basiskarte) und **keine Medien** (Bilder und Medien-Symbole entfallen und müssen neu verknüpft werden). Eine neuere `version` als vom Plugin unterstützt wird abgelehnt.
 

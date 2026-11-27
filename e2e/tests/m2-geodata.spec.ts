@@ -237,8 +237,7 @@ test('visitors filter the list and the map by category and search, and groups cl
   // The six huts form one cluster; clicking it zooms in (the scale line changes).
   const scale = view.locator('.ol-scale-line-inner');
   const before = await scale.innerText();
-  const box = (await view.locator('.swmap .ol-viewport canvas').first().boundingBox())!;
-  await view.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await view.locator('.swmap .ol-viewport').click();
   await expect.poll(async () => scale.innerText()).not.toBe(before);
   await visitor.close();
 });

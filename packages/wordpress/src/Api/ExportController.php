@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace SWMaps\WordPress\Api;
 
 use SWMaps\Core\Exception\ValidationException;
+use SWMaps\Core\Import\ImportException;
 use SWMaps\WordPress\Access;
 use SWMaps\WordPress\Capabilities;
 
@@ -60,7 +61,7 @@ final class ExportController extends BaseController {
 	}
 
 	public function export_map( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
-		return $this->run(
+		return $this->run_export(
 			function () use ( $request ) {
 				$exporter = $this->services()->exporter();
 				$id       = $this->id( $request );
@@ -78,7 +79,32 @@ final class ExportController extends BaseController {
 	}
 
 	public function export_all(): \WP_REST_Response|\WP_Error {
-		return $this->run( fn () => new \WP_REST_Response( $this->services()->exporter()->package() ) );
+		return $this->run_export( fn () => new \WP_REST_Response( $this->services()->exporter()->package() ) );
+	}
+
+	/**
+	 * @param callable(): \WP_REST_Response $export Export handler.
+	 */
+	private function run_export( callable $export ): \WP_REST_Response|\WP_Error {
+		return $this->run(
+			static function () use ( $export ) {
+				try {
+					return $export();
+				} catch ( ImportException $e ) {
+					$message = ImportException::INVALID_OPTION === $e->reason
+						? __( 'There are no maps to export.', 'sw-maps' )
+						: __( 'The export exceeds the import limits. Export individual maps or use a database backup.', 'sw-maps' );
+					return new \WP_Error(
+						'swmap_export_rejected',
+						$message,
+						array(
+							'status' => 422,
+							'reason' => $e->reason,
+						)
+					);
+				}
+			}
+		);
 	}
 
 	public function import_package( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {

@@ -164,7 +164,9 @@ const columns = computed(() => [
           data-test="import-package"
           @click="packageInput?.click()"
         />
+        <label for="swmap-package-file" hidden>{{ t('maps.importPackage') }}</label>
         <input
+          id="swmap-package-file"
           ref="packageInput"
           type="file"
           accept=".json,application/json"

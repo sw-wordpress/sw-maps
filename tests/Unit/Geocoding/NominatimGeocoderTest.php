@@ -32,7 +32,7 @@ final class NominatimGeocoderTest extends TestCase
             {
             }
 
-            public function get(string $url, array $headers, int $timeoutSeconds, int $maxBytes): HttpResponse
+            public function get(string $url, array $headers, int $timeoutSeconds, int $maxBytes, array $addresses): HttpResponse
             {
                 $this->test->record($url, $headers, $maxBytes);
                 $next = array_shift($this->responses) ?? new HttpResponse(200, [], '[]');

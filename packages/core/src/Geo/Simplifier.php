@@ -54,11 +54,15 @@ final class Simplifier
             // that distance until Douglas-Peucker (quadratic in the worst case) gets a bounded input. This is a display
             // variant: together with the Douglas-Peucker pass the shape error stays within about two tolerances.
             for ($distance = $tolerance; $n > self::MAX_DOUGLAS_PEUCKER_POINTS || $distance === $tolerance; $distance *= 2) {
-                $points = $this->radial($points, $distance);
-                $n = count($points);
-                if ($n <= $minPoints) {
+                $filtered = $this->radial($points, $distance);
+                $n = count($filtered);
+                if ($n < $minPoints) {
                     return $points;
                 }
+                if ($n === $minPoints) {
+                    return $filtered;
+                }
+                $points = $filtered;
             }
         }
         $keep = array_fill(0, $n, false);

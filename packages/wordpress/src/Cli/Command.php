@@ -154,7 +154,13 @@ final class Command {
 		$format  = $assoc_args['format'] ?? $this->guess( $path, $content );
 		try {
 			if ( 'package' === $format ) {
-				$report = Services::instance()->package_importer()->import( $content, get_current_user_id() );
+				$importer = Services::instance()->package_importer();
+				if ( isset( $assoc_args['dry-run'] ) ) {
+					$report = $importer->validate( $content );
+					$this->report( $report, $assoc_args, sprintf( 'Checked: %d map(s), %d location(s) (nothing written).', $report['maps'], $report['features'] ) );
+					return;
+				}
+				$report = $importer->import( $content, get_current_user_id() );
 				$this->report( $report, $assoc_args, sprintf( '%d map(s) imported as drafts.', count( $report['maps'] ) ) );
 				return;
 			}
@@ -263,6 +269,8 @@ final class Command {
 			}
 		} catch ( NotFoundException ) {
 			\WP_CLI::error( 'Map or layer not found.', 1 );
+		} catch ( ImportException $e ) {
+			\WP_CLI::error( $e->getMessage(), 2 );
 		}
 		if ( ! isset( $assoc_args['output'] ) ) {
 			\WP_CLI::line( $file['content'] );

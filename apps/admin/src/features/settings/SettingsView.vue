@@ -58,7 +58,7 @@ async function save(): Promise<void> {
   saving.value = true;
   try {
     const hosts = allowedHostsText.value
-      .split(/\s*[\n,]\s*/)
+      .split(/[\n,]/)
       .map((h) => h.trim())
       .filter((h) => h !== '');
     await store.save({ ...form, allowed_hosts: hosts });

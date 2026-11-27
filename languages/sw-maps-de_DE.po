@@ -87,6 +87,14 @@ msgstr "Dieser Wert wird bereits verwendet."
 msgid "Unexpected error."
 msgstr "Unerwarteter Fehler."
 
+#: packages/wordpress/src/Api/ExportController.php:95
+msgid "There are no maps to export."
+msgstr "Es gibt keine Karten zum Exportieren."
+
+#: packages/wordpress/src/Api/ExportController.php:96
+msgid "The export exceeds the import limits. Export individual maps or use a database backup."
+msgstr "Der Export überschreitet die Importgrenzen. Exportiere einzelne Karten oder verwende eine Datenbanksicherung."
+
 #: packages/wordpress/src/Api/FeaturesController.php:94
 msgid "The feature limit of this layer is reached."
 msgstr "Das Standortlimit dieses Layers ist erreicht."

@@ -94,6 +94,14 @@ msgstr ""
 msgid "Unexpected error."
 msgstr ""
 
+#: packages/wordpress/src/Api/ExportController.php:95
+msgid "There are no maps to export."
+msgstr ""
+
+#: packages/wordpress/src/Api/ExportController.php:96
+msgid "The export exceeds the import limits. Export individual maps or use a database backup."
+msgstr ""
+
 #: packages/wordpress/src/Api/FeaturesController.php:94
 msgid "The feature limit of this layer is reached."
 msgstr ""

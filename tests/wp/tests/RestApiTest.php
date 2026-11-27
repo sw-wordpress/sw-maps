@@ -1003,6 +1003,56 @@ final class RestApiTest extends SwMapsTestCase {
 		$this->assertSame( 403, $this->rest( 'POST', '/imports/package', array( 'content' => '{}' ) )->get_status() );
 	}
 
+	public function test_package_export_reports_limits_without_downloading_a_file(): void {
+		$this->as_role( 'administrator' );
+		$empty = $this->rest( 'GET', '/export' );
+		$this->assertSame( 422, $empty->get_status() );
+		$this->assertSame( 'swmap_export_rejected', $empty->get_data()['code'] );
+
+		$map_id = $this->create_map();
+		$layer  = $this->rest( 'POST', "/maps/{$map_id}/layers", array( 'title' => 'L' ) )->get_data();
+		foreach ( array( 8.4, 8.5 ) as $lon ) {
+			$this->rest( 'POST', "/layers/{$layer['id']}/features", array( 'geometry' => $this->point( $lon ) ) );
+		}
+		$this->rest( 'PATCH', '/settings', array( 'max_features_per_layer' => 1 ) );
+		$result = $this->rest( 'GET', "/maps/{$map_id}/export" );
+		$this->assertSame( 422, $result->get_status() );
+		$this->assertSame( 'too_many_features', $result->get_data()['data']['reason'] );
+	}
+
+	public function test_guarded_transport_configures_curl_and_removes_its_hooks(): void {
+		$address = 'https://transport.example.org/check';
+		$mock    = function ( $preempt, $args, $url ) use ( $address ) {
+			$this->assertSame( $address, $url );
+			$headers = array();
+			$options = array( 'follow_redirects' => true );
+			do_action_ref_array( 'requests-requests.before_request', array( $url, $headers, array(), 'GET', &$options ) );
+			$this->assertFalse( $options['follow_redirects'] );
+			$this->assertSame( \WpOrg\Requests\Transport\Curl::class, $options['transport'] );
+
+			$curl = curl_init();
+			do_action_ref_array( 'http_api_curl', array( &$curl, $args, $url ) );
+			$this->assertSame( $address, curl_getinfo( $curl, CURLINFO_EFFECTIVE_URL ) );
+
+			return array(
+				'headers'  => array( 'content-type' => 'text/plain' ),
+				'body'     => 'ok',
+				'response' => array( 'code' => 200, 'message' => 'OK' ),
+			);
+		};
+		$before_requests = has_action( 'requests-requests.before_request' );
+		$before_curl     = has_action( 'http_api_curl' );
+		add_filter( 'pre_http_request', $mock, 10, 3 );
+		try {
+			$response = Services::instance()->http_client()->get( $address );
+			$this->assertSame( 'ok', $response->body );
+		} finally {
+			remove_filter( 'pre_http_request', $mock, 10 );
+		}
+		$this->assertSame( $before_requests, has_action( 'requests-requests.before_request' ) );
+		$this->assertSame( $before_curl, has_action( 'http_api_curl' ) );
+	}
+
 	public function test_server_side_requests_refuse_private_targets_unless_the_host_is_allowlisted(): void {
 		$this->as_role( 'administrator' );
 		$calls = 0;

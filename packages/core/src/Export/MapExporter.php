@@ -14,6 +14,8 @@ use SWMaps\Core\Domain\GeometryType;
 use SWMaps\Core\Domain\Layer;
 use SWMaps\Core\Domain\MapEntity;
 use SWMaps\Core\Exception\NotFoundException;
+use SWMaps\Core\Import\ImportException;
+use SWMaps\Core\Import\ImportLimits;
 
 /**
  * Exports maps. GeoJSON and CSV are for exchange with other tools; the versioned package is the plugin's own
@@ -24,13 +26,15 @@ final class MapExporter
 {
     public const PACKAGE_FORMAT = 'sw-maps-package';
     public const PACKAGE_VERSION = 1;
+    public const PACKAGE_MAX_MAPS = 100;
 
     public function __construct(
         private readonly MapRepositoryInterface $maps,
         private readonly LayerRepositoryInterface $layers,
         private readonly FeatureRepositoryInterface $features,
         private readonly CategoryRepositoryInterface $categories,
-        private readonly ClockInterface $clock
+        private readonly ClockInterface $clock,
+        private readonly ImportLimits $limits = new ImportLimits()
     ) {
     }
 
@@ -114,14 +118,11 @@ final class MapExporter
     {
         $maps = [];
         if ($mapIds === null) {
-            for ($page = 1;; ++$page) {
-                $result = $this->maps->search('', null, $page, 100);
-                array_push($maps, ...$result['items']);
-                if ($page * 100 >= $result['total'] || $result['items'] === []) {
-                    break;
-                }
-            }
+            $result = $this->maps->search('', null, 1, self::PACKAGE_MAX_MAPS);
+            $this->checkMapCount($result['total']);
+            $maps = $result['items'];
         } else {
+            $this->checkMapCount(count($mapIds));
             foreach ($mapIds as $id) {
                 $maps[] = $this->map($id);
             }
@@ -132,8 +133,9 @@ final class MapExporter
         }
         $usedCategories = [];
         $mapData = [];
+        $featureTotal = 0;
         foreach ($maps as $map) {
-            $mapData[] = $this->mapData($map, $slugs, $usedCategories);
+            $mapData[] = $this->mapData($map, $slugs, $usedCategories, $featureTotal);
         }
         $categories = [];
         foreach ($this->categories->all() as $category) {
@@ -149,9 +151,22 @@ final class MapExporter
             'maps' => $mapData,
         ];
         $json = json_encode($package, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR);
+        if (strlen($json) > $this->limits->maxBytes) {
+            throw new ImportException(ImportException::TOO_LARGE, 'The package would exceed the import file size limit.');
+        }
         $base = $name ?? (count($maps) === 1 ? $maps[0]->slug : 'sw-maps');
 
         return ['filename' => $base . '-' . $this->clock->now()->format('Ymd') . '.json', 'mime_type' => 'application/json', 'content' => $json];
+    }
+
+    private function checkMapCount(int $count): void
+    {
+        if ($count === 0) {
+            throw new ImportException(ImportException::INVALID_OPTION, 'There are no maps to export.');
+        }
+        if ($count > self::PACKAGE_MAX_MAPS) {
+            throw new ImportException(ImportException::TOO_LARGE, 'Too many maps for one package. Export maps individually.');
+        }
     }
 
     /**
@@ -159,12 +174,15 @@ final class MapExporter
      * @param array<int, true> $used
      * @return array<string, mixed>
      */
-    private function mapData(MapEntity $map, array $slugs, array &$used): array
+    private function mapData(MapEntity $map, array $slugs, array &$used, int &$featureTotal): array
     {
         $layers = [];
         foreach ($this->layers->forMap($map->id) as $layer) {
             $features = [];
             foreach ($this->features->forLayers([$layer->id]) as $feature) {
+                if (count($features) >= $this->limits->maxFeatures || ++$featureTotal > $this->limits->maxFeatures * 10) {
+                    throw new ImportException(ImportException::TOO_MANY_FEATURES, 'The package would exceed the import feature limit.');
+                }
                 $media = $feature->properties->toArray();
                 $media['image_id'] = null;
                 $media['icon'] = str_starts_with($feature->properties->icon, 'media:') ? 'builtin:pin' : $feature->properties->icon;

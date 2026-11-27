@@ -75,14 +75,18 @@ test.describe('admin routes', () => {
   test('the admin navigation works with the keyboard', async ({ page }) => {
     await openAdmin(page, '#/', (p) => p.locator('#sw-maps-app h1'));
     await expect(page.locator('#sw-maps-app h1')).toBeVisible();
-    const link = page.locator('#sw-maps-app nav a', { hasText: 'Maps' }).first();
+    const link = page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', {
+      name: 'Maps',
+      exact: true,
+    });
+    await page.bringToFront();
     // Reach the link the way a keyboard user does: Tab from the skip link through the navigation.
     await page.locator('.swmap-skip').focus();
     for (let i = 0; i < 12 && !(await link.evaluate((el) => el === document.activeElement)); i++) {
       await page.keyboard.press('Tab');
     }
     await expect(link).toBeFocused();
-    await page.keyboard.press('Enter');
+    await link.press('Enter');
     await expect(page).toHaveURL(/#\/maps$/);
     await expect(page.locator('#sw-maps-app h1')).toHaveText('Maps');
   });

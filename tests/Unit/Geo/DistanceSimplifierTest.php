@@ -77,6 +77,20 @@ final class DistanceSimplifierTest extends TestCase
         self::assertCount(2, (new Simplifier())->simplify($degenerate, 0.1)->coordinates);
     }
 
+    public function testDenseSmallPolygonHoleStaysValid(): void
+    {
+        $ring = [];
+        for ($i = 0; $i < 2100; ++$i) {
+            $angle = 2 * M_PI * $i / 2100;
+            $ring[] = [cos($angle) * 0.00001, sin($angle) * 0.00001];
+        }
+        $ring[] = $ring[0];
+        $outer = [[-1.0, -1.0], [1.0, -1.0], [1.0, 1.0], [-1.0, 1.0], [-1.0, -1.0]];
+        $polygon = Geometry::create(GeometryType::Polygon, [$outer, $ring]);
+        $simplified = (new Simplifier())->simplify($polygon, Simplifier::toleranceForZoom(14));
+        self::assertSame($polygon->coordinates, $simplified->coordinates);
+    }
+
     public function testToleranceShrinksWithZoom(): void
     {
         self::assertGreaterThan(Simplifier::toleranceForZoom(10), Simplifier::toleranceForZoom(5));

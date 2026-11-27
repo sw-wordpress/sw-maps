@@ -18,3 +18,5 @@ Im Standortformular suchen *Koordinaten finden* und *Adresse finden* über Nomin
 - Ein Datenschutztext-Vorschlag steht im WordPress-Datenschutz-Hilfetext (*Einstellungen → Datenschutz → Hilfe zum Datenschutztext*).
 
 Keine pauschale DSGVO-Zusicherung: Konfiguration und Texte sind zu prüfen.
+
+Serverseitige Verbindungstests und Geocoding benötigen die PHP-Erweiterung cURL. Für jeden Redirect wird die Zieladresse neu geprüft. Die Verbindung verwendet eine geprüfte IP direkt, mit dem ursprünglichen Hostnamen für TLS. HTTP-Proxys werden dafür umgangen.

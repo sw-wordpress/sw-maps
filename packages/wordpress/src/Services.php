@@ -112,12 +112,15 @@ final class Services {
 	}
 
 	public function exporter(): MapExporter {
-		return new MapExporter( $this->map_repo, $this->layer_repo, $this->feature_repo, $this->category_repo, $this->clock );
+		return new MapExporter( $this->map_repo, $this->layer_repo, $this->feature_repo, $this->category_repo, $this->clock, $this->package_limits() );
 	}
 
 	public function package_importer(): PackageImporter {
-		$max = Settings::get()['max_features_per_layer'];
-		return new PackageImporter( $this->map_repo, $this->layer_repo, $this->feature_repo, $this->category_repo, $this->tx, $this->clock, $this->events, new ImportLimits( maxFeatures: $max ) );
+		return new PackageImporter( $this->map_repo, $this->layer_repo, $this->feature_repo, $this->category_repo, $this->tx, $this->clock, $this->events, $this->package_limits() );
+	}
+
+	private function package_limits(): ImportLimits {
+		return new ImportLimits( maxFeatures: Settings::get()['max_features_per_layer'] );
 	}
 
 	public function public_features(): PublicFeatureService {

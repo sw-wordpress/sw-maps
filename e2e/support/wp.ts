@@ -12,6 +12,10 @@ export class WpApi {
 
   static async create(page: Page): Promise<WpApi> {
     await page.goto(PLUGIN_PAGE);
+    return WpApi.fromPage(page);
+  }
+
+  static async fromPage(page: Page): Promise<WpApi> {
     const nonce = await page.evaluate(
       () => (window as unknown as { swmapsConfig: { nonce: string } }).swmapsConfig.nonce,
     );

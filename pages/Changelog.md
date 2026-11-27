@@ -34,6 +34,12 @@
 
 ### Bugs
 
+- Serveranfragen bleiben bei der geprüften IP-Adresse. IPv4-gemappte IPv6-Adressen werden vor der Netzprüfung normalisiert.
+- Dichte Polygonringe bleiben in der Kartenausgabe gültig.
+- WP-CLI validiert Paketimporte mit `--dry-run` ohne Datenbankänderung. JSON-Exporte melden überschrittene Importgrenzen vor dem Download.
+- Inter und JetBrains Mono werden im Release-ZIP mitgeliefert.
+- Admin-Navigation reagiert auf Enter. Browser-Tests scrollen Karten vor koordinatenbasierten Aktionen in den sichtbaren Bereich.
+
 - Gleichzeitiges Anlegen von Karten mit gleichem Titel führt nicht mehr zu einem Serverfehler (Slug-Konflikt wird wiederholt).
 
 ### Other topics

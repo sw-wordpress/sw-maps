@@ -25,8 +25,8 @@ final class GuardedHttpClient
     public function get(string $url, array $headers = [], ?int $maxBytes = null): HttpResponse
     {
         for ($hop = 0; $hop <= self::MAX_REDIRECTS; ++$hop) {
-            $this->guard->check($url);
-            $response = $this->transport->get($url, $headers, $this->timeoutSeconds, $maxBytes ?? $this->maxBytes);
+            $addresses = $this->guard->check($url);
+            $response = $this->transport->get($url, $headers, $this->timeoutSeconds, $maxBytes ?? $this->maxBytes, $addresses);
             $location = $response->header('location');
             if ($response->status >= 300 && $response->status < 400 && $location !== null) {
                 $url = UrlGuard::resolveRedirect($location, $url);

@@ -62,6 +62,10 @@ AGENTS.md
 composer.lock
 EXCLUDES
 
+for font in inter jetbrains-mono; do
+  cp "$ROOT/apps/admin/node_modules/@fontsource-variable/$font/LICENSE" "$STAGE/$NAME/assets/admin/LICENSE-$font.txt"
+done
+
 echo ">> installing production dependencies"
 cp "$ROOT/composer.json" "$ROOT/composer.lock" "$STAGE/$NAME/"
 (cd "$STAGE/$NAME" && composer validate --strict && composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-progress --no-scripts)

@@ -16,8 +16,11 @@ final class UrlGuard
     {
     }
 
-    /** @throws UnsafeUrlException */
-    public function check(string $url): void
+    /**
+     * @return non-empty-list<string> Validated endpoints for this request.
+     * @throws UnsafeUrlException
+     */
+    public function check(string $url): array
     {
         $parts = parse_url($url);
         if ($parts === false || !isset($parts['scheme'], $parts['host'])) {
@@ -33,12 +36,10 @@ final class UrlGuard
             throw new UnsafeUrlException('The URL contains forbidden characters.');
         }
         $host = strtolower(trim($parts['host'], '[]'));
-        if ($host === '' || str_ends_with($host, '.')) {
+        if (!self::isIpLiteral($host) && preg_match('/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/D', $host) !== 1) {
             throw new UnsafeUrlException('The host is not valid.');
         }
-        if (in_array($host, array_map('strtolower', $this->allowedHosts), true)) {
-            return;
-        }
+        $allowed = in_array($host, array_map('strtolower', $this->allowedHosts), true);
         // Numeric shorthand ("2130706433", "0x7f.1", "127.1") is read as an address by many resolvers: refuse it outright.
         if (!self::isIpLiteral($host) && preg_match('/^[0-9a-fx.]+$/i', $host) === 1) {
             throw new UnsafeUrlException('Numeric host notations are not allowed.');
@@ -48,10 +49,12 @@ final class UrlGuard
             throw new UnsafeUrlException('The host does not resolve.');
         }
         foreach ($addresses as $address) {
-            if (!self::isPublic($address)) {
+            if (!self::isIpLiteral($address) || (!$allowed && !self::isPublic($address))) {
                 throw new UnsafeUrlException('The target is in a private or reserved network.');
             }
         }
+
+        return $addresses;
     }
 
     /** Resolves a redirect target against the URL it came from. */
@@ -84,35 +87,28 @@ final class UrlGuard
         if (filter_var($address, FILTER_VALIDATE_IP) === false) {
             return false;
         }
-        if (preg_match('/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i', $address, $m) === 1) {
-            return self::isPublic($m[1]);
-        }
         if (str_contains($address, ':')) {
             $packed = inet_pton($address);
             if ($packed === false) {
                 return false;
             }
-            $first = ord($packed[0]);
-            $second = ord($packed[1]);
-            // ::/128 unspecified, ::1 loopback, fc00::/7 unique local, fe80::/10 link local, ff00::/8 multicast, 2001:db8::/32 documentation
-            if ($packed === str_repeat("\0", 16) || $packed === str_repeat("\0", 15) . "\x01") {
-                return false;
-            }
-            if (($first & 0xFE) === 0xFC || ($first === 0xFE && ($second & 0xC0) === 0x80) || $first === 0xFF) {
-                return false;
-            }
-            if ($first === 0x20 && $second === 0x01 && ord($packed[2]) === 0x0D && ord($packed[3]) === 0xB8) {
-                return false;
-            }
-            // IPv4-compatible / NAT64 well known prefix embed an IPv4 address: judge that one.
-            if (str_starts_with($packed, "\0\0\0\0\0\0\0\0\0\0\0\0") || str_starts_with($packed, "\x00\x64\xFF\x9B" . str_repeat("\0", 8))) {
-                return self::isPublic(inet_ntop(substr($packed, 12)) ?: '0.0.0.0');
+            // Mapped, compatible and well-known NAT64 prefixes embed an IPv4 address.
+            if (
+                str_starts_with($packed, str_repeat("\0", 10) . "\xFF\xFF")
+                || str_starts_with($packed, str_repeat("\0", 12))
+                || str_starts_with($packed, "\x00\x64\xFF\x9B" . str_repeat("\0", 8))
+            ) {
+                $embedded = inet_ntop(substr($packed, 12));
+
+                return $embedded !== false && self::isPublic($embedded);
             }
 
-            return true;
+            // Only global unicast addresses are wanted, with special-use ranges excluded by PHP.
+            return (ord($packed[0]) & 0xE0) === 0x20
+                && filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_GLOBAL_RANGE) !== false;
         }
 
-        return filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false
+        return filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_GLOBAL_RANGE) !== false
             && !self::inRange($address, '100.64.0.0', 10)   // carrier grade NAT
             && !self::inRange($address, '192.0.0.0', 24)    // IETF protocol assignments
             && !self::inRange($address, '198.18.0.0', 15)   // benchmarking

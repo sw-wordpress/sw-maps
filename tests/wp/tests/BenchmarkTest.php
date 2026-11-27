@@ -64,13 +64,13 @@ final class BenchmarkTest extends SwMapsTestCase {
 	 * @return list<array{0: float, 1: float}>
 	 */
 	private static function gps_track( int $n ): array {
-		mt_srand( 42 );
+		$random  = new \Random\Randomizer( new \Random\Engine\Mt19937( 42 ) );
 		$lon     = 8.0;
 		$lat     = 49.0;
 		$heading = 0.5;
 		$coords  = array();
 		for ( $i = 0; $i < $n; $i++ ) {
-			$heading += ( mt_rand( -100, 100 ) / 100 ) * 0.08;
+			$heading += ( $random->getInt( -100, 100 ) / 100 ) * 0.08;
 			$lon     += cos( $heading ) * 0.00004;
 			$lat     += sin( $heading ) * 0.00004;
 			$coords[] = array( $lon, $lat );

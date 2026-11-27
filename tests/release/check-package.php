@@ -52,4 +52,20 @@ foreach (['assets/admin/app.js', 'assets/frontend/swmaps-viewer.js', 'assets/fro
 if (str_contains((string) file_get_contents($dir . '/assets/frontend/swmaps-viewer.js'), 'sourceMappingURL')) {
     $fail('the frontend bundle references a source map that is not shipped');
 }
+foreach (['inter', 'jetbrains-mono'] as $font) {
+    if (!is_file($dir . '/assets/admin/LICENSE-' . $font . '.txt')) {
+        $fail("license for {$font} missing from the release");
+    }
+}
+$adminCss = (string) file_get_contents($dir . '/assets/admin/app.css');
+preg_match_all('~url\(\"?([^")]+\.woff2)\"?\)~', $adminCss, $fonts);
+if (count(array_unique($fonts[1])) < 5) {
+    $fail('the admin stylesheet is missing bundled fonts');
+}
+foreach ($fonts[1] as $font) {
+    if (!str_starts_with($font, './assets/') || !is_file($dir . '/assets/admin/' . $font)) {
+        $fail("font {$font} missing from the release");
+    }
+}
+
 echo "package ok: {$count} PHP files, autoloader and assets verified\n";

@@ -69,6 +69,9 @@ final class UrlGuardTest extends TestCase
         yield 'ipv6 documentation' => ['http://[2001:db8::1]/'];
         yield 'ipv4 mapped loopback' => ['http://[::ffff:127.0.0.1]/'];
         yield 'ipv4 mapped private' => ['http://[::ffff:10.0.0.1]/'];
+        yield 'mapped loopback in expanded IPv6 notation' => ['https://[0:0:0:0:0:ffff:7f00:1]/'];
+        yield 'mapped private address in hexadecimal' => ['https://[::ffff:a00:1]/'];
+        yield 'reserved IPv4 documentation range' => ['https://192.0.2.1/'];
         yield 'ipv4 compatible loopback' => ['http://[::127.0.0.1]/'];
         yield 'nat64 private' => ['http://[64:ff9b::10.0.0.1]/'];
         yield 'decimal ip' => ['http://2130706433/'];
@@ -116,7 +119,7 @@ final class UrlGuardTest extends TestCase
     public function testAdministratorAllowlistExemptsOnlyThatHost(): void
     {
         $guard = $this->guard(['geo.lan' => ['10.0.0.8'], 'other.lan' => ['10.0.0.9']], ['GEO.lan']);
-        $guard->check('http://geo.lan:8080/search');
+        self::assertSame(['10.0.0.8'], $guard->check('http://geo.lan:8080/search'));
         $this->expectException(UnsafeUrlException::class);
         $guard->check('http://other.lan/');
     }
@@ -139,9 +142,9 @@ final class UrlGuardTest extends TestCase
             {
             }
 
-            public function get(string $url, array $headers, int $timeoutSeconds, int $maxBytes): HttpResponse
+            public function get(string $url, array $headers, int $timeoutSeconds, int $maxBytes, array $addresses): HttpResponse
             {
-                $this->seen[] = [$url, $maxBytes];
+                $this->seen[] = [$url, $maxBytes, $addresses];
                 $next = array_shift($this->responses) ?? new HttpResponse(200, [], 'end');
                 if ($next instanceof \Throwable) {
                     throw $next;
@@ -159,7 +162,7 @@ final class UrlGuardTest extends TestCase
         $seen = [];
         $ok = $this->client([new HttpResponse(302, ['location' => '/next'], ''), new HttpResponse(200, ['content-type' => 'text/plain'], 'body')], $seen)->get('http://public.example/start', [], 50);
         self::assertSame(['body', 'text/plain'], [$ok->body, $ok->header('Content-Type')]);
-        self::assertSame([['http://public.example/start', 50], ['http://public.example/next', 50]], $seen);
+        self::assertSame([['http://public.example/start', 50, ['93.184.216.34']], ['http://public.example/next', 50, ['93.184.216.34']]], $seen);
 
         $seen = [];
         try {

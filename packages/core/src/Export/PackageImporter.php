@@ -33,8 +33,6 @@ use SWMaps\Core\Import\ImportLimits;
  */
 final class PackageImporter
 {
-    private const MAX_MAPS = 100;
-
     public function __construct(
         private readonly MapRepositoryInterface $maps,
         private readonly LayerRepositoryInterface $layers,
@@ -52,6 +50,41 @@ final class PackageImporter
      * @throws ImportException when the file as a whole is rejected
      */
     public function import(string $content, int $userId): array
+    {
+        [$plan, $categories] = $this->plan($content);
+        $report = $this->tx->run(fn (): array => $this->write($plan, $categories, $userId));
+        foreach ($report['layer_ids'] as [$layerId, $mapId]) {
+            $this->events->layerUpdated($layerId, $mapId);
+        }
+        unset($report['layer_ids']);
+
+        return $report;
+    }
+
+    /**
+     * @return array{maps: int, layers: int, features: int, categories: int}
+     * @throws ImportException when the file as a whole is rejected
+     */
+    public function validate(string $content): array
+    {
+        [$plan, $categories] = $this->plan($content);
+        $layers = 0;
+        $features = 0;
+        foreach ($plan as $map) {
+            foreach ($map['layers'] as $layer) {
+                ++$layers;
+                $features += count($layer['features']);
+            }
+        }
+
+        return ['maps' => count($plan), 'layers' => $layers, 'features' => $features, 'categories' => count($categories)];
+    }
+
+    /**
+     * @return array{list<array<string, mixed>>, array<string, array{title: string, style: array<string, mixed>}>}
+     * @throws ImportException when the file as a whole is rejected
+     */
+    private function plan(string $content): array
     {
         if (strlen($content) > $this->limits->maxBytes) {
             throw new ImportException(ImportException::TOO_LARGE, sprintf('The file exceeds %d bytes.', $this->limits->maxBytes));
@@ -72,8 +105,8 @@ final class PackageImporter
             throw new ImportException(ImportException::UNSUPPORTED, sprintf('The package has version %d; this plugin supports up to %d.', $version, MapExporter::PACKAGE_VERSION));
         }
         $maps = $data['maps'] ?? null;
-        if (!is_array($maps) || !array_is_list($maps) || $maps === [] || count($maps) > self::MAX_MAPS) {
-            throw new ImportException(ImportException::MALFORMED, 'The package contains no maps or too many.');
+        if (!is_array($maps) || !array_is_list($maps) || $maps === [] || count($maps) > MapExporter::PACKAGE_MAX_MAPS) {
+            throw new ImportException(ImportException::MALFORMED, 'The package map list is invalid or exceeds the limit.');
         }
         $categories = $this->validCategories($data['categories'] ?? []);
         $plan = [];
@@ -82,13 +115,7 @@ final class PackageImporter
             $plan[] = $this->validMap($map, $i + 1, array_keys($categories), $features);
         }
 
-        $report = $this->tx->run(fn (): array => $this->write($plan, $categories, $userId));
-        foreach ($report['layer_ids'] as [$layerId, $mapId]) {
-            $this->events->layerUpdated($layerId, $mapId);
-        }
-        unset($report['layer_ids']);
-
-        return $report;
+        return [$plan, $categories];
     }
 
     /**

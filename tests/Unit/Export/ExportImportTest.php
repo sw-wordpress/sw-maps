@@ -37,9 +37,9 @@ final class ExportImportTest extends TestCase
         $this->f->featureService->create($this->layerId, ['geometry' => ['type' => 'LineString', 'coordinates' => [[8, 49], [8.1, 49.1]]], 'properties' => ['title' => 'Pfad']]);
     }
 
-    private function exporter(): MapExporter
+    private function exporter(ImportLimits $limits = new ImportLimits()): MapExporter
     {
-        return new MapExporter($this->f->maps, $this->f->layers, $this->f->features, $this->f->categories, $this->f->clock);
+        return new MapExporter($this->f->maps, $this->f->layers, $this->f->features, $this->f->categories, $this->f->clock, $limits);
     }
 
     private function importer(?ImportLimits $limits = null, ?Fixture $target = null): PackageImporter
@@ -202,5 +202,19 @@ final class ExportImportTest extends TestCase
         self::assertStringStartsWith('sw-maps-', $this->exporter()->package()['filename']);
         self::assertStringStartsWith('wanderkarte-', $this->exporter()->package([$this->mapId])['filename']);
         self::assertStringStartsWith('mein-export-', $this->exporter()->package(null, 'mein-export')['filename']);
+    }
+
+    public function testPackageExportRejectsAFileLargerThanTheImportLimit(): void
+    {
+        $this->expectException(ImportException::class);
+        $this->expectExceptionMessage('import file size limit');
+        $this->exporter(new ImportLimits(maxBytes: 100))->package();
+    }
+
+    public function testPackageExportRejectsTooManyMaps(): void
+    {
+        $this->expectException(ImportException::class);
+        $this->expectExceptionMessage('Too many maps');
+        $this->exporter()->package(array_fill(0, MapExporter::PACKAGE_MAX_MAPS + 1, $this->mapId));
     }
 }
