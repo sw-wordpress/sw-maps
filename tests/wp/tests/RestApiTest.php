@@ -5,6 +5,8 @@
  * @package sw-maps
  */
 
+use SWMaps\Core\Geocoding\NominatimGeocoder;
+use SWMaps\WordPress\Persistence\OptionRateLimiter;
 use SWMaps\WordPress\Services;
 
 require_once __DIR__ . '/SwMapsTestCase.php';
@@ -1115,6 +1117,29 @@ final class RestApiTest extends SwMapsTestCase {
 		delete_option( \SWMaps\WordPress\Settings::OPTION );
 	}
 
+	public function test_only_one_request_acquires_the_first_rate_limit_slot(): void {
+		$key = 'atomic-test';
+		OptionRateLimiter::clear( $key );
+		$first     = new OptionRateLimiter();
+		$second    = new OptionRateLimiter();
+		$competing = null;
+		$intercept = static function ( string $query ) use ( $second, $key, &$competing ): string {
+			if ( null === $competing && str_starts_with( $query, 'INSERT IGNORE INTO' ) ) {
+				$competing = false; // Avoid recursing again while the second writer claims the slot.
+				$competing = $second->acquire( $key, 60 );
+			}
+			return $query;
+		};
+		add_filter( 'query', $intercept );
+		try {
+			$this->assertFalse( $first->acquire( $key, 60 ) );
+			$this->assertTrue( $competing );
+		} finally {
+			remove_filter( 'query', $intercept );
+			OptionRateLimiter::clear( $key );
+		}
+	}
+
 	public function test_geocoding_is_admin_triggered_identified_rate_limited_and_protected(): void {
 		$this->as_role( 'administrator' );
 		$this->rest( 'PATCH', '/settings', array( 'geocoder_url' => 'https://nominatim.openstreetmap.org', 'geocoder_contact' => 'maps@example.org' ) );
@@ -1128,7 +1153,7 @@ final class RestApiTest extends SwMapsTestCase {
 			);
 		};
 		add_filter( 'pre_http_request', $mock, 10, 3 );
-		delete_transient( 'swmap_rl_' . substr( md5( 'geocoder' ), 0, 12 ) );
+		OptionRateLimiter::clear( NominatimGeocoder::RATE_LIMIT_KEY );
 		$found = $this->rest( 'POST', '/geocoding/search', array( 'query' => 'Karlsruhe Schloss' ) );
 		$this->assertSame( 200, $found->get_status() );
 		$this->assertSame( array( array( 'label' => 'Karlsruhe', 'lon' => 8.4037, 'lat' => 49.0069 ) ), $found->get_data()['results'] );
@@ -1139,7 +1164,7 @@ final class RestApiTest extends SwMapsTestCase {
 		$this->assertSame( 429, $again->get_status() );
 		$this->assertSame( 'rate_limited', $again->as_error()->get_error_data()['reason'] );
 		$this->assertCount( 1, $sent );
-		delete_transient( 'swmap_rl_' . substr( md5( 'geocoder' ), 0, 12 ) );
+		OptionRateLimiter::clear( NominatimGeocoder::RATE_LIMIT_KEY );
 		$reverse = $this->rest( 'POST', '/geocoding/reverse', array( 'lon' => 8.4, 'lat' => 49.0 ) );
 		$this->assertSame( 200, $reverse->get_status() );
 		$this->assertArrayHasKey( 'result', $reverse->get_data() );
@@ -1152,7 +1177,7 @@ final class RestApiTest extends SwMapsTestCase {
 
 		// Without contact the public server is refused; a private self hosted server needs the allowlist.
 		$this->rest( 'PATCH', '/settings', array( 'geocoder_contact' => '' ) );
-		delete_transient( 'swmap_rl_' . substr( md5( 'geocoder' ), 0, 12 ) );
+		OptionRateLimiter::clear( NominatimGeocoder::RATE_LIMIT_KEY );
 		$this->assertSame( 422, $this->rest( 'POST', '/geocoding/search', array( 'query' => 'Berlin' ) )->get_status() );
 		$this->rest( 'PATCH', '/settings', array( 'geocoder_url' => 'http://geo.lan:8080' ) );
 		add_filter( 'swmap_resolve_host', static fn ( $a, $host ) => 'geo.lan' === $host ? array( '10.0.0.8' ) : $a, 20, 2 );

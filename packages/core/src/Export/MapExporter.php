@@ -203,7 +203,10 @@ final class MapExporter
                         'fields' => $feature->properties->fields,
                     ],
                     'style' => (object) $feature->style,
-                    'categories' => array_values(array_filter(array_map(static fn (int $id): ?string => $slugs[$id] ?? null, $feature->categoryIds))),
+                    'categories' => array_values(array_filter(
+                        array_map(static fn (int $id): ?string => $slugs[$id] ?? null, $feature->categoryIds),
+                        static fn (?string $slug): bool => $slug !== null
+                    )),
                 ];
                 foreach ($feature->categoryIds as $id) {
                     $used[$id] = true;

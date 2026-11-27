@@ -17,6 +17,7 @@ use SWMaps\Core\Network\UnsafeUrlException;
 final class NominatimGeocoder implements GeocoderInterface
 {
     public const PUBLIC_HOST = 'nominatim.openstreetmap.org';
+    public const RATE_LIMIT_KEY = 'geocoder';
     public const MAX_RESPONSE_BYTES = 262144;
 
     public function __construct(
@@ -75,7 +76,7 @@ final class NominatimGeocoder implements GeocoderInterface
         if ($public && trim($this->contact) === '') {
             throw new GeocodingException(GeocodingException::NOT_CONFIGURED, 'The public Nominatim server requires a contact address (usage policy).');
         }
-        if (!$this->limiter->acquire('geocoder', $public ? 1 : 0)) {
+        if (!$this->limiter->acquire(self::RATE_LIMIT_KEY, $public ? 1 : 0)) {
             throw new GeocodingException(GeocodingException::RATE_LIMITED, 'Too many requests; wait a moment.');
         }
         if ($this->apiKey !== null && $this->apiKey !== '') {

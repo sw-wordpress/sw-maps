@@ -36,6 +36,7 @@
 
 - Serveranfragen bleiben bei der geprüften IP-Adresse. IPv4-gemappte IPv6-Adressen werden vor der Netzprüfung normalisiert.
 - Dichte Polygonringe bleiben in der Kartenausgabe gültig.
+- Das Geocoding-Rate-Limit bleibt auch bei gleichzeitigen Anfragen wirksam.
 - WP-CLI validiert Paketimporte mit `--dry-run` ohne Datenbankänderung. JSON-Exporte melden überschrittene Importgrenzen vor dem Download. Paketimporte prüfen das gemeinsame Koordinatenlimit und erhalten numerische Kategorie-Slugs.
 - Inter und JetBrains Mono werden im Release-ZIP mitgeliefert.
 - Die Admin-Navigation lädt die gestartete SPA beim ersten Wechsel nicht erneut. Browser-Tests scrollen Karten vor koordinatenbasierten Aktionen in den sichtbaren Bereich.

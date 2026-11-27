@@ -204,10 +204,17 @@ final class ExportImportTest extends TestCase
         self::assertStringStartsWith('mein-export-', $this->exporter()->package(null, 'mein-export')['filename']);
     }
 
-    public function testNumericCategorySlugRoundTripsWithAssignmentsAndStyleRules(): void
+    public static function numericCategorySlugs(): iterable
     {
-        $category = $this->f->categoryService->create(['title' => '2026']);
-        self::assertSame('2026', $category->slug);
+        yield 'nonzero' => ['2026'];
+        yield 'zero' => ['0'];
+    }
+
+    #[DataProvider('numericCategorySlugs')]
+    public function testNumericCategorySlugRoundTripsWithAssignmentsAndStyleRules(string $slug): void
+    {
+        $category = $this->f->categoryService->create(['title' => $slug]);
+        self::assertSame($slug, $category->slug);
         $this->f->layerService->update($this->layerId, [
             'style' => ['rules' => [['categoryId' => $category->id, 'style' => ['color' => '#ff0000']]]],
         ]);
@@ -220,7 +227,7 @@ final class ExportImportTest extends TestCase
         $map = $importer->import($package, 1)['maps'][0];
         $layer = $target->layers->forMap($map['id'])[0];
         $category = $target->categories->all()[0];
-        self::assertSame('2026', $category->slug);
+        self::assertSame($slug, $category->slug);
         self::assertSame($category->id, $layer->style['rules'][0]['categoryId']);
         self::assertSame([$category->id], $target->features->forLayers([$layer->id])[0]->categoryIds);
         self::assertSame(1, $importer->import($package, 1)['categories_matched']);

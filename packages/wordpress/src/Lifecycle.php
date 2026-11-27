@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace SWMaps\WordPress;
 
+use SWMaps\Core\Geocoding\NominatimGeocoder;
+use SWMaps\WordPress\Persistence\OptionRateLimiter;
 use SWMaps\WordPress\Persistence\Schema;
 
 final class Lifecycle {
@@ -73,6 +75,7 @@ final class Lifecycle {
 		}
 		Schema::drop();
 		delete_option( Settings::OPTION );
+		OptionRateLimiter::clear( NominatimGeocoder::RATE_LIMIT_KEY );
 		Capabilities::revoke();
 	}
 }

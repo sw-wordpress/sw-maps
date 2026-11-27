@@ -22,7 +22,7 @@ use SWMaps\Core\Geocoding\NominatimGeocoder;
 use SWMaps\Core\Network\GuardedHttpClient;
 use SWMaps\Core\Network\UrlGuard;
 use SWMaps\WordPress\Network\PhpHostResolver;
-use SWMaps\WordPress\Network\TransientRateLimiter;
+use SWMaps\WordPress\Persistence\OptionRateLimiter;
 use SWMaps\WordPress\Network\WpHttpTransport;
 use SWMaps\Core\Export\PackageImporter;
 use SWMaps\Core\Contracts\FeatureRepositoryInterface;
@@ -108,7 +108,7 @@ final class Services {
 	public function geocoder(): GeocoderInterface {
 		$settings = Settings::get();
 		$key      = defined( 'SWMAP_GEOCODER_KEY' ) && is_string( SWMAP_GEOCODER_KEY ) ? SWMAP_GEOCODER_KEY : null;
-		return new NominatimGeocoder( $this->http_client(), new TransientRateLimiter(), $settings['geocoder_url'], $settings['geocoder_contact'], 'SW-Maps/' . SWMAPS_VERSION . ' (' . home_url() . ')', $key );
+		return new NominatimGeocoder( $this->http_client(), new OptionRateLimiter(), $settings['geocoder_url'], $settings['geocoder_contact'], 'SW-Maps/' . SWMAPS_VERSION . ' (' . home_url() . ')', $key );
 	}
 
 	public function exporter(): MapExporter {
