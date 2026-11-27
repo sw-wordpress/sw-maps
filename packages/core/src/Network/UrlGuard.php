@@ -41,7 +41,8 @@ final class UrlGuard
         }
         $allowed = in_array($host, array_map('strtolower', $this->allowedHosts), true);
         // Numeric shorthand ("2130706433", "0x7f.1", "127.1") is read as an address by many resolvers: refuse it outright.
-        if (!self::isIpLiteral($host) && preg_match('/^[0-9a-fx.]+$/i', $host) === 1) {
+        $numericComponent = '(?:0x[0-9a-f]+|[0-9]+)';
+        if (!self::isIpLiteral($host) && preg_match('/^' . $numericComponent . '(?:\.' . $numericComponent . '){0,3}$/D', $host) === 1) {
             throw new UnsafeUrlException('Numeric host notations are not allowed.');
         }
         $addresses = self::isIpLiteral($host) ? [$host] : $this->resolver->resolve($host);

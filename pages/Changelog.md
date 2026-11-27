@@ -34,7 +34,7 @@
 
 ### Bugs
 
-- Serveranfragen bleiben bei der geprüften IP-Adresse. IPv4-gemappte IPv6-Adressen werden vor der Netzprüfung normalisiert.
+- Serveranfragen bleiben bei der geprüften IP-Adresse. IPv4-gemappte IPv6-Adressen werden vor der Netzprüfung normalisiert. Gültige DNS-Namen werden von numerischen IP-Schreibweisen unterschieden.
 - Dichte Polygonringe bleiben in der Kartenausgabe gültig.
 - Das Geocoding-Rate-Limit bleibt auch bei gleichzeitigen Anfragen wirksam.
 - WP-CLI validiert Paketimporte mit `--dry-run` ohne Datenbankänderung. JSON-Exporte melden überschrittene Importgrenzen vor dem Download. Paketimporte prüfen das gemeinsame Koordinatenlimit und erhalten numerische Kategorie-Slugs.

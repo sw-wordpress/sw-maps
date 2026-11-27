@@ -116,6 +116,14 @@ final class UrlGuardTest extends TestCase
         self::assertTrue(true);
     }
 
+    public function testDnsNamesMayConsistOfHexadecimalLetters(): void
+    {
+        $guard = $this->guard(['abc.de' => ['93.184.216.34']]);
+        self::assertSame(['93.184.216.34'], $guard->check('https://abc.de/'));
+        $allowlisted = $this->guard(['feed.be' => ['10.0.0.8']], ['feed.be']);
+        self::assertSame(['10.0.0.8'], $allowlisted->check('https://feed.be/'));
+    }
+
     public function testAdministratorAllowlistExemptsOnlyThatHost(): void
     {
         $guard = $this->guard(['geo.lan' => ['10.0.0.8'], 'other.lan' => ['10.0.0.9']], ['GEO.lan']);
