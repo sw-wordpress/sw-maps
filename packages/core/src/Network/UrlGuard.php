@@ -1,0 +1,130 @@
+<?php
+
+declare(strict_types=1);
+
+namespace SWMaps\Core\Network;
+
+/**
+ * Decides whether the server may request a URL: http(s) only, no credentials in the URL, and the host must resolve
+ * to public addresses only. Hosts on the admin allowlist (self hosted tile or geocoding servers in a private
+ * network) are exempt from the address check, nothing else is.
+ */
+final class UrlGuard
+{
+    /** @param list<string> $allowedHosts exact host names the administrator allows even in private networks */
+    public function __construct(private readonly HostResolverInterface $resolver, private readonly array $allowedHosts = [])
+    {
+    }
+
+    /**
+     * @return non-empty-list<string> Validated endpoints for this request.
+     * @throws UnsafeUrlException
+     */
+    public function check(string $url): array
+    {
+        $parts = parse_url($url);
+        if ($parts === false || !isset($parts['scheme'], $parts['host'])) {
+            throw new UnsafeUrlException('The URL is not valid.');
+        }
+        if (!in_array(strtolower($parts['scheme']), ['http', 'https'], true)) {
+            throw new UnsafeUrlException('Only http and https URLs are allowed.');
+        }
+        if (isset($parts['user']) || isset($parts['pass'])) {
+            throw new UnsafeUrlException('URLs with credentials are not allowed.');
+        }
+        if (preg_match('/[\x00-\x20\x7F\\\\]/', $url) === 1) {
+            throw new UnsafeUrlException('The URL contains forbidden characters.');
+        }
+        $host = strtolower(trim($parts['host'], '[]'));
+        if (!self::isIpLiteral($host) && preg_match('/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/D', $host) !== 1) {
+            throw new UnsafeUrlException('The host is not valid.');
+        }
+        $allowed = in_array($host, array_map('strtolower', $this->allowedHosts), true);
+        // Numeric shorthand ("2130706433", "0x7f.1", "127.1") is read as an address by many resolvers: refuse it outright.
+        $numericComponent = '(?:0x[0-9a-f]+|[0-9]+)';
+        if (!self::isIpLiteral($host) && preg_match('/^' . $numericComponent . '(?:\.' . $numericComponent . '){0,3}$/D', $host) === 1) {
+            throw new UnsafeUrlException('Numeric host notations are not allowed.');
+        }
+        $addresses = self::isIpLiteral($host) ? [$host] : $this->resolver->resolve($host);
+        if ($addresses === []) {
+            throw new UnsafeUrlException('The host does not resolve.');
+        }
+        foreach ($addresses as $address) {
+            if (!self::isIpLiteral($address) || (!$allowed && !self::isPublic($address))) {
+                throw new UnsafeUrlException('The target is in a private or reserved network.');
+            }
+        }
+
+        return $addresses;
+    }
+
+    /** Resolves a redirect target against the URL it came from. */
+    public static function resolveRedirect(string $location, string $base): string
+    {
+        if (preg_match('#^[a-z][a-z0-9+.-]*:#i', $location) === 1) {
+            return $location;
+        }
+        $parts = parse_url($base);
+        $origin = ($parts['scheme'] ?? 'http') . '://' . ($parts['host'] ?? '') . (isset($parts['port']) ? ':' . $parts['port'] : '');
+        if (str_starts_with($location, '//')) {
+            return ($parts['scheme'] ?? 'http') . ':' . $location;
+        }
+        if (str_starts_with($location, '/')) {
+            return $origin . $location;
+        }
+        $dir = preg_replace('#/[^/]*$#', '/', $parts['path'] ?? '/');
+
+        return $origin . $dir . $location;
+    }
+
+    public static function isIpLiteral(string $host): bool
+    {
+        return filter_var($host, FILTER_VALIDATE_IP) !== false;
+    }
+
+    /** True for globally routable addresses (IPv4 and IPv6, including IPv4-mapped IPv6). */
+    public static function isPublic(string $address): bool
+    {
+        if (filter_var($address, FILTER_VALIDATE_IP) === false) {
+            return false;
+        }
+        if (str_contains($address, ':')) {
+            $packed = inet_pton($address);
+            if ($packed === false) {
+                return false;
+            }
+            // Mapped, compatible and well-known NAT64 prefixes embed an IPv4 address.
+            if (
+                str_starts_with($packed, str_repeat("\0", 10) . "\xFF\xFF")
+                || str_starts_with($packed, str_repeat("\0", 12))
+                || str_starts_with($packed, "\x00\x64\xFF\x9B" . str_repeat("\0", 8))
+            ) {
+                $embedded = inet_ntop(substr($packed, 12));
+
+                return $embedded !== false && self::isPublic($embedded);
+            }
+
+            // Only global unicast addresses are wanted, with special-use ranges excluded by PHP.
+            return (ord($packed[0]) & 0xE0) === 0x20
+                && filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_GLOBAL_RANGE) !== false;
+        }
+
+        return filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_GLOBAL_RANGE) !== false
+            && !self::inRange($address, '100.64.0.0', 10)   // carrier grade NAT
+            && !self::inRange($address, '192.0.0.0', 24)    // IETF protocol assignments
+            && !self::inRange($address, '198.18.0.0', 15)   // benchmarking
+            && !self::inRange($address, '224.0.0.0', 4);    // multicast
+    }
+
+    private static function inRange(string $address, string $base, int $bits): bool
+    {
+        $a = ip2long($address);
+        $b = ip2long($base);
+        if ($a === false || $b === false) {
+            return false;
+        }
+        $mask = -1 << (32 - $bits);
+
+        return ($a & $mask) === ($b & $mask);
+    }
+}

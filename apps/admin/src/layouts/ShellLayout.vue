@@ -115,7 +115,8 @@ function focusMain(): void {
   z-index: 100;
   padding: 8px 14px;
   border-radius: 8px;
-  background: var(--swmap-primary);
+  /* Fixed colours: the same strong contrast in light and dark mode. */
+  background: #1e3a8a;
   color: #fff !important;
   font-weight: 600;
 }

@@ -20,6 +20,7 @@ swmap_register_source( string $id, \SWMaps\Core\Contracts\MapSourceInterface $so
 | `swmap_consent_api_active` | filter | `bool $active` | Ob eine Consent-Implementierung vorhanden ist (Standard: `function_exists( 'wp_has_consent' )`) |
 | `swmap_simplify_min_points` | filter | `int $min_points` | Ab dieser Koordinatenzahl wird eine Linie/Fläche für die Ausgabe vereinfacht (Standard 500, `0` schaltet ab); die gespeicherte Geometrie bleibt unverändert |
 | `swmap_simplify_tolerance` | filter | `float $tolerance, float\|null $zoom` | Toleranz in Grad für die Vereinfachung (Standard ≈ ein Pixel bei Zoom 14 bzw. beim Zoom der AJAX-Anfrage) |
+| `swmap_resolve_host` | filter | `array\|null $addresses, string $host` | Ersetzt die DNS-Auflösung des SSRF-Schutzes (Tests, besondere DNS-Setups); `null` = Systemresolver |
 | `swmap_can_edit_map` | filter | `bool $allowed, int $map_id, int $user_id` | Schränkt ein, wer eine Karte bearbeiten darf (erweitert nie) |
 
 Fehlerrichtlinie: Events erst nach konsistentem Commit; Exceptions in Drittanbieter-Callbacks werden protokolliert und brechen abgeschlossene Operationen nicht ab.

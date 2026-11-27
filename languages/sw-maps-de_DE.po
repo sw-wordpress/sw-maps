@@ -52,36 +52,48 @@ msgstr "Die SW-Maps-Oberfläche wurde nicht gebaut. Release-Paket installieren o
 msgid "SW Maps requires JavaScript."
 msgstr "SW Maps benötigt JavaScript."
 
-#: packages/wordpress/src/Api/BaseController.php:43
+#: packages/wordpress/src/Api/BaseController.php:44
 msgid "You are not allowed to do this."
 msgstr "Sie dürfen das nicht tun."
 
-#: packages/wordpress/src/Api/BaseController.php:66
+#: packages/wordpress/src/Api/BaseController.php:67
 msgid "The geometry is invalid."
 msgstr "Die Geometrie ist ungültig."
 
-#: packages/wordpress/src/Api/BaseController.php:76
-#: packages/wordpress/src/Api/PublicController.php:55
-#: packages/wordpress/src/Api/SettingsController.php:53
+#: packages/wordpress/src/Api/BaseController.php:77
+#: packages/wordpress/src/Api/PublicController.php:49
+#: packages/wordpress/src/Api/SettingsController.php:73
 msgid "Invalid input."
 msgstr "Ungültige Eingabe."
 
-#: packages/wordpress/src/Api/BaseController.php:86
+#: packages/wordpress/src/Api/BaseController.php:93
+msgid "The address search failed."
+msgstr "Die Adresssuche ist fehlgeschlagen."
+
+#: packages/wordpress/src/Api/BaseController.php:103
 msgid "The file cannot be imported."
 msgstr "Die Datei kann nicht importiert werden."
 
-#: packages/wordpress/src/Api/BaseController.php:94
-#: packages/wordpress/src/Api/PublicController.php:51
+#: packages/wordpress/src/Api/BaseController.php:111
+#: packages/wordpress/src/Api/PublicController.php:62
 msgid "Not found."
 msgstr "Nicht gefunden."
 
-#: packages/wordpress/src/Api/BaseController.php:97
+#: packages/wordpress/src/Api/BaseController.php:114
 msgid "This value is already in use."
 msgstr "Dieser Wert wird bereits verwendet."
 
-#: packages/wordpress/src/Api/BaseController.php:100
+#: packages/wordpress/src/Api/BaseController.php:117
 msgid "Unexpected error."
 msgstr "Unerwarteter Fehler."
+
+#: packages/wordpress/src/Api/ExportController.php:95
+msgid "There are no maps to export."
+msgstr "Es gibt keine Karten zum Exportieren."
+
+#: packages/wordpress/src/Api/ExportController.php:96
+msgid "The export exceeds the import limits. Export individual maps or use a database backup."
+msgstr "Der Export überschreitet die Importgrenzen. Exportiere einzelne Karten oder verwende eine Datenbanksicherung."
 
 #: packages/wordpress/src/Api/FeaturesController.php:94
 msgid "The feature limit of this layer is reached."
@@ -90,24 +102,6 @@ msgstr "Das Standortlimit dieses Layers ist erreicht."
 #: packages/wordpress/src/Api/MapsController.php:133
 msgid "You are not allowed to publish maps."
 msgstr "Sie dürfen Karten nicht veröffentlichen."
-
-#: packages/wordpress/src/Api/ProvidersController.php:124
-#: packages/wordpress/src/Api/ProvidersController.php:162
-msgid "The tile server is not reachable."
-msgstr "Der Kachelserver ist nicht erreichbar."
-
-#: packages/wordpress/src/Api/ProvidersController.php:135
-#: packages/wordpress/src/Api/ProvidersController.php:173
-msgid "Connection successful."
-msgstr "Verbindung erfolgreich."
-
-#: packages/wordpress/src/Api/ProvidersController.php:135
-msgid "The tile server did not return a tile."
-msgstr "Der Kachelserver hat keine Kachel geliefert."
-
-#: packages/wordpress/src/Api/ProvidersController.php:173
-msgid "The file is not a PMTiles archive (version 3)."
-msgstr "Die Datei ist kein PMTiles-Archiv (Version 3)."
 
 #: packages/wordpress/src/Integration/Block.php:27
 msgid "SW Map"
@@ -121,60 +115,60 @@ msgstr "Zeigt eine mit SW Maps erstellte Karte an."
 msgid "Draft"
 msgstr "Entwurf"
 
-#: packages/wordpress/src/Integration/MapPayload.php:194
+#: packages/wordpress/src/Integration/MapPayload.php:192
 msgid "Zoom in"
 msgstr "Vergrößern"
 
-#: packages/wordpress/src/Integration/MapPayload.php:195
+#: packages/wordpress/src/Integration/MapPayload.php:193
 msgid "Zoom out"
 msgstr "Verkleinern"
 
-#: packages/wordpress/src/Integration/MapPayload.php:196
+#: packages/wordpress/src/Integration/MapPayload.php:194
 msgid "Fullscreen"
 msgstr "Vollbild"
 
-#: packages/wordpress/src/Integration/MapPayload.php:197
+#: packages/wordpress/src/Integration/MapPayload.php:195
 msgid "Exit fullscreen"
 msgstr "Vollbild beenden"
 
-#: packages/wordpress/src/Integration/MapPayload.php:198
+#: packages/wordpress/src/Integration/MapPayload.php:196
 msgid "Load map"
 msgstr "Karte laden"
 
-#: packages/wordpress/src/Integration/MapPayload.php:199
+#: packages/wordpress/src/Integration/MapPayload.php:197
 msgid "The map is shown after you accept the cookies required for it."
 msgstr "Die Karte wird angezeigt, sobald Sie die dafür nötigen Cookies akzeptieren."
 
-#: packages/wordpress/src/Integration/MapPayload.php:200
+#: packages/wordpress/src/Integration/MapPayload.php:198
 msgid "Loading the map contacts the map provider and transmits your IP address."
 msgstr "Beim Laden der Karte wird der Kartenanbieter kontaktiert und Ihre IP-Adresse übertragen."
 
-#: packages/wordpress/src/Integration/MapPayload.php:201
+#: packages/wordpress/src/Integration/MapPayload.php:199
 msgid "The map could not be displayed."
 msgstr "Die Karte konnte nicht angezeigt werden."
 
-#: packages/wordpress/src/Integration/MapPayload.php:202
+#: packages/wordpress/src/Integration/MapPayload.php:200
 msgid "Map attribution"
 msgstr "Kartenquelle"
 
-#: packages/wordpress/src/Integration/MapPayload.php:203
+#: packages/wordpress/src/Integration/MapPayload.php:201
 #: packages/wordpress/src/Integration/Renderer.php:133
 msgid "Open link"
 msgstr "Link öffnen"
 
-#: packages/wordpress/src/Integration/MapPayload.php:204
+#: packages/wordpress/src/Integration/MapPayload.php:202
 msgid "Close"
 msgstr "Schließen"
 
-#: packages/wordpress/src/Integration/MapPayload.php:205
+#: packages/wordpress/src/Integration/MapPayload.php:203
 msgid "Search locations"
 msgstr "Standorte suchen"
 
-#: packages/wordpress/src/Integration/MapPayload.php:206
+#: packages/wordpress/src/Integration/MapPayload.php:204
 msgid "Filter by category"
 msgstr "Nach Kategorie filtern"
 
-#: packages/wordpress/src/Integration/MapPayload.php:207
+#: packages/wordpress/src/Integration/MapPayload.php:205
 msgid "No locations found."
 msgstr "Keine Standorte gefunden."
 
@@ -211,6 +205,27 @@ msgstr "Auf der Karte zeigen"
 #: packages/wordpress/src/Integration/Renderer.php:138
 msgid "Locations"
 msgstr "Standorte"
+
+#: packages/wordpress/src/Providers/ProviderDiagnostics.php:72
+#: packages/wordpress/src/Providers/ProviderDiagnostics.php:93
+msgid "Connection successful."
+msgstr "Verbindung erfolgreich."
+
+#: packages/wordpress/src/Providers/ProviderDiagnostics.php:72
+msgid "The tile server did not return a tile."
+msgstr "Der Kachelserver hat keine Kachel geliefert."
+
+#: packages/wordpress/src/Providers/ProviderDiagnostics.php:93
+msgid "The file is not a PMTiles archive (version 3)."
+msgstr "Die Datei ist kein PMTiles-Archiv (Version 3)."
+
+#: packages/wordpress/src/Providers/ProviderDiagnostics.php:105
+msgid "The address is not allowed for server requests."
+msgstr "Die Adresse ist für Serveranfragen nicht erlaubt."
+
+#: packages/wordpress/src/Providers/ProviderDiagnostics.php:105
+msgid "The tile server is not reachable."
+msgstr "Der Kachelserver ist nicht erreichbar."
 
 #. translators: 1: required PHP version, 2: current PHP version
 #: sw-maps.php:36

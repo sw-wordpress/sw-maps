@@ -1,24 +1,17 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { authFile, PLUGIN_PAGE } from '../support/env';
+import { authFile } from '../support/env';
 import { mockTiles } from '../support/tiles';
 import { WpApi } from '../support/wp';
+import { openAdmin } from '../support/admin';
 
 test.use({ storageState: authFile('administrator') });
 
 const tool = (page: Page, name: string) => page.locator(`[data-test="tool-${name}"]`);
 
 async function openEditorFor(page: Page, title: string): Promise<number> {
-  await page.goto(`${PLUGIN_PAGE}#/maps`);
-  // On a cold stack the very first admin page can stay blank (the app chunk is still being served): reload once.
+  await openAdmin(page, '#/maps', (p) => p.locator('input[data-test="new-title"]'));
   const field = page.locator('input[data-test="new-title"]');
-  const shown = await field.waitFor({ state: 'visible', timeout: 10_000 }).then(
-    () => true,
-    () => false,
-  );
-  if (!shown) {
-    await page.reload();
-  }
   await field.fill(title);
   await page.locator('[data-test="create"]').click();
   await expect(page.locator('.swmap-editor__canvas .ol-viewport')).toBeVisible();
@@ -28,20 +21,16 @@ async function openEditorFor(page: Page, title: string): Promise<number> {
 test('create a map, place, move and publish a marker', async ({ page, baseURL }) => {
   await mockTiles(page, baseURL!);
   const mapId = await openEditorFor(page, 'E2E Marker');
-  const canvas = page.locator('.swmap-editor__canvas');
-  const box = (await canvas.boundingBox())!;
-  const x = box.x + box.width / 2;
-  const y = box.y + box.height / 2;
+  const canvas = page.locator('.swmap-editor__canvas .ol-viewport');
 
   await tool(page, 'point').click();
-  await page.mouse.click(x, y);
+  await canvas.click();
   await expect(page.locator('[data-test="feature-item"]')).toHaveCount(1);
   await expect(page.locator('[data-test="dirty"]')).toBeVisible();
   await page.locator('input[data-test="title"]').fill('Mein Marker');
-  await page.locator('input[data-test="title"]').blur();
+  await page.locator('input[data-test="title"]').press('Tab');
 
-  const apiPage = await page.context().newPage();
-  const api = await WpApi.create(apiPage);
+  const api = await WpApi.fromPage(page);
   expect(await api.layers(mapId)).toHaveLength(0); // nothing is saved before the explicit save
 
   await page.locator('[data-test="save"]').click();
@@ -57,6 +46,7 @@ test('create a map, place, move and publish a marker', async ({ page, baseURL })
 
   // Drag the marker with the select tool.
   await tool(page, 'select').click();
+  await canvas.scrollIntoViewIfNeeded();
   // The page can have scrolled meanwhile: the marker still sits at the centre of the (possibly moved) canvas.
   const now = (await canvas.boundingBox())!;
   const mx = now.x + now.width / 2;

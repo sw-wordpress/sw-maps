@@ -12,6 +12,10 @@ export class WpApi {
 
   static async create(page: Page): Promise<WpApi> {
     await page.goto(PLUGIN_PAGE);
+    return WpApi.fromPage(page);
+  }
+
+  static async fromPage(page: Page): Promise<WpApi> {
     const nonce = await page.evaluate(
       () => (window as unknown as { swmapsConfig: { nonce: string } }).swmapsConfig.nonce,
     );
@@ -86,6 +90,10 @@ export class WpApi {
 
   async layers(mapId: number): Promise<Array<{ id: number }>> {
     return this.call('GET', `/sw-maps/v1/maps/${mapId}/layers`);
+  }
+
+  async patchSettings(settings: Record<string, unknown>): Promise<void> {
+    await this.call('PATCH', '/sw-maps/v1/settings', settings);
   }
 
   /** Generic POST for resources without a dedicated helper (categories, ...). */

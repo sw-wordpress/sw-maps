@@ -24,6 +24,9 @@ function dataWithCategories(extra = 0): MapRenderData {
   return data;
 }
 
+beforeEach(() => vi.useFakeTimers());
+afterEach(() => vi.useRealTimers());
+
 describe('matchingIds', () => {
   it('matches text (title, address, description) and categories together', () => {
     const data = dataWithCategories();
@@ -61,10 +64,20 @@ describe('buildFilterBar', () => {
     const input = bar.element.querySelector<HTMLInputElement>('input[type=search]')!;
     input.value = 'lake';
     input.dispatchEvent(new Event('input'));
-    expect(onChange).toHaveBeenLastCalledWith({ query: 'lake', categories: new Set() });
+    input.value = 'lake x';
+    input.dispatchEvent(new Event('input'));
+    expect(onChange).toHaveBeenCalledTimes(2);
+    vi.advanceTimersByTime(200);
+    expect(onChange).toHaveBeenCalledTimes(3);
+    expect(onChange).toHaveBeenLastCalledWith({ query: 'lake x', categories: new Set() });
+    input.value = 'late';
+    input.dispatchEvent(new Event('input'));
     bar.destroy();
+    vi.advanceTimersByTime(500);
+    expect(onChange).toHaveBeenCalledTimes(3);
     expect(document.querySelector('.swmap__filters')).toBeNull();
     input.dispatchEvent(new Event('input'));
+    vi.advanceTimersByTime(500);
     expect(onChange).toHaveBeenCalledTimes(3);
   });
 
@@ -135,13 +148,16 @@ describe('viewer filter integration', () => {
     const input = root.querySelector<HTMLInputElement>('input[type=search]')!;
     input.value = 'nothing like this';
     input.dispatchEvent(new Event('input'));
+    vi.advanceTimersByTime(200);
     expect(root.querySelector('.swmap__empty')!.textContent).toBe('No locations found.');
     input.value = 'zzz again';
     input.dispatchEvent(new Event('input'));
+    vi.advanceTimersByTime(200);
     expect(root.querySelectorAll('.swmap__empty')).toHaveLength(1);
     chip.click();
     input.value = '';
     input.dispatchEvent(new Event('input'));
+    vi.advanceTimersByTime(200);
     expect(root.querySelector('.swmap__empty')).toBeNull();
     expect(root.querySelectorAll('li[hidden]')).toHaveLength(0);
     expect(setVisible.mock.calls.at(-1)![0]).toBeNull();
@@ -161,6 +177,7 @@ describe('viewer filter integration', () => {
     viewer.start();
     root.querySelector<HTMLInputElement>('input[type=search]')!.value = 'zzz';
     root.querySelector<HTMLInputElement>('input[type=search]')!.dispatchEvent(new Event('input'));
+    vi.advanceTimersByTime(200);
     expect(root.querySelector('.swmap__empty')).not.toBeNull();
   });
 });

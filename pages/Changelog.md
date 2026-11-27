@@ -23,12 +23,28 @@
 - PMTiles-Anbieter für Raster-Archive (Verbindungstest, externer Host wird vor der Aktivierung angezeigt); Zusatzfelder (Bezeichnung/Wert) für Standorte, auch aus CSV-Spalten; Streckenlänge (Haversine) im Editor.
 - Stilregeln pro Layer (nach Kategorie), Multi-Geometrien per „Teil hinzufügen“, Hover-Tooltip im Viewer.
 - Gruppen, die sich nicht durch Zoomen trennen lassen, öffnen eine Auswahlliste der Standorte; REST liefert `length_m` für Linien.
+- Export: GeoJSON, CSV (Punkte) und versionierte Plugin-Datei (ohne Zugangsdaten und Medien) je Karte oder für alle Karten; Plugin-Datei importieren (neue Entwurfskarten, Kategorien per Slug).
+- SSRF-Schutz für serverseitige Anfragen (Verbindungstests): nur http(s), private und reservierte Netze gesperrt (auch per Redirect), Admin-Allowlist `allowed_hosts` in den Einstellungen (REST).
+- Geocoding (Nominatim, nur Admin/Editor per Aktion): Koordinaten zur Adresse und Adresse zur Position mit Bestätigung vor der Übernahme; Server, Kontakt und Allowlist in den Einstellungen, Schlüssel nur aus `wp-config.php`.
+- WP-CLI: `wp sw-maps status`, `maps list`, `import` und `export` (Exit-Codes, Rückfragen, JSON-Ausgabe), siehe `docs/cli.md`.
+- Diagnose im Systemstatus: Schemazustand, wirksame Grenzen und Erreichbarkeit der aktivierten Anbieter (auf Knopfdruck).
+- Löschwarnung mit Export-Hinweis bei „Daten beim Deinstallieren löschen“.
+- Barrierefreiheit: Kontrast des Sprunglinks im Dunkelmodus und der Zusatzzeilen, ARIA-Rolle der Standortlisten; automatische axe-Prüfung aller Admin-Routen und der Frontend-Karte (hell/dunkel).
+- Große Tracks werden deutlich schneller für die Ausgabe vereinfacht; die Suche im Viewer ist entprellt.
 
 ### Bugs
+
+- Serveranfragen bleiben bei der geprüften IP-Adresse. IPv4-gemappte IPv6-Adressen werden vor der Netzprüfung normalisiert. Gültige DNS-Namen werden von numerischen IP-Schreibweisen unterschieden.
+- Dichte Polygonringe bleiben in der Kartenausgabe gültig.
+- Das Geocoding-Rate-Limit bleibt auch bei gleichzeitigen Anfragen wirksam.
+- WP-CLI validiert Paketimporte mit `--dry-run` ohne Datenbankänderung. JSON-Exporte melden überschrittene Importgrenzen vor dem Download. Paketimporte prüfen das gemeinsame Koordinatenlimit und erhalten numerische Kategorie-Slugs.
+- Inter und JetBrains Mono werden im Release-ZIP mitgeliefert.
+- Die Admin-Navigation lädt die gestartete SPA beim ersten Wechsel nicht erneut. Browser-Tests scrollen Karten vor koordinatenbasierten Aktionen in den sichtbaren Bereich.
 
 - Gleichzeitiges Anlegen von Karten mit gleichem Titel führt nicht mehr zu einem Serverfehler (Slug-Konflikt wird wiederholt).
 
 ### Other topics
 
+- Sicherheits-Fixtures (übergroße/ungültige Geometrien, feindliche Importdateien, Pfadschutz) und Lebenszyklus-Tests (BackupIt-Kompatibilität); `docs/lifecycle.md`.
 - Repository-Grundgerüst nach SW-BackupIt-Vorbild: Composer (PSR-4, Mozart-Konfiguration), PHPStan Level 8, PHPCS (PSR-12/WPCS), PHPUnit 11, WordPress-Integrationstests (Einzelsite/Multisite), Vitest mit strikter Coverage-Prüfung (> 80 %), Playwright (WordPress in Docker, Mock-Modus), Makefile, Release-ZIP mit Verifikation, Bundle-Budget, GitHub Actions, SonarQube-Konfiguration.
 - Dokumentation: Plan, ADRs, Datenbankschema, REST-Verträge, Hooks, MVP-Abnahme, Benutzerhandbuch.

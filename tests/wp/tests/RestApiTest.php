@@ -5,6 +5,8 @@
  * @package sw-maps
  */
 
+use SWMaps\Core\Geocoding\NominatimGeocoder;
+use SWMaps\WordPress\Persistence\OptionRateLimiter;
 use SWMaps\WordPress\Services;
 
 require_once __DIR__ . '/SwMapsTestCase.php';
@@ -955,5 +957,288 @@ final class RestApiTest extends SwMapsTestCase {
 		add_filter( 'pre_http_request', $down );
 		$this->assertSame( 0, $this->rest( 'POST', "/providers/{$id}/test" )->get_data()['status'] );
 		remove_filter( 'pre_http_request', $down );
+	}
+
+	public function test_export_and_package_import_roundtrip_with_permissions(): void {
+		$map_id = $this->create_map( 'Export me' );
+		$layer  = $this->rest( 'POST', "/maps/{$map_id}/layers", array( 'title' => 'Orte' ) )->get_data();
+		$cat    = $this->rest( 'POST', '/categories', array( 'title' => 'Huts' ) )->get_data();
+		$this->rest( 'POST', "/layers/{$layer['id']}/features", array( 'geometry' => $this->point( 8.4, 49.0 ), 'properties' => array( 'title' => 'Hut' ), 'categories' => array( $cat['id'] ), 'external_id' => 'h1' ) );
+
+		$json = $this->rest( 'GET', "/maps/{$map_id}/export" );
+		$this->assertSame( 200, $json->get_status() );
+		$this->assertSame( 'application/json', $json->get_data()['mime_type'] );
+		$package = json_decode( $json->get_data()['content'], true );
+		$this->assertSame( 'sw-maps-package', $package['format'] );
+		$this->assertStringNotContainsString( 'secret', $json->get_data()['content'] );
+		$geo = $this->rest( 'GET', "/maps/{$map_id}/export", null, array( 'format' => 'geojson', 'layer_id' => $layer['id'] ) )->get_data();
+		$this->assertCount( 1, json_decode( $geo['content'], true )['features'] );
+		$csv = $this->rest( 'GET', "/maps/{$map_id}/export", null, array( 'format' => 'csv' ) )->get_data();
+		$this->assertStringContainsString( 'Hut', $csv['content'] );
+		$this->assertSame( 400, $this->rest( 'GET', "/maps/{$map_id}/export", null, array( 'format' => 'xml' ) )->get_status() );
+		$this->assertSame( 404, $this->rest( 'GET', '/maps/999999/export' )->get_status() );
+		$all = $this->rest( 'GET', '/export' );
+		$this->assertSame( 200, $all->get_status() );
+		$this->assertStringContainsString( 'Export me', $all->get_data()['content'] );
+
+		$imported = $this->rest( 'POST', '/imports/package', array( 'content' => $json->get_data()['content'] ) );
+		$this->assertSame( 201, $imported->get_status() );
+		$new_id = $imported->get_data()['maps'][0]['id'];
+		$this->assertNotSame( $map_id, $new_id );
+		$this->assertSame( 'draft', $this->rest( 'GET', "/maps/{$new_id}" )->get_data()['status'] );
+		$new_layer = $this->rest( 'GET', "/maps/{$new_id}/layers" )->get_data()[0];
+		$features  = $this->rest( 'GET', "/layers/{$new_layer['id']}/features" )->get_data();
+		$this->assertSame( array( $cat['id'] ), $features[0]['categories'], 'the existing category is matched by slug' );
+		$this->assertSame( 0, $imported->get_data()['categories_created'] );
+
+		$this->assertSame( 422, $this->rest( 'POST', '/imports/package', array( 'content' => '{"format":"x"}' ) )->get_status() );
+		$this->assertSame( 400, $this->rest( 'POST', '/imports/package', array() )->get_status() );
+
+		$this->as_role( 'editor' );
+		$this->assertSame( 403, $this->rest( 'GET', '/export' )->get_status(), 'exporting every map needs the system capability' );
+		wp_set_current_user( 0 );
+		foreach ( array( array( 'GET', "/maps/{$map_id}/export" ), array( 'GET', '/export' ), array( 'POST', '/imports/package' ) ) as list( $method, $route ) ) {
+			$this->assertSame( 401, $this->rest( $method, $route, array() )->get_status(), "anonymous $method $route" );
+		}
+		$this->as_role( 'subscriber' );
+		$this->assertSame( 403, $this->rest( 'GET', "/maps/{$map_id}/export" )->get_status() );
+		$this->assertSame( 403, $this->rest( 'POST', '/imports/package', array( 'content' => '{}' ) )->get_status() );
+	}
+
+	public function test_package_export_reports_limits_without_downloading_a_file(): void {
+		$this->as_role( 'administrator' );
+		$empty = $this->rest( 'GET', '/export' );
+		$this->assertSame( 422, $empty->get_status() );
+		$this->assertSame( 'swmap_export_rejected', $empty->get_data()['code'] );
+
+		$map_id = $this->create_map();
+		$layer  = $this->rest( 'POST', "/maps/{$map_id}/layers", array( 'title' => 'L' ) )->get_data();
+		foreach ( array( 8.4, 8.5 ) as $lon ) {
+			$this->rest( 'POST', "/layers/{$layer['id']}/features", array( 'geometry' => $this->point( $lon ) ) );
+		}
+		$this->rest( 'PATCH', '/settings', array( 'max_features_per_layer' => 1 ) );
+		$result = $this->rest( 'GET', "/maps/{$map_id}/export" );
+		$this->assertSame( 422, $result->get_status() );
+		$this->assertSame( 'too_many_features', $result->get_data()['data']['reason'] );
+	}
+
+	public function test_guarded_transport_configures_curl_and_removes_its_hooks(): void {
+		$address = 'https://transport.example.org/check';
+		$mock    = function ( $preempt, $args, $url ) use ( $address ) {
+			$this->assertSame( $address, $url );
+			$headers = array();
+			$options = array( 'follow_redirects' => true );
+			do_action_ref_array( 'requests-requests.before_request', array( $url, $headers, array(), 'GET', &$options ) );
+			$this->assertFalse( $options['follow_redirects'] );
+			$this->assertSame( \WpOrg\Requests\Transport\Curl::class, $options['transport'] );
+
+			$curl = curl_init();
+			do_action_ref_array( 'http_api_curl', array( &$curl, $args, $url ) );
+			$this->assertSame( $address, curl_getinfo( $curl, CURLINFO_EFFECTIVE_URL ) );
+
+			return array(
+				'headers'  => array( 'content-type' => 'text/plain' ),
+				'body'     => 'ok',
+				'response' => array( 'code' => 200, 'message' => 'OK' ),
+			);
+		};
+		$before_requests = has_action( 'requests-requests.before_request' );
+		$before_curl     = has_action( 'http_api_curl' );
+		add_filter( 'pre_http_request', $mock, 10, 3 );
+		try {
+			$response = Services::instance()->http_client()->get( $address );
+			$this->assertSame( 'ok', $response->body );
+		} finally {
+			remove_filter( 'pre_http_request', $mock, 10 );
+		}
+		$this->assertSame( $before_requests, has_action( 'requests-requests.before_request' ) );
+		$this->assertSame( $before_curl, has_action( 'http_api_curl' ) );
+	}
+
+	public function test_server_side_requests_refuse_private_targets_unless_the_host_is_allowlisted(): void {
+		$this->as_role( 'administrator' );
+		$calls = 0;
+		$mock  = static function () use ( &$calls ) {
+			++$calls;
+			return array(
+				'headers'  => array( 'content-type' => 'image/png' ),
+				'body'     => 'x',
+				'response' => array( 'code' => 200, 'message' => 'OK' ),
+			);
+		};
+		add_filter( 'pre_http_request', $mock );
+		$private = array(
+			'http://127.0.0.1/{z}/{x}/{y}.png',
+			'http://169.254.169.254/{z}/{x}/{y}.png',
+			'http://[::1]/{z}/{x}/{y}.png',
+			'http://10.0.0.7/{z}/{x}/{y}.png',
+			'http://2130706433/{z}/{x}/{y}.png',
+		);
+		foreach ( $private as $url ) {
+			$created = $this->rest( 'POST', '/providers', array( 'name' => 'P', 'public_config' => array( 'urlTemplate' => $url, 'attribution' => 'x' ) ) );
+			$result  = $this->rest( 'POST', "/providers/{$created->get_data()['id']}/test" )->get_data();
+			$this->assertFalse( $result['ok'], $url );
+			$this->assertSame( 'The address is not allowed for server requests.', $result['message'], $url );
+		}
+		$this->assertSame( 0, $calls, 'no request left the server' );
+
+		// A redirect to the metadata service is refused before it is requested.
+		remove_filter( 'pre_http_request', $mock );
+		$hops   = array();
+		$redir  = static function ( $pre, $args, $url ) use ( &$hops ) {
+			$hops[] = $url;
+			return array(
+				'headers'  => array( 'location' => 'http://169.254.169.254/latest/meta-data/' ),
+				'body'     => '',
+				'response' => array( 'code' => 302, 'message' => 'Found' ),
+			);
+		};
+		add_filter( 'pre_http_request', $redir, 10, 3 );
+		$public = $this->rest( 'POST', '/providers', array( 'name' => 'Pub', 'public_config' => array( 'urlTemplate' => 'https://tiles.example.org/{z}/{x}/{y}.png', 'attribution' => 'x' ) ) )->get_data();
+		$this->assertSame( 'The address is not allowed for server requests.', $this->rest( 'POST', "/providers/{$public['id']}/test" )->get_data()['message'] );
+		$this->assertCount( 1, $hops );
+		remove_filter( 'pre_http_request', $redir, 10 );
+
+		// The administrator allowlist lets one private host through.
+		$this->rest( 'PATCH', '/settings', array( 'allowed_hosts' => array( 'tiles.lan' ) ) );
+		add_filter( 'swmap_resolve_host', static fn ( $a, $host ) => 'tiles.lan' === $host ? array( '10.0.0.9' ) : $a, 20, 2 );
+		add_filter( 'pre_http_request', $mock );
+		$lan = $this->rest( 'POST', '/providers', array( 'name' => 'Lan', 'public_config' => array( 'urlTemplate' => 'http://tiles.lan/{z}/{x}/{y}.png', 'attribution' => 'x' ) ) )->get_data();
+		$this->assertTrue( $this->rest( 'POST', "/providers/{$lan['id']}/test" )->get_data()['ok'] );
+		$other = $this->rest( 'POST', '/providers', array( 'name' => 'Other', 'public_config' => array( 'urlTemplate' => 'http://10.0.0.7/{z}/{x}/{y}.png', 'attribution' => 'x' ) ) )->get_data();
+		$this->assertFalse( $this->rest( 'POST', "/providers/{$other['id']}/test" )->get_data()['ok'] );
+		remove_filter( 'pre_http_request', $mock );
+
+		// Allowlist validation.
+		foreach ( array( array( 'http://x/' ), array( 'a b' ), 'x', array_fill( 0, 21, 'h.lan' ), array( 5 ) ) as $bad ) {
+			$this->assertSame( 400, $this->rest( 'PATCH', '/settings', array( 'allowed_hosts' => $bad ) )->get_status() );
+		}
+		$this->assertSame( array( 'a.lan', 'b.lan' ), $this->rest( 'PATCH', '/settings', array( 'allowed_hosts' => array( 'A.lan', 'b.lan', 'a.lan' ) ) )->get_data()['allowed_hosts'] );
+		delete_option( \SWMaps\WordPress\Settings::OPTION );
+	}
+
+	public function test_only_one_request_acquires_the_first_rate_limit_slot(): void {
+		$key = 'atomic-test';
+		OptionRateLimiter::clear( $key );
+		$first     = new OptionRateLimiter();
+		$second    = new OptionRateLimiter();
+		$competing = null;
+		$intercept = static function ( string $query ) use ( $second, $key, &$competing ): string {
+			if ( null === $competing && str_starts_with( $query, 'INSERT IGNORE INTO' ) ) {
+				$competing = false; // Avoid recursing again while the second writer claims the slot.
+				$competing = $second->acquire( $key, 60 );
+			}
+			return $query;
+		};
+		add_filter( 'query', $intercept );
+		try {
+			$this->assertFalse( $first->acquire( $key, 60 ) );
+			$this->assertTrue( $competing );
+		} finally {
+			remove_filter( 'query', $intercept );
+			OptionRateLimiter::clear( $key );
+		}
+	}
+
+	public function test_geocoding_is_admin_triggered_identified_rate_limited_and_protected(): void {
+		$this->as_role( 'administrator' );
+		$this->rest( 'PATCH', '/settings', array( 'geocoder_url' => 'https://nominatim.openstreetmap.org', 'geocoder_contact' => 'maps@example.org' ) );
+		$sent = array();
+		$mock = static function ( $pre, $args, $url ) use ( &$sent ) {
+			$sent[] = array( $url, $args );
+			return array(
+				'headers'  => array( 'content-type' => 'application/json' ),
+				'body'     => wp_json_encode( array( array( 'lat' => '49.0069', 'lon' => '8.4037', 'display_name' => 'Karlsruhe' ) ) ),
+				'response' => array( 'code' => 200, 'message' => 'OK' ),
+			);
+		};
+		add_filter( 'pre_http_request', $mock, 10, 3 );
+		OptionRateLimiter::clear( NominatimGeocoder::RATE_LIMIT_KEY );
+		$found = $this->rest( 'POST', '/geocoding/search', array( 'query' => 'Karlsruhe Schloss' ) );
+		$this->assertSame( 200, $found->get_status() );
+		$this->assertSame( array( array( 'label' => 'Karlsruhe', 'lon' => 8.4037, 'lat' => 49.0069 ) ), $found->get_data()['results'] );
+		$this->assertStringContainsString( 'maps@example.org', $sent[0][1]['user-agent'] );
+		$this->assertStringContainsString( 'q=Karlsruhe%20Schloss', $sent[0][0] );
+		// The public instance allows one request per second: the second one is answered with 429 without a request.
+		$again = $this->rest( 'POST', '/geocoding/search', array( 'query' => 'Karlsruhe Schloss' ) );
+		$this->assertSame( 429, $again->get_status() );
+		$this->assertSame( 'rate_limited', $again->as_error()->get_error_data()['reason'] );
+		$this->assertCount( 1, $sent );
+		OptionRateLimiter::clear( NominatimGeocoder::RATE_LIMIT_KEY );
+		$reverse = $this->rest( 'POST', '/geocoding/reverse', array( 'lon' => 8.4, 'lat' => 49.0 ) );
+		$this->assertSame( 200, $reverse->get_status() );
+		$this->assertArrayHasKey( 'result', $reverse->get_data() );
+		remove_filter( 'pre_http_request', $mock, 10 );
+
+		$this->assertSame( 400, $this->rest( 'POST', '/geocoding/search', array( 'query' => 'ab' ) )->get_status() );
+		$this->assertSame( 400, $this->rest( 'POST', '/geocoding/search', array() )->get_status() );
+		$this->assertSame( 400, $this->rest( 'POST', '/geocoding/reverse', array( 'lon' => 'x', 'lat' => 1 ) )->get_status() );
+		$this->assertSame( 400, $this->rest( 'POST', '/geocoding/reverse', array( 'lon' => 999, 'lat' => 1 ) )->get_status() );
+
+		// Without contact the public server is refused; a private self hosted server needs the allowlist.
+		$this->rest( 'PATCH', '/settings', array( 'geocoder_contact' => '' ) );
+		OptionRateLimiter::clear( NominatimGeocoder::RATE_LIMIT_KEY );
+		$this->assertSame( 422, $this->rest( 'POST', '/geocoding/search', array( 'query' => 'Berlin' ) )->get_status() );
+		$this->rest( 'PATCH', '/settings', array( 'geocoder_url' => 'http://geo.lan:8080' ) );
+		add_filter( 'swmap_resolve_host', static fn ( $a, $host ) => 'geo.lan' === $host ? array( '10.0.0.8' ) : $a, 20, 2 );
+		$blocked = $this->rest( 'POST', '/geocoding/search', array( 'query' => 'Berlin' ) );
+		$this->assertSame( 'not_allowed', $blocked->as_error()->get_error_data()['reason'] );
+		$this->rest( 'PATCH', '/settings', array( 'allowed_hosts' => array( 'geo.lan' ) ) );
+		add_filter( 'pre_http_request', $mock, 10, 3 );
+		$this->assertSame( 200, $this->rest( 'POST', '/geocoding/search', array( 'query' => 'Berlin' ) )->get_status() );
+		remove_filter( 'pre_http_request', $mock, 10 );
+		$this->assertSame( 400, $this->rest( 'PATCH', '/settings', array( 'geocoder_url' => 'ftp://x' ) )->get_status() );
+		$this->assertSame( 400, $this->rest( 'PATCH', '/settings', array( 'geocoder_contact' => "a\nb" ) )->get_status() );
+		$settings = $this->rest( 'GET', '/settings' )->get_data();
+		$this->assertFalse( $settings['geocoder_key_defined'] );
+		$this->assertArrayNotHasKey( 'geocoder_key', $settings );
+		delete_option( \SWMaps\WordPress\Settings::OPTION );
+
+		// Capability: editors may search, subscribers and visitors may not.
+		$this->as_role( 'editor' );
+		$this->assertNotSame( 403, $this->rest( 'POST', '/geocoding/search', array( 'query' => 'Berlin' ) )->get_status() );
+		$this->as_role( 'subscriber' );
+		$this->assertSame( 403, $this->rest( 'POST', '/geocoding/search', array( 'query' => 'Berlin' ) )->get_status() );
+		wp_set_current_user( 0 );
+		$this->assertSame( 401, $this->rest( 'POST', '/geocoding/reverse', array( 'lon' => 1, 'lat' => 1 ) )->get_status() );
+	}
+
+	public function test_diagnostics_report_schema_limits_and_provider_reachability(): void {
+		$this->as_role( 'administrator' );
+		$status = $this->rest( 'GET', '/status' )->get_data();
+		$this->assertTrue( $status['schema_ok'] );
+		$this->assertSame( 5000, $status['limits']['max_features_per_layer'] );
+		$this->assertArrayHasKey( 'php_memory_limit', $status['limits'] );
+		$this->assertSame( 500, $status['limits']['public_page_size'] );
+
+		// Reachability is checked only on request and only for enabled providers.
+		$calls = array();
+		$mock  = static function ( $pre, $args, $url ) use ( &$calls ) {
+			$calls[] = $url;
+			$ok      = str_contains( $url, 'good.example.org' );
+			return array(
+				'headers'  => array( 'content-type' => $ok ? 'image/png' : 'text/html' ),
+				'body'     => 'x',
+				'response' => array( 'code' => $ok ? 200 : 503, 'message' => '' ),
+			);
+		};
+		add_filter( 'pre_http_request', $mock, 10, 3 );
+		$this->assertSame( array(), $calls, 'reading the status contacts nobody' );
+		$this->rest( 'POST', '/providers', array( 'name' => 'Good', 'enabled' => true, 'public_config' => array( 'urlTemplate' => 'https://good.example.org/{z}/{x}/{y}.png', 'attribution' => 'x' ) ) );
+		$this->rest( 'POST', '/providers', array( 'name' => 'Bad', 'enabled' => true, 'public_config' => array( 'urlTemplate' => 'https://bad.example.org/{z}/{x}/{y}.png', 'attribution' => 'x' ) ) );
+		$this->rest( 'POST', '/providers', array( 'name' => 'Off', 'enabled' => false, 'public_config' => array( 'urlTemplate' => 'https://off.example.org/{z}/{x}/{y}.png', 'attribution' => 'x' ) ) );
+		$result = $this->rest( 'POST', '/status/providers' )->get_data()['providers'];
+		remove_filter( 'pre_http_request', $mock, 10 );
+		$by_name = array_column( $result, null, 'name' );
+		$this->assertTrue( $by_name['Good']['ok'] );
+		$this->assertFalse( $by_name['Bad']['ok'] );
+		$this->assertSame( 'good.example.org', $by_name['Good']['host'] );
+		$this->assertArrayNotHasKey( 'Off', $by_name );
+		$this->assertNotContains( 'https://off.example.org/0/0/0.png', $calls );
+
+		$this->as_role( 'editor' );
+		$this->assertSame( 403, $this->rest( 'POST', '/status/providers' )->get_status() );
+		wp_set_current_user( 0 );
+		$this->assertSame( 401, $this->rest( 'POST', '/status/providers' )->get_status() );
 	}
 }

@@ -34,6 +34,7 @@ final class Plugin {
 		add_action( 'init', array( Integration\Block::class, 'register' ) );
 		Integration\Privacy::register();
 		Integration\Consent::register();
+		Cli\Registrar::register();
 		if ( is_admin() ) {
 			( new Admin\AdminPage() )->register();
 		}
@@ -63,6 +64,8 @@ final class Plugin {
 			new Api\LayersController(),
 			new Api\ImportsController(),
 			new Api\CategoriesController(),
+			new Api\ExportController(),
+			new Api\GeocodingController(),
 			new Api\PublicController(),
 			new Api\FeaturesController(),
 			new Api\ProvidersController(),

@@ -7,7 +7,10 @@ import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { useNotify } from '@/composables/useNotify';
 import { getConfig, hasCapability } from '@/config';
 import { useMapsStore } from '@/stores/maps';
+import { isApiError } from '@/api/client';
 import { errorMessage } from '@/utils/errors';
+import { api } from '@/api';
+import { downloadFile } from '@/utils/download';
 import EmbedDialog from './EmbedDialog.vue';
 import PaginationBar from '@/components/ui/PaginationBar.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
@@ -19,6 +22,8 @@ const maps = useMapsStore();
 const router = useRouter();
 const notify = useNotify();
 const canPublish = hasCapability(getConfig(), 'swmap_publish_maps');
+const canExport = hasCapability(getConfig(), 'swmap_manage_imports');
+const packageInput = ref<HTMLInputElement | null>(null);
 
 const newTitle = ref('');
 const creating = ref(false);
@@ -97,6 +102,33 @@ function confirmDelete(): void {
   if (map) void run(() => maps.remove(map.id), t('maps.deleted'));
 }
 
+async function exportMap(map: MapData, format: 'geojson' | 'csv' | 'json'): Promise<void> {
+  try {
+    downloadFile(await api().exports.map(map.id, format));
+  } catch (error) {
+    notify.error(errorMessage(error, t('maps.exportFailed')));
+  }
+}
+
+/** Reads a package file in the browser and creates the maps from it (as drafts). */
+async function importPackage(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file) return;
+  try {
+    const report = await api().imports.package(await file.text());
+    notify.success(t('maps.packageImported', { n: report.maps.length }));
+    await maps.load();
+  } catch (error) {
+    notify.error(
+      isApiError(error) && error.reason
+        ? t(`import.reason.${error.reason}`)
+        : errorMessage(error, t('maps.packageFailed')),
+    );
+  }
+}
+
 function openEmbed(map: MapData): void {
   embedFor.value = map.id;
   embedOpen.value = true;
@@ -123,6 +155,26 @@ const columns = computed(() => [
         data-test="new-title"
         @keyup.enter="create"
       />
+      <template v-if="canExport">
+        <q-btn
+          outline
+          no-caps
+          icon="r_upload_file"
+          :label="t('maps.importPackage')"
+          data-test="import-package"
+          @click="packageInput?.click()"
+        />
+        <label for="swmap-package-file" hidden>{{ t('maps.importPackage') }}</label>
+        <input
+          id="swmap-package-file"
+          ref="packageInput"
+          type="file"
+          accept=".json,application/json"
+          hidden
+          data-test="package-file"
+          @change="importPackage"
+        />
+      </template>
       <q-btn
         color="primary"
         no-caps
@@ -206,6 +258,44 @@ const columns = computed(() => [
               data-test="embed"
               @click="openEmbed(p.row)"
             />
+            <q-btn
+              v-if="canExport"
+              flat
+              dense
+              round
+              icon="r_download"
+              :aria-label="t('maps.export')"
+              data-test="export"
+            >
+              <q-menu>
+                <q-list dense>
+                  <q-item
+                    v-close-popup
+                    clickable
+                    data-test="export-json"
+                    @click="exportMap(p.row, 'json')"
+                  >
+                    <q-item-section>{{ t('maps.exportJson') }}</q-item-section>
+                  </q-item>
+                  <q-item
+                    v-close-popup
+                    clickable
+                    data-test="export-geojson"
+                    @click="exportMap(p.row, 'geojson')"
+                  >
+                    <q-item-section>GeoJSON</q-item-section>
+                  </q-item>
+                  <q-item
+                    v-close-popup
+                    clickable
+                    data-test="export-csv"
+                    @click="exportMap(p.row, 'csv')"
+                  >
+                    <q-item-section>{{ t('maps.exportCsv') }}</q-item-section>
+                  </q-item>
+                </q-list>
+              </q-menu>
+            </q-btn>
             <q-btn
               flat
               dense

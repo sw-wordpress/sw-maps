@@ -5,6 +5,7 @@ import type { CategoryData, FeatureData } from '@sw-maps/map-contracts';
 import { FEATURE_ICONS } from './icons';
 import { isValidPosition, lineLengthMeters, safeColor } from '@sw-maps/map-contracts';
 import { pickImage } from '@/utils/media';
+import GeocodeDialog from './GeocodeDialog.vue';
 
 const props = defineProps<{
   feature: FeatureData;
@@ -42,6 +43,8 @@ const imageUrl = ref<string | null>(null);
 const coordinatesError = ref(false);
 const linkError = ref(false);
 
+const geocodeMode = ref<'search' | 'reverse' | null>(null);
+const geocodeOpen = ref(false);
 const fieldRows = ref<{ label: string; value: string }[]>([]);
 const MAX_FIELDS = 10;
 
@@ -121,6 +124,17 @@ function commitText(field: 'title' | 'description' | 'address'): void {
 }
 
 /** Rows without a label are kept in the form until one is entered; only complete rows are stored. */
+function openGeocode(mode: 'search' | 'reverse'): void {
+  geocodeMode.value = mode;
+  geocodeOpen.value = true;
+}
+
+/** The user confirmed a result: coordinates for a search, the address text for a reverse lookup. */
+function onGeocoded(hit: { label: string; lon: number; lat: number }): void {
+  if (geocodeMode.value === 'search') emit('coordinates', hit.lon, hit.lat);
+  else emit('patch', { properties: { address: hit.label.slice(0, 300) } });
+}
+
 function commitFields(): void {
   const complete = fieldRows.value
     .map((row) => ({ label: row.label.trim(), value: row.value.trim() }))
@@ -210,6 +224,36 @@ async function chooseImage(): Promise<void> {
       class="swmap-field"
       data-test="address"
       @blur="commitText('address')"
+    />
+    <div v-if="isPoint" class="swmap-field row q-gutter-xs">
+      <q-btn
+        flat
+        dense
+        no-caps
+        icon="r_travel_explore"
+        :label="t('geocoding.find')"
+        :disable="(form.address || form.title).trim().length < 3"
+        data-test="geocode-search"
+        @click="openGeocode('search')"
+      />
+      <q-btn
+        flat
+        dense
+        no-caps
+        icon="r_pin_drop"
+        :label="t('geocoding.address')"
+        data-test="geocode-reverse"
+        @click="openGeocode('reverse')"
+      />
+    </div>
+    <GeocodeDialog
+      v-if="geocodeMode"
+      v-model="geocodeOpen"
+      :mode="geocodeMode"
+      :query="(form.address || form.title).trim()"
+      :lon="form.lon"
+      :lat="form.lat"
+      @choose="onGeocoded"
     />
     <q-input
       v-model="form.link"

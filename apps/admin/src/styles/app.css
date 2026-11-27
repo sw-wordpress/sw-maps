@@ -88,3 +88,9 @@
   border-radius: 8px;
   white-space: pre;
 }
+
+/* Quasar's caption colour is too light on the card background (WCAG AA): use the contrast-checked muted token. */
+.swmap-root .q-item__label--caption,
+.swmap-root .text-caption {
+  color: var(--swmap-muted);
+}

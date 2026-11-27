@@ -55,6 +55,19 @@ final class Geometry
         return ['type' => $this->type->value, 'coordinates' => $this->coordinates];
     }
 
+    public function coordinateCount(): int
+    {
+        return match ($this->type) {
+            GeometryType::Point => 1,
+            GeometryType::MultiPoint, GeometryType::LineString => count($this->coordinates),
+            GeometryType::MultiLineString, GeometryType::Polygon => array_sum(array_map('count', $this->coordinates)),
+            GeometryType::MultiPolygon => array_sum(array_map(
+                static fn (array $rings): int => array_sum(array_map('count', $rings)),
+                $this->coordinates
+            )),
+        };
+    }
+
     /** @return list<Coordinate> */
     public function flatten(): array
     {

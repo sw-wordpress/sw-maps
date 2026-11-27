@@ -33,7 +33,8 @@ Authentifizierung: Cookie + REST-Nonce (`X-WP-Nonce`). Alle Endpunkte haben eine
 | GET/POST | `/categories` | lesen: `swmap_edit_maps`; anlegen: `swmap_manage_layers` | Liste/`Category` (201) |
 | PATCH/DELETE | `/categories/{id}` | `swmap_manage_layers` | `Category` / 204 |
 | GET/PATCH | `/settings` | `swmap_manage_system` | `Settings` |
-| GET | `/status` | `swmap_manage_system` | Systemstatus |
+| GET | `/status` | `swmap_manage_system` | Systemstatus inkl. `schema_ok` und `limits` |
+| POST | `/status/providers` | `swmap_manage_system` | Erreichbarkeit der aktivierten Anbieter (`providers[]`: `ok`, `status`, `message`, `host`); kontaktiert die Anbieter nur auf Anforderung |
 
 Standorte enthalten `length_m` (Länge von Linien in Metern, Haversine; 0 sonst; nur lesend).
 
@@ -42,6 +43,15 @@ Kategorien sind seitenweit (`id`, `slug`, `title`, `style` mit `color` und `icon
 Öffentlich (ohne Anmeldung, nur veröffentlichte Karten mit aktivierter Einstellung `ajax`, sonst 404): `GET /public/maps/{id}/features?bbox=minLon,minLat,maxLon,maxLat&zoom=&categories=1,2&page=&per_page=` (Standard 200, maximal 500 je Seite) (`minLon` > `maxLon` steht für einen Ausschnitt über die Datumsgrenze) liefert `{ layers: [{ id, features }], total, page, total_pages }` nur für sichtbare, veröffentlichte Layer. Der Viewer fragt entprellt (250 ms) und bricht die vorherige Anfrage ab; Linien und Flächen werden passend zum Zoom vereinfacht (Feld `simplified`). Im AJAX-Modus enthält das Inline-Payload keine Standorte (`ajaxUrl` stattdessen) und die Standortliste entfällt; Entwurfsvorschauen bleiben inline.
 
 Anbieter: `type` ist `xyz` oder `pmtiles` (bei `pmtiles` enthält `public_config.urlTemplate` die URL der `.pmtiles`-Datei; Kachelgröße, Schlüssel und Secret entfallen; der Typ ist nach dem Anlegen unveränderlich).
+
+## Geocoding (M3)
+`POST /geocoding/search` (`{ query }`, 3 bis 200 Zeichen) und `POST /geocoding/reverse` (`{ lon, lat }`) für Nutzer mit `swmap_edit_maps`; Antwort `{ results: [{ label, lon, lat }] }` bzw. `{ result }`. Fehler: `swmap_geocoding_failed` mit `data.reason` (`not_configured` 422, `invalid_query` 400, `rate_limited` 429, `unavailable` 502, `not_allowed` 422). Nur per Aktion (kein Autocomplete); das Ergebnis wird erst nach Bestätigung im Editor übernommen. Einstellungen (`/settings`): `geocoder_url` (Standard der öffentliche Nominatim-Server, auch selbst gehostet), `geocoder_contact` (für den öffentlichen Server erforderlich, steht im User-Agent), `allowed_hosts`; ein optionaler Schlüssel kommt ausschließlich aus der Konstante `SWMAP_GEOCODER_KEY` in `wp-config.php` (`geocoder_key_defined` zeigt nur, ob sie existiert). Der öffentliche Server wird auf eine Anfrage pro Sekunde begrenzt (seine Nutzungsrichtlinie).
+
+## Export (M3)
+- `GET /maps/{id}/export?format=json|geojson|csv&layer_id=` (`swmap_manage_imports` plus Bearbeitungsrecht): Antwort `{ filename, mime_type, content }`; der Client bietet den Text als Download an. `geojson` und `csv` (nur Punkte, Formelzeichen am Zellenanfang mit `'` entschärft) sind Austauschformate; `json` ist die **Plugin-Datei**.
+- `GET /export` (`swmap_manage_system`): Plugin-Datei aller Karten. Die JSON-Exporte verwenden die Paketgrenzen des Imports (100 Karten, 5 MiB, 200 000 Koordinaten, Feature-Limits). Bei Überschreitung antwortet die API mit `swmap_export_rejected` (HTTP 422). Für größere Bestände einzelne Karten exportieren oder eine [Datenbanksicherung](lifecycle.md) verwenden.
+- `POST /imports/package` (`swmap_manage_imports`, Body `{ content }`): legt die Karten der Plugin-Datei als **Entwürfe** neu an (Antwort 201 mit `maps[]`, `categories_created`, `categories_matched`, `media_relink_hint`). Alles wird vor dem Schreiben geprüft und in einer Transaktion geschrieben; eine abgelehnte Datei hinterlässt nichts (422 `swmap_import_rejected`).
+- Plugin-Datei (`format: "sw-maps-package"`, `version: 1`): Kategorien (Slug), Karten mit Ansicht, Einstellungen, Layern (inkl. Stilregeln über `categorySlug`) und Standorten. Sie enthält **keine Zugangsdaten** (Anbieter-ID und Secrets fehlen, die Zielsite wählt ihre Basiskarte) und **keine Medien** (Bilder und Medien-Symbole entfallen und müssen neu verknüpft werden). Eine neuere `version` als vom Plugin unterstützt wird abgelehnt.
 
 ## Import (M2)
 `POST /imports` (`swmap_manage_imports` plus Bearbeitungsrecht an der Karte `map_id`). Body: `map_id`, `format` (`geojson`|`gpx`|`csv`), `content` (Dateitext), `mode` (`new_layer` Standard, `append`, `upsert`, `replace`), `layer_id` (außer `new_layer`), `layer_title?`, `mapping?` (Ziel → Quellspalte; Ziele `title`, `description`, `address`, `link`, `external_id`), `options?` (CSV: `delimiter`, `decimal`, `lon_column`, `lat_column`), `dry_run?`, `skip_invalid?`, `confirm_replace?`.

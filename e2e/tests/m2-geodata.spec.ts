@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { authFile, PLUGIN_PAGE } from '../support/env';
+import { authFile } from '../support/env';
+import { openAdmin } from '../support/admin';
 import { mockTiles } from '../support/tiles';
 import { WpApi } from '../support/wp';
 
@@ -52,7 +53,7 @@ async function newMap(page: Page, title: string): Promise<{ id: number; api: WpA
 }
 
 async function openEditor(page: Page, mapId: number): Promise<void> {
-  await page.goto(`${PLUGIN_PAGE}#/maps/${mapId}`);
+  await openAdmin(page, `#/maps/${mapId}`, (p) => p.locator('.swmap-editor__canvas .ol-viewport'));
   await expect(page.locator('.swmap-editor__canvas .ol-viewport')).toBeVisible();
 }
 
@@ -237,8 +238,7 @@ test('visitors filter the list and the map by category and search, and groups cl
   // The six huts form one cluster; clicking it zooms in (the scale line changes).
   const scale = view.locator('.ol-scale-line-inner');
   const before = await scale.innerText();
-  const box = (await view.locator('.swmap .ol-viewport canvas').first().boundingBox())!;
-  await view.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await view.locator('.swmap .ol-viewport').click();
   await expect.poll(async () => scale.innerText()).not.toBe(before);
   await visitor.close();
 });

@@ -18,9 +18,17 @@ abstract class SwMapsTestCase extends WP_UnitTestCase {
 		Capabilities::grant();
 		$this->wipe();
 		wp_set_current_user( 0 );
+		// Tests never depend on real DNS: *.example.org and *.example.com are public hosts, everything else keeps its fate.
+		add_filter(
+			'swmap_resolve_host',
+			static fn ( $addresses, $host ) => preg_match( '/(^|\.)example\.(org|com)$/', (string) $host ) ? array( '93.184.216.34' ) : $addresses,
+			10,
+			2
+		);
 	}
 
 	public function tear_down(): void {
+		remove_all_filters( 'swmap_resolve_host' );
 		$this->wipe();
 		remove_all_filters( 'swmap_can_edit_map' );
 		parent::tear_down();

@@ -195,6 +195,9 @@ export function fakeApi(): FakeApi {
         default_scroll_zoom: false,
         max_features_per_layer: 5000,
         click_to_load: false,
+        allowed_hosts: [],
+        geocoder_url: 'https://nominatim.openstreetmap.org',
+        geocoder_contact: '',
       })),
       update: vi.fn(async (b: Record<string, unknown>) => ({
         delete_data_on_uninstall: false,
@@ -202,10 +205,40 @@ export function fakeApi(): FakeApi {
         default_scroll_zoom: false,
         max_features_per_layer: 5000,
         click_to_load: false,
+        allowed_hosts: [],
+        geocoder_url: '',
+        geocoder_contact: '',
         ...b,
       })),
     },
+    geocoding: {
+      search: vi.fn(async () => ({
+        results: [
+          { label: 'Karlsruhe Schloss', lon: 8.4037, lat: 49.0069 },
+          { label: 'Karlsruhe Hbf', lon: 8.4, lat: 49.0 },
+        ],
+      })),
+      reverse: vi.fn(async () => ({ result: { label: 'Kaiserstraße 1', lon: 8.4, lat: 49 } })),
+    },
+    exports: {
+      map: vi.fn(async (_id: number, format: string) => ({
+        filename: `map.${format}`,
+        mime_type: 'application/json',
+        content: '{}',
+      })),
+      all: vi.fn(async () => ({
+        filename: 'all.json',
+        mime_type: 'application/json',
+        content: '{}',
+      })),
+    },
     imports: {
+      package: vi.fn(async () => ({
+        maps: [{ id: 30, title: 'Imported', layers: 1, features: 2 }],
+        categories_created: 1,
+        categories_matched: 0,
+        media_relink_hint: true,
+      })),
       run: vi.fn(async () => ({
         mode: 'new_layer',
         layer_id: 12,
@@ -224,10 +257,42 @@ export function fakeApi(): FakeApi {
       })),
     },
     status: {
+      providers: vi.fn(async () => ({
+        providers: [
+          {
+            id: 1,
+            name: 'OpenStreetMap',
+            type: 'xyz',
+            host: 'tile.openstreetmap.org',
+            ok: true,
+            status: 200,
+            message: 'Connection successful.',
+          },
+          {
+            id: 2,
+            name: 'Own tiles',
+            type: 'xyz',
+            host: 'tiles.example.org',
+            ok: false,
+            status: 503,
+            message: 'The tile server did not return a tile.',
+          },
+        ],
+      })),
       get: vi.fn(async () => ({
         plugin_version: '0.1.0',
         db_version: 1,
         db_expected: 1,
+        schema_ok: true,
+        limits: {
+          max_features_per_layer: 5000,
+          import_max_bytes: 5242880,
+          import_max_coords: 200000,
+          public_page_size: 500,
+          php_memory_limit: '256M',
+          php_max_execution_time: 30,
+          php_post_max_size: '8M',
+        },
         tables: [
           { name: 'wp_swmap_maps', exists: true },
           { name: 'wp_swmap_layers', exists: false },
@@ -244,6 +309,9 @@ export function fakeApi(): FakeApi {
           default_scroll_zoom: false,
           max_features_per_layer: 5000,
           click_to_load: false,
+          allowed_hosts: [],
+          geocoder_url: '',
+          geocoder_contact: '',
         },
       })),
     },

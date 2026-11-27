@@ -8,6 +8,7 @@ import type {
 import { getConfig } from '@/config';
 import type { Paged, RequestOptions } from './client';
 import { ApiClient } from './client';
+import type { ExportFile } from '@/utils/download';
 
 export interface SettingsData {
   delete_data_on_uninstall: boolean;
@@ -15,12 +16,27 @@ export interface SettingsData {
   default_scroll_zoom: boolean;
   max_features_per_layer: number;
   click_to_load: boolean;
+  allowed_hosts: string[];
+  geocoder_url: string;
+  geocoder_contact: string;
+  /** Read only: whether the key constant SWMAP_GEOCODER_KEY exists on the server. */
+  geocoder_key_defined?: boolean;
 }
 
 export interface StatusData {
   plugin_version: string;
   db_version: number;
   db_expected: number;
+  schema_ok: boolean;
+  limits: {
+    max_features_per_layer: number;
+    import_max_bytes: number;
+    import_max_coords: number;
+    public_page_size: number;
+    php_memory_limit: string;
+    php_max_execution_time: number;
+    php_post_max_size: string;
+  };
   tables: { name: string; exists: boolean }[];
   php_version: string;
   wp_version: string;
@@ -29,6 +45,16 @@ export interface StatusData {
   environment: string;
   consent_api: boolean;
   settings: SettingsData;
+}
+
+export interface ProviderCheck {
+  id: number;
+  name: string;
+  type: string;
+  host: string;
+  ok: boolean;
+  status: number;
+  message: string;
 }
 
 export interface ConnectionTest {
@@ -60,6 +86,19 @@ export interface ImportReport {
   media_relink_hint: boolean;
   imported: boolean;
   preview: { title: string; type: string; external_id: string | null }[];
+}
+
+export interface PackageReport {
+  maps: { id: number; title: string; layers: number; features: number }[];
+  categories_created: number;
+  categories_matched: number;
+  media_relink_hint: boolean;
+}
+
+export interface GeocodeHit {
+  label: string;
+  lon: number;
+  lat: number;
 }
 
 export type Body = Record<string, unknown>;
@@ -118,9 +157,25 @@ export function createApi(client: ApiClient) {
     },
     status: {
       get: () => client.request<StatusData>('GET', 'status'),
+      providers: () => client.request<{ providers: ProviderCheck[] }>('POST', 'status/providers'),
     },
     imports: {
       run: (body: Body) => client.request<ImportReport>('POST', 'imports', { body }),
+      package: (content: string) =>
+        client.request<PackageReport>('POST', 'imports/package', { body: { content } }),
+    },
+    geocoding: {
+      search: (query: string) =>
+        client.request<{ results: GeocodeHit[] }>('POST', 'geocoding/search', { body: { query } }),
+      reverse: (lon: number, lat: number) =>
+        client.request<{ result: GeocodeHit | null }>('POST', 'geocoding/reverse', {
+          body: { lon, lat },
+        }),
+    },
+    exports: {
+      map: (id: number, format: 'geojson' | 'csv' | 'json') =>
+        client.request<ExportFile>('GET', `maps/${id}/export`, { query: { format } }),
+      all: () => client.request<ExportFile>('GET', 'export'),
     },
   };
 }
